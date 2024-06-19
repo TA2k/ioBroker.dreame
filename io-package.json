@@ -1,0 +1,118 @@
+{
+  "common": {
+    "name": "dreame",
+    "version": "0.0.1",
+    "news": {
+      "0.0.1": {
+        "en": "initial release",
+        "de": "Erstveröffentlichung",
+        "ru": "Начальная версия",
+        "pt": "lançamento inicial",
+        "nl": "Eerste uitgave",
+        "fr": "Première version",
+        "it": "Versione iniziale",
+        "es": "Versión inicial",
+        "pl": "Pierwsze wydanie",
+        "uk": "Початкова версія",
+        "zh-cn": "首次出版"
+      }
+    },
+    "title": "Dreame",
+    "titleLang": {
+      "en": "Dreame",
+      "de": "Dreame",
+      "ru": "Dreame",
+      "pt": "Dreame",
+      "nl": "Dreame",
+      "fr": "Dreame",
+      "it": "Dreame",
+      "es": "Dreame",
+      "pl": "Dreame",
+      "uk": "Dreame",
+      "zh-cn": "Dreame"
+    },
+    "desc": {
+      "en": "Adapter for dreame home devices",
+      "de": "Adapter für Dreame-Home-Geräte",
+      "ru": "Адаптер для домашних устройств Dreame",
+      "pt": "Adaptador para dispositivos domésticos dreame",
+      "nl": "Adapter voor Dreame Home-apparaten",
+      "fr": "Adaptateur pour appareils dreame home",
+      "it": "Adattatore per dispositivi Dreame Home",
+      "es": "Adaptador para dispositivos domésticos de ensueño",
+      "pl": "Adapter do urządzeń Dreame Home",
+      "uk": "Адаптер для домашніх пристроїв Dreame",
+      "zh-cn": "Dreame 家用设备适配器"
+    },
+    "authors": ["TA2k <tombox2020@gmail.com>"],
+    "keywords": ["dreame", "dreamehome"],
+    "license": "MIT",
+    "licenseInformation": {
+      "type": "free",
+      "license": "MIT"
+    },
+    "platform": "Javascript/Node.js",
+    "main": "main.js",
+    "icon": "dreame.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/TA2k/ioBroker.dreame/main/admin/dreame.png",
+    "readme": "https://github.com/TA2k/ioBroker.dreame/blob/main/README.md",
+    "loglevel": "info",
+    "tier": 3,
+    "mode": "daemon",
+    "type": "household",
+    "compact": true,
+    "connectionType": "cloud",
+    "dataSource": "poll",
+    "adminUI": {
+      "config": "json"
+    },
+    "dependencies": [
+      {
+        "js-controller": ">=5.0.0"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=5.1.13"
+      }
+    ],
+    "plugins": {
+      "sentry": {
+        "dsn": "https://802f699c7aa84a62b0bcb54b31485352@sentry.iobroker.net/226"
+      }
+    }
+  },
+  "encryptedNative": ["password"],
+  "protectedNative": ["password"],
+  "native": {
+    "username": "",
+    "password": "",
+    "interval": 30,
+    "getMap": false
+  },
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info",
+      "type": "channel",
+      "common": {
+        "name": "Information"
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "role": "indicator.connected",
+        "name": "Device or service connected",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    }
+  ]
+}
