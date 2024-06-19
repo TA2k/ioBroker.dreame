@@ -66,6 +66,8 @@ class Dreame extends utils.Adapter {
 
     if (this.session.access_token) {
       await this.getDeviceList();
+      await this.fetchSpecs();
+      await this.createRemotes();
       await this.updateDevicesViaSpec();
       this.updateInterval = setInterval(
         async () => {
@@ -104,7 +106,7 @@ class Dreame extends utils.Adapter {
         username: this.config.username,
         password: crypto
           .createHash('md5')
-          .update(this.config.password + '!RAylYC%fmSKp7%Tq')
+          .update(this.config.password + 'RAylYC%fmSKp7%Tq')
           .digest('hex'),
         country: 'DE',
         lang: 'de',
@@ -263,7 +265,7 @@ class Dreame extends utils.Adapter {
         this.log.debug('Device list response: ' + JSON.stringify(response.data));
 
         if (
-          response.data.code === '0' &&
+          response.data.code == '0' &&
           response.data &&
           response.data.data &&
           response.data.data.page &&
@@ -271,7 +273,7 @@ class Dreame extends utils.Adapter {
         ) {
           this.deviceArray = response.data.data.page.records;
           for (const device of this.deviceArray) {
-            this.extendForeignObject(device.did, {
+            await this.extendObject(device.did, {
               type: 'device',
               common: {
                 name: device.customName || device.deviceInfo.displayName || device.model,
@@ -311,7 +313,7 @@ class Dreame extends utils.Adapter {
             this.json2iob.parse(device.did, device, { states: { latestStatus: this.states[device.did] } });
           }
         } else {
-          this.log.error('No Devices found' + JSON.stringify(response.data));
+          this.log.error('No Devices found: ' + JSON.stringify(response.data));
         }
       })
       .catch((error) => {
@@ -322,7 +324,7 @@ class Dreame extends utils.Adapter {
 
   async fetchSpecs() {
     this.log.info('Fetching Specs');
-    const allDevices = this.requestClient({
+    const allDevices = await this.requestClient({
       url: 'https://miot-spec.org/miot-spec-v2/instances?status=all',
     }).catch((error) => {
       this.log.error('failing to get all devices');
@@ -332,7 +334,7 @@ class Dreame extends utils.Adapter {
 
     const specs = [];
     for (const device of this.deviceArray) {
-      const type = allDevices.data
+      const type = allDevices.data.instances
         .filter((obj) => {
           return obj.model === device.model && obj.status === 'released';
         })
@@ -360,6 +362,59 @@ class Dreame extends utils.Adapter {
         this.log.error(error);
         error.response && this.log.error(JSON.stringify(error.response.data));
       });
+  }
+  async createRemotes() {
+    for (const device of this.deviceArray) {
+      if (this.specs[device.spec_type]) {
+        this.log.debug(JSON.stringify(this.specs[device.spec_type]));
+        await this.extractRemotesFromSpec(device);
+      }
+      const remoteArray = this.remoteCommands[device.model] || [];
+      for (const remote of remoteArray) {
+        await this.extendObject(device.did + '.remotePlugins', {
+          type: 'channel',
+          common: {
+            name: 'Remote Controls extracted from Plugin definition',
+            desc: 'Not so reliable alternative remotes',
+          },
+          native: {},
+        });
+        this.setObjectNotExists(device.did + '.remotePlugins.customCommand', {
+          type: 'state',
+          common: {
+            name: 'Send Custom command via Plugin',
+            type: 'mixed',
+            role: 'state',
+            def: 'set_level_favorite,16',
+            write: true,
+            read: true,
+          },
+          native: {},
+        });
+        let name = remote;
+        let params = '';
+        if (typeof remote === 'object') {
+          name = remote.type;
+          params = remote.params;
+        }
+        try {
+          this.setObjectNotExists(device.did + '.remotePlugins.' + name, {
+            type: 'state',
+            common: {
+              name: name + ' ' + params || '',
+              type: 'mixed',
+              role: 'state',
+              def: false,
+              write: true,
+              read: true,
+            },
+            native: {},
+          });
+        } catch (error) {
+          this.log.error(error);
+        }
+      }
+    }
   }
   async extractRemotesFromSpec(device) {
     const spec = this.specs[device.spec_type];
@@ -417,10 +472,10 @@ class Dreame extends utils.Adapter {
           const [type, role] = this.getRole(property.format, write, property['value-range']);
           this.log.debug(`Found remote for ${device.model} ${service.description} ${property.description}`);
 
-          await this.setObjectNotExistsAsync(device.did + '.' + path, {
+          await this.extendObject(device.did + '.' + path, {
             type: 'channel',
             common: {
-              name: 'Remote Controls extracted from Spec definition',
+              name: path + ' extracted from Spec definition',
             },
             native: {},
           });
@@ -592,82 +647,88 @@ class Dreame extends utils.Adapter {
   async updateDevicesViaSpec() {
     for (const device of this.deviceArray) {
       if (this.specStatusDict[device.did]) {
-        const data = { type: 3, accessKey: 'IOS00026747c5acafc2', params: this.specStatusDict[device.did] };
+        //split array in chunks of 50
+        const chunkSize = 50;
+        for (let i = 0; i < this.specStatusDict[device.did].length; i += chunkSize) {
+          const chunk = this.specStatusDict[device.did].slice(i, i + chunkSize);
 
-        await this.requestClient({
-          method: 'post',
-          url: 'https://eu.iot.dreame.tech:13267/dreame-iot-com-10000/device/sendCommand',
-          headers: {
-            'user-agent': 'Dart/3.2 (dart:io)',
-            'dreame-meta': 'cv=i_829',
-            'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
-            'tenant-id': '000000',
-            host: 'eu.iot.dreame.tech:13267',
-            authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
-            'content-type': 'application/json',
-            'dreame-auth': 'bearer ' + this.session.access_token,
-          },
-          data: {
+          const requestId = Math.floor(Math.random() * 9000) + 1000;
+          const data = {
             did: device.did,
-            id: device.id,
+            id: requestId,
             data: {
               did: device.did,
-              id: device.id,
+              id: requestId,
               method: 'get_properties',
-              params: this.specStatusDict[device.did],
-              from: 'I66b94e',
+              params: chunk,
+              from: 'XXXXXX',
             },
-          },
-        })
-          .then(async (res) => {
-            if (res.data.code !== 0) {
-              if (res.data.code === -8) {
-                this.log.debug(
+          };
+          await this.requestClient({
+            method: 'post',
+            url: 'https://eu.iot.dreame.tech:13267/dreame-iot-com-10000/device/sendCommand',
+            headers: {
+              'user-agent': 'Dart/3.2 (dart:io)',
+              'dreame-meta': 'cv=i_829',
+              'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
+              'tenant-id': '000000',
+              host: 'eu.iot.dreame.tech:13267',
+              authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
+              'content-type': 'application/json',
+              'dreame-auth': 'bearer ' + this.session.access_token,
+            },
+            data: data,
+          })
+            .then(async (res) => {
+              if (res.data.code !== 0) {
+                if (res.data.code === -8) {
+                  this.log.debug(
+                    `Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`,
+                  );
+
+                  this.log.debug(JSON.stringify(res.data));
+                  return;
+                }
+                this.log.info(
                   `Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`,
                 );
-
                 this.log.debug(JSON.stringify(res.data));
                 return;
               }
-              this.log.info(
-                `Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`,
-              );
               this.log.debug(JSON.stringify(res.data));
-              return;
-            }
-            this.log.debug(JSON.stringify(res.data));
-            for (const element of res.data.result) {
-              const path = this.specPropsToIdDict[device.did][element.siid + '-' + element.piid];
-              if (path) {
-                this.log.debug(`Set ${path} to ${element.value}`);
-                if (element.value != null) {
-                  this.setState(path, element.value, true);
+              for (const element of res.data.data.result) {
+                const path = this.specPropsToIdDict[device.did][element.siid + '-' + element.piid];
+                if (path) {
+                  this.log.debug(`Set ${path} to ${element.value}`);
+                  if (element.value != null) {
+                    this.setState(path, element.value, true);
+                  }
                 }
               }
-            }
-          })
-          .catch((error) => {
-            if (error.response) {
-              if (error.response.status === 401) {
-                error.response && this.log.debug(JSON.stringify(error.response.data));
-                this.log.info(' receive 401 error. Refresh Token in 60 seconds');
-                this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
-                this.refreshTokenTimeout = setTimeout(() => {
-                  this.refreshToken();
-                }, 1000 * 60);
+            })
+            .catch((error) => {
+              if (error.response) {
+                if (error.response.status === 401) {
+                  error.response && this.log.debug(JSON.stringify(error.response.data));
+                  this.log.info(' receive 401 error. Refresh Token in 60 seconds');
+                  this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
+                  this.refreshTokenTimeout = setTimeout(() => {
+                    this.refreshToken();
+                  }, 1000 * 60);
 
+                  return;
+                }
+
+                this.log.error(error);
+                error.stack && this.log.error(error.stack);
+                error.response && this.log.error(JSON.stringify(error.response.data));
                 return;
               }
 
-              this.log.error(error);
-              error.stack && this.log.error(error.stack);
-              error.response && this.log.error(JSON.stringify(error.response.data));
-              return;
-            }
-
-            this.log.debug(error);
-            this.log.debug(JSON.stringify(error));
-          });
+              this.log.debug(error);
+              this.log.debug(JSON.stringify(error));
+            });
+        }
       }
     }
   }
@@ -740,13 +801,117 @@ class Dreame extends utils.Adapter {
    * @param {string} id
    * @param {ioBroker.State | null | undefined} state
    */
-  onStateChange(id, state) {
+  async onStateChange(id, state) {
     if (state) {
-      // The state was changed
-      this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
-    } else {
-      // The state was deleted
-      this.log.info(`state ${id} deleted`);
+      if (!state.ack) {
+        const deviceId = id.split('.')[2];
+        const folder = id.split('.')[3];
+        let command = id.split('.')[4];
+        this.log.debug(`Receive command ${command} for ${deviceId} in folder ${folder} with value ${state.val} `);
+        // let type;
+        if (command) {
+          // type = command.split("-")[1];
+          command = command.split('-')[0];
+        }
+        if (id.split('.')[4] === 'Refresh') {
+          this.updateDevicesViaSpec();
+          return;
+        }
+        //{"id":0,"method":"app_start","params":[{"clean_mop":0}]}
+
+        const stateObject = await this.getObjectAsync(id);
+
+        const requestId = Math.floor(Math.random() * 9000) + 1000;
+
+        const data = {
+          did: deviceId,
+          id: requestId,
+          data: {
+            did: deviceId,
+            id: requestId,
+            method: 'action',
+            params: {},
+            from: 'XXXXXX',
+          },
+        };
+        if (stateObject && stateObject.native.piid) {
+          data.data.params = {
+            did: deviceId,
+            siid: stateObject.native.siid,
+            piid: stateObject.native.piid,
+            value: state.val,
+          };
+        }
+        if (stateObject && stateObject.native.aiid) {
+          data.data.params = { did: deviceId, siid: stateObject.native.siid, aiid: stateObject.native.aiid };
+          if (typeof state.val !== 'boolean') {
+            try {
+              data.data.params['in'] = JSON.parse(state.val);
+            } catch (error) {
+              this.log.error(error);
+              return;
+            }
+          }
+
+          // data.params.in = [];
+        }
+        this.log.info(`Send: ${JSON.stringify(data)} to ${deviceId}`);
+
+        await this.requestClient({
+          method: 'post',
+          url: 'https://eu.iot.dreame.tech:13267/dreame-iot-com-10000/device/sendCommand',
+          headers: {
+            'user-agent': 'Dart/3.2 (dart:io)',
+            'dreame-meta': 'cv=i_829',
+            'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
+            'tenant-id': '000000',
+            host: 'eu.iot.dreame.tech:13267',
+            authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
+            'content-type': 'application/json',
+            'dreame-auth': 'bearer ' + this.session.access_token,
+          },
+          data: data,
+        })
+          .then(async (res) => {
+            if (res.data.code !== 0) {
+              this.log.error('Error setting device state');
+              this.log.error(JSON.stringify(res.data));
+              return;
+            }
+            if (res.data.result && res.data.result.length > 0) {
+              res.data = res.data.result[0];
+            }
+            this.log.info(JSON.stringify(res.data));
+            if (!res.data.result) {
+              return;
+            }
+            const result = res.data.result;
+            if (result.out) {
+              const path = this.specActiosnToIdDict[result.did][result.siid + '-' + result.aiid];
+              this.log.debug(path);
+              const stateObject = await this.getObjectAsync(path);
+              if (stateObject && stateObject.native.out) {
+                const out = stateObject.native.out;
+                for (const outItem of out) {
+                  const index = out.indexOf(outItem);
+                  const outPath = this.specPropsToIdDict[result.did][result.siid + '-' + outItem];
+                  await this.setStateAsync(outPath, result.out[index], true);
+                  this.log.info('Set ' + outPath + ' to ' + result.out[index]);
+                }
+              } else {
+                this.log.info(JSON.stringify(result.out));
+              }
+            }
+          })
+          .catch(async (error) => {
+            this.log.error(error);
+            error.response && this.log.error(JSON.stringify(error.response.data));
+          });
+        this.refreshTimeout = setTimeout(async () => {
+          this.log.info('Update devices');
+          await this.updateDevicesViaSpec();
+        }, 10 * 1000);
+      }
     }
   }
 }
