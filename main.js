@@ -312,7 +312,10 @@ class Dreame extends utils.Adapter {
               }
             }
 
-            this.json2iob.parse(device.did, device, { states: { latestStatus: this.states[device.did] } });
+            this.json2iob.parse(device.did + '.general', device, {
+              states: { latestStatus: this.states[device.did] },
+              channelName: 'General Updated at Start',
+            });
           }
         } else {
           this.log.error('No Devices found: ' + JSON.stringify(response.data));
