@@ -71,18 +71,12 @@ class Dreame extends utils.Adapter {
       await this.createRemotes();
       await this.updateDevicesViaSpec();
       await this.connectMqtt();
-      this.updateInterval = setInterval(
-        async () => {
-          await this.updateDevicesViaSpec();
-        },
-        this.config.interval * 60 * 1000,
-      );
-      this.refreshTokenInterval = setInterval(
-        async () => {
-          await this.refreshToken();
-        },
-        (this.session.expires_in - 100 || 3500) * 1000,
-      );
+      this.updateInterval = setInterval(async () => {
+        await this.updateDevicesViaSpec();
+      }, this.config.interval * 60 * 1000);
+      this.refreshTokenInterval = setInterval(async () => {
+        await this.refreshToken();
+      }, (this.session.expires_in - 100 || 3500) * 1000);
     }
   }
 
@@ -266,13 +260,7 @@ class Dreame extends utils.Adapter {
         */
         this.log.debug('Device list response: ' + JSON.stringify(response.data));
 
-        if (
-          response.data.code == '0' &&
-          response.data &&
-          response.data.data &&
-          response.data.data.page &&
-          response.data.data.page.records
-        ) {
+        if (response.data.code == '0' && response.data && response.data.data && response.data.data.page && response.data.data.page.records) {
           this.deviceArray = response.data.data.page.records;
           for (const device of this.deviceArray) {
             await this.extendObject(device.did, {
@@ -424,10 +412,7 @@ class Dreame extends utils.Adapter {
   async extractRemotesFromSpec(device) {
     const spec = this.specs[device.spec_type];
     this.log.info(`Extracting remotes from spec for ${device.model} ${spec.description}`);
-    this.log.info(
-      'You can detailed information about status and remotes here: http://www.merdok.org/miotspec/?model=' +
-        device.model,
-    );
+    this.log.info('You can detailed information about status and remotes here: http://www.merdok.org/miotspec/?model=' + device.model);
     let siid = 0;
     this.specStatusDict[device.did] = [];
 
@@ -527,8 +512,7 @@ class Dreame extends utils.Adapter {
               updateTime: 0,
             });
           }
-          this.specPropsToIdDict[device.did][remote.siid + '-' + remote.piid] =
-            device.did + '.' + path + '.' + typeName;
+          this.specPropsToIdDict[device.did][remote.siid + '-' + remote.piid] = device.did + '.' + path + '.' + typeName;
         }
         //extract actions
         let aiid = 0;
@@ -637,8 +621,7 @@ class Dreame extends utils.Adapter {
                 access: action.access,
               },
             });
-            this.specActiosnToIdDict[device.did][service.iid + '-' + action.iid] =
-              device.did + '.' + path + '.' + typeName;
+            this.specActiosnToIdDict[device.did][service.iid + '-' + action.iid] = device.did + '.' + path + '.' + typeName;
           }
         }
       } catch (error) {
@@ -687,16 +670,12 @@ class Dreame extends utils.Adapter {
             .then(async (res) => {
               if (res.data.code !== 0) {
                 if (res.data.code === -8) {
-                  this.log.debug(
-                    `Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`,
-                  );
+                  this.log.debug(`Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`);
 
                   this.log.debug(JSON.stringify(res.data));
                   return;
                 }
-                this.log.info(
-                  `Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`,
-                );
+                this.log.info(`Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`);
                 this.log.debug(JSON.stringify(res.data));
                 return;
               }
@@ -760,23 +739,78 @@ class Dreame extends utils.Adapter {
     if (this.mqttClient) {
       this.mqttClient.end();
     }
-    this.mqttClient = mqtt.connect('mqtts://app.mt.eu.iot.dreame.tech:19973', {
+    const url = this.deviceArray[0].bindDomain || 'app.mt.eu.iot.dreame.tech:19973';
+    this.mqttClient = mqtt.connect('mqtts://' + url, {
       clientId: 'p_' + crypto.randomBytes(8).toString('hex'),
       username: this.session.uid,
       password: this.session.access_token,
+      rejectUnauthorized: false,
     });
 
     this.mqttClient.on('connect', () => {
       this.log.info('Connected to MQTT');
       for (const device of this.deviceArray) {
-        this.mqttClient.subscribe(`/w/${device.did}/.`);
-        this.mqttClient.subscribe(`/status/${device.did}/${this.session.uid}/dreame.vacuum.r2449k/eu/`);
+        this.mqttClient.subscribe(`/status/${device.did}/${this.session.uid}/${device.model}/eu/`);
       }
     });
-    this.mqttClient.on('message', (topic, message) => {
+    this.mqttClient.on('message', async (topic, message) => {
       // message is Buffer
-      this.log.info(topic.toString());
-      this.log.info(message.toString());
+      this.log.debug(topic.toString());
+      this.log.debug(message.toString());
+      /*
+      {"id":92,"did":XXXXXX,"data":{"id":92,"method":"properties_changed","params":[{"did":"XXXXX","siid":2,"piid":6,"value":1},{"did":"XXXXX","siid":4,"piid":23,"value":5121}]}}
+      */
+      try {
+        message = JSON.parse(message.toString());
+      } catch (error) {
+        this.log.error(error);
+        return;
+      }
+      if (message.data && message.data.method === 'properties_changed') {
+        for (const element of message.data.params) {
+          if (!this.specPropsToIdDict[element.did]) {
+            this.log.debug(`No spec found for ${element.did}`);
+            continue;
+          }
+          let path = this.specPropsToIdDict[element.did][element.siid + '-' + element.piid];
+          if (!path) {
+            this.log.debug(`No path found for ${element.did} ${element.siid}-${element.piid}`);
+
+            path = `${element.did}.status.${element.siid}-${element.piid}`;
+
+            await this.extendObject(path, {
+              type: 'state',
+              common: {
+                name: path,
+                type: 'mixed',
+                role: 'state',
+                write: false,
+                read: true,
+              },
+              native: {},
+            });
+            this.setState(path, element.value, true);
+            path = `${element.did}.remote.${element.siid}-${element.piid}`;
+            await this.extendObject(path, {
+              type: 'state',
+              common: {
+                name: path,
+                type: 'mixed',
+                role: 'state',
+                write: true,
+                read: true,
+              },
+              native: {},
+            });
+          }
+          if (path) {
+            this.log.debug(`Set ${path} to ${element.value}`);
+            if (element.value != null) {
+              this.setState(path, element.value, true);
+            }
+          }
+        }
+      }
     });
     this.mqttClient.on('error', (error) => {
       this.log.error(error);
