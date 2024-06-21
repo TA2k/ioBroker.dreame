@@ -15,6 +15,16 @@
 
 Adapter for dreame home devices
 
+#### deviceId.status
+
+Current Status of the devices
+
+#### deviceId.remote
+
+Remote control of the devices
+Start: dreame.0.xxxxx.remote.start-sweep
+Stop: dreame.0.xxxxx.remote.start-charge
+
 ## Changelog
 
 <!--
