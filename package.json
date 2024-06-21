@@ -22,7 +22,8 @@
   "dependencies": {
     "@iobroker/adapter-core": "^3.1.6",
     "axios": "^1.7.2",
-    "json2iob": "^2.6.12"
+    "json2iob": "^2.6.12",
+    "mqtt": "^5.7.2"
   },
   "devDependencies": {
     "@alcalzone/release-script": "^3.7.0",

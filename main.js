@@ -10,6 +10,7 @@ const utils = require('@iobroker/adapter-core');
 const axios = require('axios').default;
 const Json2iob = require('json2iob');
 const crypto = require('crypto');
+const mqtt = require('mqtt');
 
 class Dreame extends utils.Adapter {
   /**
@@ -69,6 +70,7 @@ class Dreame extends utils.Adapter {
       await this.fetchSpecs();
       await this.createRemotes();
       await this.updateDevicesViaSpec();
+      await this.connectMqtt();
       this.updateInterval = setInterval(
         async () => {
           await this.updateDevicesViaSpec();
@@ -751,7 +753,35 @@ class Dreame extends utils.Adapter {
 
     return ['string', 'text'];
   }
+  async connectMqtt() {
+    if (this.mqttClient) {
+      this.mqttClient.end();
+    }
+    this.mqttClient = mqtt.connect('mqtts://app.mt.eu.iot.dreame.tech:19973', {
+      clientId: 'p_' + crypto.randomBytes(8).toString('hex'),
+      username: this.session.uid,
+      password: this.session.access_token,
+    });
 
+    this.mqttClient.on('connect', () => {
+      this.log.info('Connected to MQTT');
+      for (const device of this.deviceArray) {
+        this.mqttClient.subscribe(`/w/${device.did}/.`);
+        this.mqttClient.subscribe(`/status/${device.did}/${this.session.uid}/dreame.vacuum.r2449k/eu/`);
+      }
+    });
+    this.mqttClient.on('message', (topic, message) => {
+      // message is Buffer
+      this.log.info(topic.toString());
+      this.log.info(message.toString());
+    });
+    this.mqttClient.on('error', (error) => {
+      this.log.error(error);
+    });
+    this.mqttClient.on('close', () => {
+      this.log.info('MQTT Connection closed');
+    });
+  }
   async refreshToken() {
     await this.requestClient({
       method: 'post',
@@ -767,9 +797,6 @@ class Dreame extends utils.Adapter {
       },
       data: {
         grant_type: 'refresh_token',
-        scope: 'all',
-        platform: 'IOS',
-        type: 'account',
         refresh_token: this.session.refresh_token,
       },
     })
