@@ -25,6 +25,30 @@ Remote control of the devices
 Start: dreame.0.xxxxx.remote.start-sweep
 Stop: dreame.0.xxxxx.remote.start-charge
 
+Start Shortcut:
+dreame.0.XXXXXXXX.remote.start-clean
+
+```
+[
+                {
+                    "piid": 1,
+                    "value": 25
+                },
+                {
+                    "piid": 10,
+                    "value": "32"
+                }
+]
+```
+
+Id 30 = First shortcut
+
+Id 31 = second shortcut
+
+Id 32 = third shortcut
+
+...
+
 ## Changelog
 
 <!--
