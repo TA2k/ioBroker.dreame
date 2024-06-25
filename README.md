@@ -41,11 +41,13 @@ dreame.0.XXXXXXXX.remote.start-clean
 ]
 ```
 
-Id 30 = First shortcut
+"value": "32" -> Shortcut id
 
-Id 31 = second shortcut
+List of shortcuts:
 
-Id 32 = third shortcut
+dreame.0.XXXXX.status.4-48
+
+Names are base64 encoded
 
 ...
 
