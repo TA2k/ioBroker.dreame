@@ -771,6 +771,7 @@ class Dreame extends utils.Adapter {
       username: this.session.uid,
       password: this.session.access_token,
       rejectUnauthorized: false,
+      reconnectPeriod: 10000,
     });
 
     this.mqttClient.on('connect', () => {
@@ -838,8 +839,13 @@ class Dreame extends utils.Adapter {
         }
       }
     });
-    this.mqttClient.on('error', (error) => {
+    this.mqttClient.on('error', async (error) => {
       this.log.error(error);
+      if (error.message && error.message.includes('Not authorized')) {
+        this.log.error('Not authorized to connect to MQTT');
+        this.setState('info.connection', false, true);
+        await this.refreshToken();
+      }
     });
     this.mqttClient.on('close', () => {
       this.log.info('MQTT Connection closed');
@@ -867,6 +873,8 @@ class Dreame extends utils.Adapter {
         this.log.debug('Login response: ' + JSON.stringify(response.data));
         this.session = response.data;
         this.setState('info.connection', true, true);
+        //reconnect mqtt
+        this.connectMqtt();
       })
       .catch((error) => {
         this.log.error('Refresh Token  error: ' + error);
