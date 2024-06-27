@@ -574,7 +574,7 @@ class Dreame extends utils.Adapter {
                 states[value.value] = value.description;
               }
             }
-            let def;
+            let def = [];
             if (action.in.length) {
               remote.name = remote.name + ' in[';
 
@@ -744,7 +744,7 @@ class Dreame extends utils.Adapter {
   }
   getRole(element, write, valueRange) {
     if (!element) {
-      return ['boolean', 'switch'];
+      return ['string', 'text'];
     }
     if (element === 'bool' && !write) {
       return ['boolean', 'indicator'];
