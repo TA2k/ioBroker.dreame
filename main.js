@@ -574,7 +574,7 @@ class Dreame extends utils.Adapter {
                 states[value.value] = value.description;
               }
             }
-            let def = [];
+            let def = '[]';
             if (action.in.length) {
               remote.name = remote.name + ' in[';
 
