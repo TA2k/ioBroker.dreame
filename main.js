@@ -744,7 +744,7 @@ class Dreame extends utils.Adapter {
   }
   getRole(element, write, valueRange) {
     if (!element) {
-      return ['string', 'text'];
+      return ['string', 'json'];
     }
     if (element === 'bool' && !write) {
       return ['boolean', 'indicator'];
