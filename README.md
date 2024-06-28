@@ -26,6 +26,7 @@ Start: dreame.0.xxxxx.remote.start-sweep
 Stop: dreame.0.xxxxx.remote.start-charge
 
 Start Shortcut:
+
 dreame.0.XXXXXXXX.remote.start-clean
 
 ```
@@ -48,7 +49,7 @@ List of shortcuts:
 dreame.0.XXXXX.status.4-48
 
 Names are base64 encoded
-
+If there is no 4-48 state you have to start a short cut
 ...
 
 ## Changelog
