@@ -50,7 +50,43 @@ dreame.0.XXXXX.status.4-48
 
 Names are base64 encoded
 If there is no 4-48 state you have to start a short cut
-...
+
+### Room cleaning
+
+dreame.0.XXXX.remote.start-clean
+
+```
+ [
+                {
+                    "piid": 1,
+                    "value": 18
+                },
+                {
+                    "piid": 10,
+                    "value": "{\"selects\":[[X,1,3,2,1]]}"
+                }
+            ]
+```
+
+X = room id
+
+Multiple Rooms:
+
+```
+ [
+                {
+                    "piid": 1,
+                    "value": 18
+                },
+                {
+                    "piid": 10,
+                    "value": "{\"selects\":[[X,1,3,2,1],[Y,1,3,2,1]]}"
+                }
+            ]
+```
+
+X = room 1
+Y = room 2
 
 ## Changelog
 
