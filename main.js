@@ -71,18 +71,12 @@ class Dreame extends utils.Adapter {
       await this.createRemotes();
       await this.updateDevicesViaSpec();
       await this.connectMqtt();
-      this.updateInterval = setInterval(
-        async () => {
-          await this.updateDevicesViaSpec();
-        },
-        this.config.interval * 60 * 1000,
-      );
-      this.refreshTokenInterval = setInterval(
-        async () => {
-          await this.refreshToken();
-        },
-        (this.session.expires_in - 100 || 3500) * 1000,
-      );
+      this.updateInterval = setInterval(async () => {
+        await this.updateDevicesViaSpec();
+      }, this.config.interval * 60 * 1000);
+      this.refreshTokenInterval = setInterval(async () => {
+        await this.refreshToken();
+      }, (this.session.expires_in - 100 || 3500) * 1000);
     }
   }
 
@@ -266,13 +260,7 @@ class Dreame extends utils.Adapter {
         */
         this.log.debug('Device list response: ' + JSON.stringify(response.data));
 
-        if (
-          response.data.code == '0' &&
-          response.data &&
-          response.data.data &&
-          response.data.data.page &&
-          response.data.data.page.records
-        ) {
+        if (response.data.code == '0' && response.data && response.data.data && response.data.data.page && response.data.data.page.records) {
           this.deviceArray = response.data.data.page.records;
           for (const device of this.deviceArray) {
             await this.extendObject(device.did, {
@@ -282,19 +270,20 @@ class Dreame extends utils.Adapter {
               },
               native: {},
             });
-            const iotKeyValue = await this.requestClient({
-              method: 'get',
-              url: device.keyDefine.url,
-            })
-              .then((response) => {
-                this.log.debug('iotKeyValue response: ' + JSON.stringify(response.data));
-                return response.data;
+            if (device.keyDefine) {
+              const iotKeyValue = await this.requestClient({
+                method: 'get',
+                url: device.keyDefine.url,
               })
-              .catch((error) => {
-                this.log.error('iotKeyValue error: ' + error);
-                error.response && this.log.error('iotKeyValue error response: ' + JSON.stringify(error.response.data));
-              });
-            /*{
+                .then((response) => {
+                  this.log.debug('iotKeyValue response: ' + JSON.stringify(response.data));
+                  return response.data;
+                })
+                .catch((error) => {
+                  this.log.error('iotKeyValue error: ' + error);
+                  error.response && this.log.error('iotKeyValue error response: ' + JSON.stringify(error.response.data));
+                });
+              /*{
             "keyDefine": {
               "2.1": {
                 "de": {
@@ -304,19 +293,19 @@ class Dreame extends utils.Adapter {
             "hash": "54587b0364cdd763deba93a974ef5aa05cbe7dcc"
           }*/
 
-            if (iotKeyValue && iotKeyValue.keyDefine) {
-              //replace dot in id with - and select en language
+              if (iotKeyValue && iotKeyValue.keyDefine) {
+                //replace dot in id with - and select en language
 
-              for (const key in iotKeyValue.keyDefine) {
-                if (Object.hasOwnProperty.call(iotKeyValue.keyDefine, key)) {
-                  const element = iotKeyValue.keyDefine[key];
-                  if (element['en'] && element['en'] !== 'null') {
-                    this.states[device.did][key.replace(/\./g, '-')] = element['en'];
+                for (const key in iotKeyValue.keyDefine) {
+                  if (Object.hasOwnProperty.call(iotKeyValue.keyDefine, key)) {
+                    const element = iotKeyValue.keyDefine[key];
+                    if (element['en'] && element['en'] !== 'null') {
+                      this.states[device.did][key.replace(/\./g, '-')] = element['en'];
+                    }
                   }
                 }
               }
             }
-
             this.json2iob.parse(device.did + '.general', device, {
               states: { latestStatus: this.states[device.did] },
               channelName: 'General Updated at Start',
@@ -429,10 +418,7 @@ class Dreame extends utils.Adapter {
   async extractRemotesFromSpec(device) {
     const spec = this.specs[device.spec_type];
     this.log.info(`Extracting remotes from spec for ${device.model} ${spec.description}`);
-    this.log.info(
-      'You can detailed information about status and remotes here: http://www.merdok.org/miotspec/?model=' +
-        device.model,
-    );
+    this.log.info('You can detailed information about status and remotes here: http://www.merdok.org/miotspec/?model=' + device.model);
     let siid = 0;
     this.specStatusDict[device.did] = [];
 
@@ -532,8 +518,7 @@ class Dreame extends utils.Adapter {
               updateTime: 0,
             });
           }
-          this.specPropsToIdDict[device.did][remote.siid + '-' + remote.piid] =
-            device.did + '.' + path + '.' + typeName;
+          this.specPropsToIdDict[device.did][remote.siid + '-' + remote.piid] = device.did + '.' + path + '.' + typeName;
         }
         //extract actions
         let aiid = 0;
@@ -642,8 +627,7 @@ class Dreame extends utils.Adapter {
                 access: action.access,
               },
             });
-            this.specActiosnToIdDict[device.did][service.iid + '-' + action.iid] =
-              device.did + '.' + path + '.' + typeName;
+            this.specActiosnToIdDict[device.did][service.iid + '-' + action.iid] = device.did + '.' + path + '.' + typeName;
           }
         }
       } catch (error) {
@@ -692,16 +676,12 @@ class Dreame extends utils.Adapter {
             .then(async (res) => {
               if (res.data.code !== 0) {
                 if (res.data.code === -8) {
-                  this.log.debug(
-                    `Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`,
-                  );
+                  this.log.debug(`Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`);
 
                   this.log.debug(JSON.stringify(res.data));
                   return;
                 }
-                this.log.info(
-                  `Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`,
-                );
+                this.log.info(`Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`);
                 this.log.debug(JSON.stringify(res.data));
                 return;
               }
@@ -816,7 +796,7 @@ class Dreame extends utils.Adapter {
               },
               native: {},
             });
-            this.setState(path, element.value, true);
+            this.setState(path, JSON.stringify(element.value), true);
             path = `${element.did}.remote.${element.siid}-${element.piid}`;
             await this.extendObject(path, {
               type: 'state',
@@ -833,7 +813,8 @@ class Dreame extends utils.Adapter {
           if (path) {
             this.log.debug(`Set ${path} to ${element.value}`);
             if (element.value != null) {
-              this.setState(path, element.value, true);
+              // this.setState(path, JSON.stringify(element.value), true);
+              this.json2iob.parse(path, JSON.stringify(element));
             }
           }
         }
@@ -951,6 +932,13 @@ class Dreame extends utils.Adapter {
             }
           }
 
+          const device = this.deviceArray.filter((obj) => {
+            return obj.did === deviceId;
+          })[0];
+          if (device && device.model.includes('mower')) {
+            data.data.params.siid += 3;
+          }
+
           // data.params.in = [];
         }
         this.log.info(`Send: ${JSON.stringify(data)} to ${deviceId}`);
@@ -993,7 +981,8 @@ class Dreame extends utils.Adapter {
                 for (const outItem of out) {
                   const index = out.indexOf(outItem);
                   const outPath = this.specPropsToIdDict[result.did][result.siid + '-' + outItem];
-                  await this.setStateAsync(outPath, result.out[index], true);
+                  // await this.setState(outPath, result.out[index], true);
+                  this.json2iob.parse(outPath, result.out[index]);
                   this.log.info('Set ' + outPath + ' to ' + result.out[index]);
                 }
               } else {
