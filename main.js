@@ -71,12 +71,18 @@ class Dreame extends utils.Adapter {
       await this.createRemotes();
       await this.updateDevicesViaSpec();
       await this.connectMqtt();
-      this.updateInterval = setInterval(async () => {
-        await this.updateDevicesViaSpec();
-      }, this.config.interval * 60 * 1000);
-      this.refreshTokenInterval = setInterval(async () => {
-        await this.refreshToken();
-      }, (this.session.expires_in - 100 || 3500) * 1000);
+      this.updateInterval = setInterval(
+        async () => {
+          await this.updateDevicesViaSpec();
+        },
+        this.config.interval * 60 * 1000,
+      );
+      this.refreshTokenInterval = setInterval(
+        async () => {
+          await this.refreshToken();
+        },
+        (this.session.expires_in - 100 || 3500) * 1000,
+      );
     }
   }
 
@@ -260,7 +266,13 @@ class Dreame extends utils.Adapter {
         */
         this.log.debug('Device list response: ' + JSON.stringify(response.data));
 
-        if (response.data.code == '0' && response.data && response.data.data && response.data.data.page && response.data.data.page.records) {
+        if (
+          response.data.code == '0' &&
+          response.data &&
+          response.data.data &&
+          response.data.data.page &&
+          response.data.data.page.records
+        ) {
           this.deviceArray = response.data.data.page.records;
           for (const device of this.deviceArray) {
             await this.extendObject(device.did, {
@@ -281,7 +293,8 @@ class Dreame extends utils.Adapter {
                 })
                 .catch((error) => {
                   this.log.error('iotKeyValue error: ' + error);
-                  error.response && this.log.error('iotKeyValue error response: ' + JSON.stringify(error.response.data));
+                  error.response &&
+                    this.log.error('iotKeyValue error response: ' + JSON.stringify(error.response.data));
                 });
               /*{
             "keyDefine": {
@@ -418,7 +431,10 @@ class Dreame extends utils.Adapter {
   async extractRemotesFromSpec(device) {
     const spec = this.specs[device.spec_type];
     this.log.info(`Extracting remotes from spec for ${device.model} ${spec.description}`);
-    this.log.info('You can detailed information about status and remotes here: http://www.merdok.org/miotspec/?model=' + device.model);
+    this.log.info(
+      'You can detailed information about status and remotes here: http://www.merdok.org/miotspec/?model=' +
+        device.model,
+    );
     let siid = 0;
     this.specStatusDict[device.did] = [];
 
@@ -475,6 +491,32 @@ class Dreame extends utils.Adapter {
             },
             native: {},
           });
+          if (path === 'remote') {
+            await this.extendObject(device.did + '.' + path + '.customCommand', {
+              type: 'state',
+              common: {
+                name: 'Send Custom command via Spec',
+                type: 'string',
+                role: 'json',
+                def: `{
+            "aiid": 9,
+            "in": [
+                {
+                    "order": 4,
+                    "region": [
+                        1
+                    ],
+                    "type": "order"
+                }
+            ],
+            "siid": 5
+        }`,
+                write: true,
+                read: true,
+              },
+              native: {},
+            });
+          }
           const states = {};
           if (property['value-list']) {
             for (const value of property['value-list']) {
@@ -518,7 +560,8 @@ class Dreame extends utils.Adapter {
               updateTime: 0,
             });
           }
-          this.specPropsToIdDict[device.did][remote.siid + '-' + remote.piid] = device.did + '.' + path + '.' + typeName;
+          this.specPropsToIdDict[device.did][remote.siid + '-' + remote.piid] =
+            device.did + '.' + path + '.' + typeName;
         }
         //extract actions
         let aiid = 0;
@@ -627,7 +670,8 @@ class Dreame extends utils.Adapter {
                 access: action.access,
               },
             });
-            this.specActiosnToIdDict[device.did][service.iid + '-' + action.iid] = device.did + '.' + path + '.' + typeName;
+            this.specActiosnToIdDict[device.did][service.iid + '-' + action.iid] =
+              device.did + '.' + path + '.' + typeName;
           }
         }
       } catch (error) {
@@ -676,12 +720,16 @@ class Dreame extends utils.Adapter {
             .then(async (res) => {
               if (res.data.code !== 0) {
                 if (res.data.code === -8) {
-                  this.log.debug(`Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`);
+                  this.log.debug(
+                    `Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`,
+                  );
 
                   this.log.debug(JSON.stringify(res.data));
                   return;
                 }
-                this.log.info(`Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`);
+                this.log.info(
+                  `Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`,
+                );
                 this.log.debug(JSON.stringify(res.data));
                 return;
               }
@@ -940,6 +988,15 @@ class Dreame extends utils.Adapter {
           }
 
           // data.params.in = [];
+        }
+        if (command === 'customCommand') {
+          try {
+            data.data.params = JSON.parse(state.val);
+            data.data.params.did = deviceId;
+          } catch (error) {
+            this.log.error(error);
+            return;
+          }
         }
         this.log.info(`Send: ${JSON.stringify(data)} to ${deviceId}`);
 
