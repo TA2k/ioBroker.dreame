@@ -355,7 +355,7 @@ class Dreame extends utils.Adapter {
         });
       if (type.length === 0) {
         this.log.info(`No spec found for ${device.model} set to default spec type`);
-        type[0] = 'urn:miot-spec-v2:device:vacuum:0000A006:dreame-r2228z:1';
+        type[0] = 'urn:miot-spec-v2:device:vacuum:0000A006:dreame-r2320:1';
       }
       device.spec_type = type[0];
       specs.push(type[0]);
