@@ -1,9 +1,7 @@
 'use strict';
-
 /*
  * Created with @iobroker/create-adapter v2.6.3
  */
-
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
@@ -11,7 +9,55 @@ const axios = require('axios').default;
 const Json2iob = require('json2iob');
 const crypto = require('crypto');
 const mqtt = require('mqtt');
-
+const zlib = require('node:zlib');
+const DreameLevel = Object.freeze({
+  0: 'Silent',
+  1: 'Basic',
+  2: 'Strong',
+  3: 'Full Speed',
+});
+const DreameCleaningMode = Object.freeze({
+  0: 'Sweeping',
+  1: 'Mopping',
+  2: 'Sweeping and Mopping',
+});
+let Waterstr = '';
+for (let i = 1; i < 6; i++) {
+  Waterstr = Waterstr + i + ':Low ' + i + ',';
+}
+for (let i = 6; i < 17; i++) {
+  Waterstr = Waterstr + i + ':Middle ' + i + ',';
+}
+for (let i = 17; i < 28; i++) {
+  Waterstr = Waterstr + i + ':Height ' + i + ',';
+}
+for (let i = 28; i < 33; i++) {
+  Waterstr = Waterstr + i + ':Ultra ' + i + ',';
+}
+const DreameWaterVolume = Object.fromEntries(
+  Waterstr.replace(/,.$/, '')
+    .split(',')
+    .map((i) => i.split(':')),
+);
+const DreameRepeat = Object.freeze({
+  1: '1',
+  2: '2',
+  3: '3',
+});
+const DreameRoute = Object.freeze({
+  1: 'Standart',
+  2: 'Intensive',
+  3: 'Deep',
+  546: 'Intelligent',
+});
+const DreameRoomClean = Object.freeze({
+  0: 'No',
+  1: 'Yes',
+});
+var UpdateCleanset = true;
+var CheckRCObject = false;
+var CheckSCObject = false;
+var CheckUObject = true;
 class Dreame extends utils.Adapter {
   /**
    * @param {Partial<utils.AdapterOptions>} [options={}]
@@ -31,13 +77,11 @@ class Dreame extends utils.Adapter {
       withCredentials: true,
       timeout: 3 * 60 * 1000, //3min client timeout
     });
-
     this.remoteCommands = {};
     this.specStatusDict = {};
     this.specPropsToIdDict = {};
     this.specActiosnToIdDict = {};
   }
-
   /**
    * Is called when databases are connected and adapter received configuration.
    */
@@ -55,16 +99,14 @@ class Dreame extends utils.Adapter {
       this.log.error('Please set username and password in the instance settings');
       return;
     }
-
     this.updateInterval = null;
     this.reLoginTimeout = null;
     this.refreshTokenTimeout = null;
     this.session = {};
     this.subscribeStates('*.remote.*');
-
+    this.subscribeStates('*.cleanset.*');
     this.log.info('Login to Dreame Cloud...');
     await this.login();
-
     if (this.session.access_token) {
       await this.getDeviceList();
       await this.fetchSpecs();
@@ -443,7 +485,6 @@ class Dreame extends utils.Adapter {
     );
     let siid = 0;
     this.specStatusDict[device.did] = [];
-
     this.specActiosnToIdDict[device.did] = {};
     this.specPropsToIdDict[device.did] = {};
     for (const service of spec.services) {
@@ -460,8 +501,8 @@ class Dreame extends utils.Adapter {
         this.log.warn(`No properties for ${device.model} ${service.description} cannot extract information`);
         continue;
       }
-
       try {
+        //this.log.info(JSON.stringify(service));
         let piid = 0;
         for (const property of service.properties) {
           if (property.iid) {
@@ -556,7 +597,6 @@ class Dreame extends utils.Adapter {
               access: property.access,
             },
           });
-
           if (property.access.includes('notify')) {
             this.specStatusDict[device.did].push({
               did: device.did,
@@ -588,13 +628,10 @@ class Dreame extends utils.Adapter {
               access: action.access,
             };
             const typeName = action.type.split(':')[3];
-
             const path = 'remote';
             const write = true;
-
             let [type, role] = this.getRole(action.format, write, action['value-range']);
             this.log.debug(`Found actions for ${device.model} ${service.description} ${action.description}`);
-
             await this.extendObject(device.did + '.' + path, {
               type: 'channel',
               common: {
@@ -792,7 +829,6 @@ class Dreame extends utils.Adapter {
     if ((element.indexOf('int') !== -1 || valueRange) && write) {
       return ['number', 'level'];
     }
-
     return ['string', 'text'];
   }
   async connectMqtt() {
@@ -807,7 +843,6 @@ class Dreame extends utils.Adapter {
       rejectUnauthorized: false,
       reconnectPeriod: 10000,
     });
-
     this.mqttClient.on('connect', () => {
       this.log.info('Connected to MQTT');
       for (const device of this.deviceArray) {
@@ -819,10 +854,11 @@ class Dreame extends utils.Adapter {
       this.log.debug(topic.toString());
       this.log.debug(message.toString());
       /*
-      {"id":92,"did":XXXXXX,"data":{"id":92,"method":"properties_changed","params":[{"did":"XXXXX","siid":2,"piid":6,"value":1},{"did":"XXXXX","siid":4,"piid":23,"value":5121}]}}
-      */
+            {"id":92,"did":XXXXXX,"data":{"id":92,"method":"properties_changed","params":[{"did":"XXXXX","siid":2,"piid":6,"value":1},{"did":"XXXXX","siid":4,"piid":23,"value":5121}]}}
+            */
       try {
         message = JSON.parse(message.toString());
+        //this.log.info(' Get Message:' + JSON.stringify(message));
       } catch (error) {
         this.log.error(error);
         return;
@@ -833,12 +869,24 @@ class Dreame extends utils.Adapter {
             this.log.debug(`No spec found for ${element.did}`);
             continue;
           }
+          if (JSON.stringify(element.siid) === '6' && JSON.stringify(element.piid) === '1') {
+            //this.log.info(' Map data:' + JSON.stringify(element.value));
+            let encode = JSON.stringify(element.value);
+            this.extendObject(element.did + '.map', {
+              type: 'channel',
+              common: {
+                name: 'Map and map related controls',
+              },
+              native: {},
+            });
+            let mappath = `${element.did}` + '.map.';
+            this.uncompress(encode, mappath);
+          }
+          //this.log.info(' Map data:' + JSON.stringify(element.siid) + ' => ' + JSON.stringify(element.piid));
           let path = this.specPropsToIdDict[element.did][element.siid + '-' + element.piid];
           if (!path) {
             this.log.debug(`No path found for ${element.did} ${element.siid}-${element.piid}`);
-
             path = `${element.did}.status.${element.siid}-${element.piid}`;
-
             await this.extendObject(path, {
               type: 'state',
               common: {
@@ -886,6 +934,277 @@ class Dreame extends utils.Adapter {
       this.log.info('MQTT Connection closed');
     });
   }
+  async uncompress(In_Compressed, In_path) {
+    var input_Raw = In_Compressed.replace(/-/g, '+').replace(/_/g, '/');
+    var encodedData = Buffer.from(input_Raw, 'base64');
+    var decode = zlib.inflateSync(encodedData);
+    //this.log.info(' Zlib inflate  : ' + decode);
+    /*csvar mapHeader = decode.toString().split("{");
+    let GetHeader = mapHeader[0];
+	this.log.info(' decode Header 1: ' + GetHeader);
+	try {
+		var encodedDataH = Buffer.from(GetHeader, 'base64');
+		this.log.info(' Base64 decode Header : ' + encodedDataH);
+		var decodeHeader = zlib.inflateSync(encodedDataH);
+		} catch (e) {
+        this.log.info(' Error decode Header 2: ' + e);
+        } finally {
+        this.log.info(' decode Header 2: ' + decodeHeader);
+        }
+    */
+    var jsondecode = decode.toString().match(/[{\[]{1}([,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]|".*?")+[}\]]{1}/gis);
+    var jsonread = ((_) => {
+      try {
+        return JSON.parse(jsondecode);
+      } catch (err) {
+        this.log.info('Error:' + err);
+        return undefined;
+      }
+    })();
+    if (!jsonread) {
+      return;
+    }
+    await this.setObjectNotExists(In_path + 'cleanset.Update', {
+      type: 'state',
+      common: {
+        name: 'Update cleanset Path',
+        type: 'boolean',
+        role: 'switch',
+        write: true,
+        read: true,
+      },
+      native: {},
+    });
+    try {
+      var CheckUObjectOb = await this.getStateAsync(In_path + 'cleanset.Update');
+      CheckUObject = CheckUObjectOb.val;
+    } catch (error) {
+      this.log.error(error);
+      if (CheckUObject == null) {
+        this.setStateAsync(In_path + 'cleanset.Update', true, true);
+        CheckUObject = true;
+      }
+    }
+    await this.setObjectNotExists(In_path + 'cleanset.Start-Clean', {
+      type: 'state',
+      common: {
+        name: 'start cleaning for the selected rooms',
+        type: 'boolean',
+        role: 'switch',
+        write: true,
+        read: true,
+      },
+      native: {},
+    });
+    try {
+      var CheckSCObjectOb = await this.getStateAsync(In_path + 'cleanset.Start-Clean');
+      CheckSCObject = CheckSCObjectOb.val;
+    } catch (error) {
+      this.log.error(error);
+      if (CheckSCObject == null) {
+        this.setStateAsync(In_path + 'cleanset.Start-Clean', false, true);
+        CheckSCObject = false;
+      }
+    }
+    await this.setObjectNotExists(In_path + 'cleanset.Restart', {
+      type: 'state',
+      common: {
+        name: 'stop ongoing cleaning and start new cleaning',
+        type: 'boolean',
+        role: 'switch',
+        write: true,
+        read: true,
+      },
+      native: {},
+    });
+    try {
+      var CheckRCObjectOb = await this.getStateAsync(In_path + 'cleanset.Restart');
+      CheckRCObject = CheckRCObjectOb.val;
+    } catch (error) {
+      this.log.error(error);
+      if (CheckRCObject == null) {
+        this.setStateAsync(In_path + 'cleanset.Restart', false, true);
+        CheckRCObject = false;
+      }
+    }
+    for (var [key, value] of Object.entries(jsonread)) {
+      //this.log.info(' decode Map JSON:' + `${key}: ${value}`);
+      if (Object.prototype.toString.call(value) !== '[object Object]') {
+        if (value != null) {
+          let pathMap = In_path + key;
+          this.getType(value, pathMap);
+          if (typeof value === 'object' && value !== null) {
+            this.setState(pathMap, JSON.stringify(value), true);
+          } else {
+            this.setState(pathMap, value, true);
+          }
+        }
+      }
+      if (typeof value === 'object' && value !== null) {
+        if (Object.prototype.toString.call(value) === '[object Object]') {
+          for (var [Subkey, Subvalue] of Object.entries(value)) {
+            //this.log.info(' decode subkey ' + key + ' ==> ' + `${Subkey}: ${Subvalue}`);
+            if (value != null) {
+              let pathMap = In_path + key + '.' + Subkey;
+              if (pathMap.toString().indexOf('.cleanset') != -1) {
+                //this.log.info(' Long subkey ' + Subvalue.length + ' / ' + Subvalue[3]);
+                if (Subvalue.length == 6) {
+                  if (UpdateCleanset) {
+                    for (let i = 0; i < Subvalue.length; i += 1) {
+                      //1: DreameLevel, 2: DreameWaterVolume, 3: DreameRepeat, 4: DreameRoomNumber, 5: DreameCleaningMode, 6: Route
+                      //map-req[{"piid": 2,"value": "{\"req_type\":1,\"frame_type\":I,\"force_type\":1}"}]
+                      let pathMap = In_path + key + '.' + Subkey + '.RoomSettings';
+                      this.getType(JSON.stringify(Subvalue), pathMap);
+                      this.setState(pathMap, JSON.stringify(Subvalue), true);
+                      pathMap = In_path + key + '.' + Subkey + '.RoomOrder';
+                      this.getType(parseFloat(Subvalue[3]), pathMap);
+                      this.setState(pathMap, parseFloat(Subvalue[3]), true);
+                      pathMap = In_path + key + '.' + Subkey + '.Level';
+                      this.setcleansetPath(pathMap, DreameLevel);
+                      this.setState(pathMap, Subvalue[0], true);
+                      pathMap = In_path + key + '.' + Subkey + '.CleaningMode';
+                      this.setcleansetPath(pathMap, DreameCleaningMode);
+                      this.setState(pathMap, Subvalue[4], true);
+                      pathMap = In_path + key + '.' + Subkey + '.WaterVolume';
+                      this.setcleansetPath(pathMap, DreameWaterVolume);
+                      this.setState(pathMap, Subvalue[1], true);
+                      pathMap = In_path + key + '.' + Subkey + '.Repeat';
+                      this.setcleansetPath(pathMap, DreameRepeat);
+                      this.setState(pathMap, Subvalue[2], true);
+                      pathMap = In_path + key + '.' + Subkey + '.Route';
+                      this.setcleansetPath(pathMap, DreameRoute);
+                      this.setState(pathMap, Subvalue[5], true);
+                      pathMap = In_path + key + '.' + Subkey + '.Cleaning';
+                      await this.setcleansetPath(pathMap, DreameRoomClean);
+                      const Cleanstates = await this.getStateAsync(pathMap);
+                      if (Cleanstates == null) {
+                        this.setStateAsync(pathMap, 0, true);
+                      }
+                    }
+                  }
+                }
+              } else {
+                this.getType(Subvalue, pathMap);
+                this.setState(pathMap, JSON.stringify(Subvalue), true);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  async setcleansetPath(createpath, CsetS) {
+    //let jsonString = `{${Object.entries(CsetS).map(([key, value]) => `"${key}":"${value}"`).join(', ')}}`;
+    await this.extendObject(createpath, {
+      type: 'state',
+      common: {
+        name: createpath,
+        type: 'number',
+        role: 'level',
+        states: CsetS,
+        write: true,
+        read: true,
+      },
+      native: {},
+    });
+  }
+  async getType(element, createpath) {
+    var setrolT = ['string', 'text'];
+    var Typeof = Object.prototype.toString
+      .call(element)
+      .match(/\s([\w]+)/)[1]
+      .toLowerCase();
+    switch (Typeof) {
+      case 'object':
+        setrolT[0] = 'json';
+        setrolT[1] = 'Object';
+        break;
+      case 'array':
+        setrolT[0] = 'json';
+        setrolT[1] = 'Array';
+        break;
+      case 'boolean':
+        setrolT[0] = 'boolean';
+        setrolT[1] = 'switch';
+        break;
+      case 'number':
+        setrolT[0] = 'number';
+        setrolT[1] = 'value';
+        break;
+      case 'undefined':
+        setrolT[0] = 'string';
+        setrolT[1] = 'text';
+        break;
+    }
+    let Stwrite = false;
+    if (createpath.toString().indexOf('.cleanset') != -1) {
+      Stwrite = true;
+    }
+    await this.extendObject(createpath, {
+      type: 'state',
+      common: {
+        name: createpath,
+        type: setrolT[0].toString(),
+        role: setrolT[1].toString(),
+        write: Stwrite,
+        read: true,
+      },
+      native: {},
+    });
+    //this.log.info(' ======> common Type:' + setrolT + " / " + setrolT[1] + " / " + Typeof + " ==> " + element);
+  }
+  async jsonFromString(str) {
+    const matches = str.match(/[{\[]{1}([,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]|".*?")+[}\]]{1}/gis);
+    return Object.assign({}, ...matches.map((m) => m)); //JSON.parse(m)));
+  }
+  async UpdateRoomSettings(RoomInd, ChangeType, ChangeVal) {
+    const RoomIdOb = await this.getStateAsync(RoomInd + '.RoomOrder');
+    const RoomId = RoomIdOb.val;
+    let stateSuctionLevel, stateWaterVolume, stateRepeats, stateCleaningMode, stateRoute;
+
+    const getStateValues = async () => {
+      const stateSuctionLevelOb = await this.getStateAsync(RoomInd + '.Level');
+      stateSuctionLevel = stateSuctionLevelOb.val;
+
+      const stateWaterVolumeOb = await this.getStateAsync(RoomInd + '.WaterVolume');
+      stateWaterVolume = stateWaterVolumeOb.val;
+
+      const stateRepeatsOb = await this.getStateAsync(RoomInd + '.Repeat');
+      stateRepeats = stateRepeatsOb.val;
+
+      const stateCleaningModeOb = await this.getStateAsync(RoomInd + '.CleaningMode');
+      stateCleaningMode = stateCleaningModeOb.val;
+
+      const stateRouteOb = await this.getStateAsync(RoomInd + '.Route');
+      stateRoute = stateRouteOb.val;
+    };
+
+    await getStateValues();
+
+    switch (ChangeType) {
+      case 1:
+        stateSuctionLevel = ChangeVal;
+        break;
+      case 2:
+        stateWaterVolume = ChangeVal;
+        break;
+      case 3:
+        stateRepeats = ChangeVal;
+        break;
+      case 4:
+        stateCleaningMode = ChangeVal;
+        break;
+      case 5:
+        stateRoute = ChangeVal;
+        break;
+    }
+
+    const TosRetString = JSON.stringify({
+      customeClean: [[RoomId, stateSuctionLevel, stateWaterVolume, stateRepeats, stateCleaningMode, stateRoute]],
+    });
+
+    return TosRetString;
+  }
   async refreshToken() {
     await this.requestClient({
       method: 'post',
@@ -928,7 +1247,6 @@ class Dreame extends utils.Adapter {
       callback();
     }
   }
-
   /**
    * Is called if a subscribed state changes
    * @param {string} id
@@ -976,7 +1294,11 @@ class Dreame extends utils.Adapter {
           };
         }
         if (stateObject && stateObject.native.aiid) {
-          data.data.params = { did: deviceId, siid: stateObject.native.siid, aiid: stateObject.native.aiid };
+          data.data.params = {
+            did: deviceId,
+            siid: stateObject.native.siid,
+            aiid: stateObject.native.aiid,
+          };
           if (typeof state.val !== 'boolean') {
             try {
               data.data.params['in'] = JSON.parse(state.val);
@@ -985,14 +1307,12 @@ class Dreame extends utils.Adapter {
               return;
             }
           }
-
           const device = this.deviceArray.filter((obj) => {
             return obj.did === deviceId;
           })[0];
           if (device && device.model.includes('mower')) {
             data.data.params.siid += 3;
           }
-
           // data.params.in = [];
         }
         if (command === 'customCommand') {
@@ -1004,8 +1324,246 @@ class Dreame extends utils.Adapter {
             return;
           }
         }
+        if (id.toString().indexOf('.cleanset') != -1) {
+          var RoomIdx = id.lastIndexOf('.');
+          var RoomOjct = id.substring(0, RoomIdx);
+          //this.log.info(' ======> Changed:' + id + ' to ' + state.val);
+          var RetRoomSettings = '';
+          if (id.split('.')[5] === 'Update') {
+            UpdateCleanset = state.val === true ? true : false;
+          }
+          if (id.split('.')[5] === 'Start-Clean') {
+            let GetCleanChange = state.val;
+            if (GetCleanChange) {
+              try {
+                let GetCleanRoomState = await this.getStatesAsync('*.cleanset.*.Cleaning');
+                var GetRoomIdOb,
+                  GetRoomId,
+                  GetRepeatsOb,
+                  GetRepeats,
+                  GetSuctionLevelOb,
+                  GetSuctionLevel,
+                  GetWaterVolumeOb,
+                  GetWaterVolume;
+                var GetMultiId = 0;
+                var ToGetString = '{\"selects\":[';
+                for (let idx in GetCleanRoomState) {
+                  if (GetCleanRoomState[idx].val == 1) {
+                    ToGetString += GetMultiId === 0 ? '[' : ',[';
+                    GetMultiId += 1;
+                    var RIdx = idx.lastIndexOf('.');
+                    var RPath = idx.substring(0, RIdx);
+                    //start-clean[{"piid": 1,"value": 18},{"piid": 10,"value": "{\"selects\": [[3,1,3,2,1]]}"}]
+                    //Room ID, Repeats, Suction Level, Water Volume, Multi Room Id
+                    GetRoomIdOb = await this.getStateAsync(RPath + '.RoomOrder');
+                    GetRoomId = GetRoomIdOb.val;
+                    GetRepeatsOb = await this.getStateAsync(RPath + '.Repeat');
+                    GetRepeats = GetRepeatsOb.val;
+                    GetSuctionLevelOb = await this.getStateAsync(RPath + '.Level');
+                    GetSuctionLevel = GetSuctionLevelOb.val;
+                    GetWaterVolumeOb = await this.getStateAsync(RPath + '.WaterVolume');
+                    GetWaterVolume = GetWaterVolumeOb.val;
+                    ToGetString +=
+                      GetRoomId +
+                      ',' +
+                      GetRepeats +
+                      ',' +
+                      GetSuctionLevel +
+                      ',' +
+                      GetWaterVolume +
+                      ',' +
+                      GetMultiId +
+                      ']';
+                  }
+                }
+                ToGetString += ']}';
+                this.log.info('start-clean ' + ToGetString);
+                if (CheckRCObject) {
+                  data.data.params = {
+                    did: deviceId,
+                    siid: 4,
+                    aiid: 2,
+                    in: [1],
+                  };
+                  await this.requestClient({
+                    method: 'post',
+                    url: 'https://eu.iot.dreame.tech:13267/dreame-iot-com-10000/device/sendCommand',
+                    headers: {
+                      'user-agent': 'Dart/3.2 (dart:io)',
+                      'dreame-meta': 'cv=i_829',
+                      'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
+                      'tenant-id': '000000',
+                      host: 'eu.iot.dreame.tech:13267',
+                      authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
+                      'content-type': 'application/json',
+                      'dreame-auth': 'bearer ' + this.session.access_token,
+                    },
+                    data: data,
+                  })
+                    .then(async (res) => {
+                      if (res.data.code !== 0) {
+                        this.log.error('Error setting device state');
+                        this.log.error(JSON.stringify(res.data));
+                        this.setStateAsync(id, false, true);
+                        CheckSCObject = false;
+                        return;
+                      }
+                      if (res.data.result && res.data.result.length > 0) {
+                        res.data = res.data.result[0];
+                      }
+                      this.log.info(JSON.stringify(res.data));
+                      if (!res.data.result) {
+                        this.setStateAsync(id, false, true);
+                        CheckSCObject = false;
+                        return;
+                      }
+                      const result = res.data.result;
+                      if (result.out) {
+                        this.log.info(JSON.stringify(result.out));
+                      }
+                    })
+                    .catch(async (error) => {
+                      this.log.error(error);
+                      error.response && this.log.error(JSON.stringify(error.response.data));
+                    });
+                }
+                if (GetMultiId > 0) {
+                  data.data.params = {
+                    did: deviceId,
+                    siid: 4,
+                    aiid: 1,
+                    in: [
+                      {
+                        piid: 1,
+                        value: 18,
+                      },
+                      {
+                        piid: 10,
+                        value: ToGetString,
+                      },
+                    ],
+                  };
+                } else {
+                  this.setStateAsync(id, false, true);
+                  CheckSCObject = false;
+                  return;
+                }
+              } catch (error) {
+                this.log.error(error);
+                this.setStateAsync(id, false, true);
+                CheckSCObject = false;
+                return;
+              }
+            }
+            this.setStateAsync(id, false, true);
+            CheckSCObject = false;
+          }
+          /*
+					[{"piid": 4,"value": "{\"customeClean\":[[5,2,27,2,2,2]]}"}]
+					Room ID: [X,2,27,2,2,2]
+					Suction Level: [5,X,27,2,2,2] 0: Quiet, 1: Standard, 2: Strong, 3: Turbo
+                    Water Volume: [5,2,X,2,2,2] 2: Low, 3: Medium, 4:High
+                    Repeats: [5,2,27,X,2,2] 1,2,3
+                    Cleaning Mode: [5,2,27,2,X,2] 0: Sweeping, 1: Mopping, 2: Sweeping and Mopping
+					Route: [5,2,27,2,2,X] 1: Standart 2: Intensive 3:Deep
+                    */
+          if (id.split('.')[6] === 'Level') {
+            try {
+              RetRoomSettings = await this.UpdateRoomSettings(RoomOjct, 1, state.val);
+              data.data.params = {
+                did: deviceId,
+                siid: 6,
+                aiid: 2,
+                in: [
+                  {
+                    piid: 4,
+                    value: RetRoomSettings,
+                  },
+                ],
+              };
+            } catch (error) {
+              this.log.error(error);
+              return;
+            }
+          }
+          if (id.split('.')[6] === 'WaterVolume') {
+            try {
+              RetRoomSettings = await this.UpdateRoomSettings(RoomOjct, 2, state.val);
+              data.data.params = {
+                did: deviceId,
+                siid: 6,
+                aiid: 2,
+                in: [
+                  {
+                    piid: 4,
+                    value: RetRoomSettings,
+                  },
+                ],
+              };
+            } catch (error) {
+              this.log.error(error);
+              return;
+            }
+          }
+          if (id.split('.')[6] === 'Repeat') {
+            try {
+              RetRoomSettings = await this.UpdateRoomSettings(RoomOjct, 3, state.val);
+              data.data.params = {
+                did: deviceId,
+                siid: 6,
+                aiid: 2,
+                in: [
+                  {
+                    piid: 4,
+                    value: RetRoomSettings,
+                  },
+                ],
+              };
+            } catch (error) {
+              this.log.error(error);
+              return;
+            }
+          }
+          if (id.split('.')[6] === 'CleaningMode') {
+            try {
+              RetRoomSettings = await this.UpdateRoomSettings(RoomOjct, 4, state.val);
+              data.data.params = {
+                did: deviceId,
+                siid: 6,
+                aiid: 2,
+                in: [
+                  {
+                    piid: 4,
+                    value: RetRoomSettings,
+                  },
+                ],
+              };
+            } catch (error) {
+              this.log.error(error);
+              return;
+            }
+          }
+          if (id.split('.')[6] === 'Route') {
+            try {
+              RetRoomSettings = await this.UpdateRoomSettings(RoomOjct, 5, state.val);
+              data.data.params = {
+                did: deviceId,
+                siid: 6,
+                aiid: 2,
+                in: [
+                  {
+                    piid: 4,
+                    value: RetRoomSettings,
+                  },
+                ],
+              };
+            } catch (error) {
+              this.log.error(error);
+              return;
+            }
+          }
+        }
         this.log.info(`Send: ${JSON.stringify(data)} to ${deviceId}`);
-
         await this.requestClient({
           method: 'post',
           url: 'https://eu.iot.dreame.tech:13267/dreame-iot-com-10000/device/sendCommand',
@@ -1065,7 +1623,6 @@ class Dreame extends utils.Adapter {
     }
   }
 }
-
 if (require.main !== module) {
   // Export the constructor in compact mode
   /**
