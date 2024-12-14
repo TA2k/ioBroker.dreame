@@ -531,7 +531,7 @@ class Dreame extends utils.Adapter {
             type: 'state',
             common: {
               name: remote.name || '',
-              type: type,
+              type: 'mixed',
               role: role,
               unit: unit,
               min: property['value-range'] ? property['value-range'][0] : undefined,
@@ -648,7 +648,7 @@ class Dreame extends utils.Adapter {
               type: 'state',
               common: {
                 name: remote.name || '',
-                type: type,
+                type: 'mixed',
                 role: role,
                 unit: unit,
                 min: action['value-range'] ? action['value-range'][0] : undefined,
