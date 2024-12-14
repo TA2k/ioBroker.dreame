@@ -88,6 +88,23 @@ Multiple Rooms:
 X = room 1
 Y = room 2
 
+Karte wechseln
+dreame.XXXXXXX.remote.update-map
+
+```
+ [
+                {
+                    "piid": 4,
+                    "value": "{\"sm\":{},\"mapid\":X}"
+                }
+            ]
+```
+
+X = mapId
+dreame.0.XXXX.status.6-99
+oder
+dreame.0.XXXX.map.curid
+
 ## Changelog
 
 <!--
