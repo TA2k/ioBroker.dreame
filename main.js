@@ -1159,28 +1159,34 @@ class Dreame extends utils.Adapter {
   }
   async UpdateRoomSettings(RoomInd, ChangeType, ChangeVal) {
     const RoomIdOb = await this.getStateAsync(RoomInd + '.RoomOrder');
-    const RoomId = RoomIdOb?.val;
-    if (RoomId === undefined || RoomId === null) {
-      throw new Error('RoomId is undefined or null');
-    }
-
+    const RoomId = RoomIdOb.val;
     let stateSuctionLevel, stateWaterVolume, stateRepeats, stateCleaningMode, stateRoute;
 
     const getStateValues = async () => {
       const stateSuctionLevelOb = await this.getStateAsync(RoomInd + '.Level');
-      stateSuctionLevel = stateSuctionLevelOb?.val;
+      if (stateSuctionLevelOb) {
+        stateSuctionLevel = stateSuctionLevelOb.val;
+      }
 
       const stateWaterVolumeOb = await this.getStateAsync(RoomInd + '.WaterVolume');
-      stateWaterVolume = stateWaterVolumeOb?.val;
+      if (stateWaterVolumeOb) {
+        stateWaterVolume = stateWaterVolumeOb.val;
+      }
 
       const stateRepeatsOb = await this.getStateAsync(RoomInd + '.Repeat');
-      stateRepeats = stateRepeatsOb?.val;
+      if (stateRepeatsOb) {
+        stateRepeats = stateRepeatsOb.val;
+      }
 
       const stateCleaningModeOb = await this.getStateAsync(RoomInd + '.CleaningMode');
-      stateCleaningMode = stateCleaningModeOb?.val;
+      if (stateCleaningModeOb) {
+        stateCleaningMode = stateCleaningModeOb.val;
+      }
 
       const stateRouteOb = await this.getStateAsync(RoomInd + '.Route');
-      stateRoute = stateRouteOb?.val;
+      if (stateRouteOb) {
+        stateRoute = stateRouteOb.val;
+      }
     };
 
     await getStateValues();
