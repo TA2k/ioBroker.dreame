@@ -111,8 +111,11 @@ dreame.0.XXXX.map.curid
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### 0.1.0 (2024-12-14)
 
-### **WORK IN PROGRESS**
+- bugfixes
+
+### 0.1.0 (2024-12-14)
 
 - (TA2k) initial release
 
