@@ -331,6 +331,7 @@ class Dreame extends utils.Adapter {
       .catch((error) => {
         this.log.error('Device list error: ' + error);
         error.response && this.log.error('Device list error response: ' + JSON.stringify(error.response.data));
+        this.log.error(error.stack);
       });
   }
 
