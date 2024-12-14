@@ -916,7 +916,7 @@ class Dreame extends utils.Adapter {
             this.log.debug(`Set ${path} to ${element.value}`);
             if (element.value != null) {
               // this.setState(path, JSON.stringify(element.value), true);
-              this.json2iob.parse(path, JSON.stringify(element));
+              this.json2iob.parse(path, JSON.stringify(element.value));
             }
           }
         }
