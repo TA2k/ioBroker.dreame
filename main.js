@@ -1159,8 +1159,11 @@ class Dreame extends utils.Adapter {
   }
   async UpdateRoomSettings(RoomInd, ChangeType, ChangeVal) {
     const RoomIdOb = await this.getStateAsync(RoomInd + '.RoomOrder');
-    const RoomId = RoomIdOb.val;
-    let stateSuctionLevel, stateWaterVolume, stateRepeats, stateCleaningMode, stateRoute;
+    this.log.debug('Update Room Settings: ' + RoomInd + ' ' + ChangeType + ' ' + ChangeVal);
+    let stateSuctionLevel, stateWaterVolume, stateRepeats, stateCleaningMode, stateRoute, RoomId;
+    if (RoomIdOb) {
+      RoomId = RoomIdOb.val;
+    }
 
     const getStateValues = async () => {
       const stateSuctionLevelOb = await this.getStateAsync(RoomInd + '.Level');
