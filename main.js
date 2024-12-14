@@ -975,16 +975,15 @@ class Dreame extends utils.Adapter {
       },
       native: {},
     });
-    try {
-      var CheckUObjectOb = await this.getStateAsync(In_path + 'cleanset.Update');
+
+    var CheckUObjectOb = await this.getStateAsync(In_path + 'cleanset.Update');
+    if (CheckUObjectOb == null) {
+      this.setState(In_path + 'cleanset.Update', true, true);
+      CheckUObject = true;
+    } else {
       CheckUObject = CheckUObjectOb.val;
-    } catch (error) {
-      this.log.error(error);
-      if (CheckUObject == null) {
-        this.setStateAsync(In_path + 'cleanset.Update', true, true);
-        CheckUObject = true;
-      }
     }
+
     await this.setObjectNotExists(In_path + 'cleanset.Start-Clean', {
       type: 'state',
       common: {
@@ -996,16 +995,15 @@ class Dreame extends utils.Adapter {
       },
       native: {},
     });
-    try {
-      var CheckSCObjectOb = await this.getStateAsync(In_path + 'cleanset.Start-Clean');
+
+    var CheckSCObjectOb = await this.getStateAsync(In_path + 'cleanset.Start-Clean');
+    if (CheckSCObjectOb == null) {
+      this.setState(In_path + 'cleanset.Start-Clean', false, true);
+      CheckSCObject = false;
+    } else {
       CheckSCObject = CheckSCObjectOb.val;
-    } catch (error) {
-      this.log.error(error);
-      if (CheckSCObject == null) {
-        this.setStateAsync(In_path + 'cleanset.Start-Clean', false, true);
-        CheckSCObject = false;
-      }
     }
+
     await this.setObjectNotExists(In_path + 'cleanset.Restart', {
       type: 'state',
       common: {
@@ -1017,16 +1015,15 @@ class Dreame extends utils.Adapter {
       },
       native: {},
     });
-    try {
-      var CheckRCObjectOb = await this.getStateAsync(In_path + 'cleanset.Restart');
+
+    var CheckRCObjectOb = await this.getStateAsync(In_path + 'cleanset.Restart');
+    if (CheckRCObjectOb == null) {
+      this.setState(In_path + 'cleanset.Restart', false, true);
+      CheckRCObject = false;
+    } else {
       CheckRCObject = CheckRCObjectOb.val;
-    } catch (error) {
-      this.log.error(error);
-      if (CheckRCObject == null) {
-        this.setStateAsync(In_path + 'cleanset.Restart', false, true);
-        CheckRCObject = false;
-      }
     }
+
     for (var [key, value] of Object.entries(jsonread)) {
       //this.log.info(' decode Map JSON:' + `${key}: ${value}`);
       if (Object.prototype.toString.call(value) !== '[object Object]') {
