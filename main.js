@@ -315,7 +315,9 @@ class Dreame extends utils.Adapter {
                     if (element['en'] && element['en'] !== 'null') {
                       this.log.debug('Device: ' + JSON.stringify(device));
                       this.log.debug(`Set ${device.did}.${key.replace(/\./g, '-')} to ${element['en']}`);
-
+                      if (!this.states[device.did]) {
+                        this.states[device.did] = {};
+                      }
                       this.states[device.did][key.replace(/\./g, '-')] = element['en'];
                     }
                   }
