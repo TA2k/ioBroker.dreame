@@ -54,10 +54,10 @@ const DreameRoomClean = Object.freeze({
   0: 'No',
   1: 'Yes',
 });
-var UpdateCleanset = true;
-var CheckRCObject = false;
-var CheckSCObject = false;
-var CheckUObject = true;
+let UpdateCleanset = true;
+let CheckRCObject = false;
+let CheckSCObject = false;
+let CheckUObject = true;
 class Dreame extends utils.Adapter {
   /**
    * @param {Partial<utils.AdapterOptions>} [options={}]
@@ -871,7 +871,7 @@ class Dreame extends utils.Adapter {
           }
           if (JSON.stringify(element.siid) === '6' && JSON.stringify(element.piid) === '1') {
             //this.log.info(' Map data:' + JSON.stringify(element.value));
-            let encode = JSON.stringify(element.value);
+            const encode = JSON.stringify(element.value);
             this.extendObject(element.did + '.map', {
               type: 'channel',
               common: {
@@ -879,7 +879,7 @@ class Dreame extends utils.Adapter {
               },
               native: {},
             });
-            let mappath = `${element.did}` + '.map.';
+            const mappath = `${element.did}` + '.map.';
             this.uncompress(encode, mappath);
           }
           //this.log.info(' Map data:' + JSON.stringify(element.siid) + ' => ' + JSON.stringify(element.piid));
@@ -935,9 +935,9 @@ class Dreame extends utils.Adapter {
     });
   }
   async uncompress(In_Compressed, In_path) {
-    var input_Raw = In_Compressed.replace(/-/g, '+').replace(/_/g, '/');
-    var encodedData = Buffer.from(input_Raw, 'base64');
-    var decode = zlib.inflateSync(encodedData);
+    const input_Raw = In_Compressed.replace(/-/g, '+').replace(/_/g, '/');
+    const encodedData = Buffer.from(input_Raw, 'base64');
+    const decode = zlib.inflateSync(encodedData);
     //this.log.info(' Zlib inflate  : ' + decode);
     /*csvar mapHeader = decode.toString().split("{");
     let GetHeader = mapHeader[0];
@@ -952,8 +952,8 @@ class Dreame extends utils.Adapter {
         this.log.info(' decode Header 2: ' + decodeHeader);
         }
     */
-    var jsondecode = decode.toString().match(/[{\[]{1}([,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]|".*?")+[}\]]{1}/gis);
-    var jsonread = ((_) => {
+    const jsondecode = decode.toString().match(/[{\[]{1}([,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]|".*?")+[}\]]{1}/gis);
+    const jsonread = ((_) => {
       try {
         return JSON.parse(jsondecode);
       } catch (err) {
@@ -976,7 +976,7 @@ class Dreame extends utils.Adapter {
       native: {},
     });
 
-    var CheckUObjectOb = await this.getStateAsync(In_path + 'cleanset.Update');
+    const CheckUObjectOb = await this.getStateAsync(In_path + 'cleanset.Update');
     if (CheckUObjectOb == null) {
       this.setState(In_path + 'cleanset.Update', true, true);
       CheckUObject = true;
@@ -996,7 +996,7 @@ class Dreame extends utils.Adapter {
       native: {},
     });
 
-    var CheckSCObjectOb = await this.getStateAsync(In_path + 'cleanset.Start-Clean');
+    const CheckSCObjectOb = await this.getStateAsync(In_path + 'cleanset.Start-Clean');
     if (CheckSCObjectOb == null) {
       this.setState(In_path + 'cleanset.Start-Clean', false, true);
       CheckSCObject = false;
@@ -1016,7 +1016,7 @@ class Dreame extends utils.Adapter {
       native: {},
     });
 
-    var CheckRCObjectOb = await this.getStateAsync(In_path + 'cleanset.Restart');
+    const CheckRCObjectOb = await this.getStateAsync(In_path + 'cleanset.Restart');
     if (CheckRCObjectOb == null) {
       this.setState(In_path + 'cleanset.Restart', false, true);
       CheckRCObject = false;
@@ -1024,11 +1024,11 @@ class Dreame extends utils.Adapter {
       CheckRCObject = CheckRCObjectOb.val;
     }
 
-    for (var [key, value] of Object.entries(jsonread)) {
+    for (const [key, value] of Object.entries(jsonread)) {
       //this.log.info(' decode Map JSON:' + `${key}: ${value}`);
       if (Object.prototype.toString.call(value) !== '[object Object]') {
         if (value != null) {
-          let pathMap = In_path + key;
+          const pathMap = In_path + key;
           this.getType(value, pathMap);
           if (typeof value === 'object' && value !== null) {
             this.setState(pathMap, JSON.stringify(value), true);
@@ -1039,10 +1039,10 @@ class Dreame extends utils.Adapter {
       }
       if (typeof value === 'object' && value !== null) {
         if (Object.prototype.toString.call(value) === '[object Object]') {
-          for (var [Subkey, Subvalue] of Object.entries(value)) {
+          for (const [Subkey, Subvalue] of Object.entries(value)) {
             //this.log.info(' decode subkey ' + key + ' ==> ' + `${Subkey}: ${Subvalue}`);
             if (value != null) {
-              let pathMap = In_path + key + '.' + Subkey;
+              const pathMap = In_path + key + '.' + Subkey;
               if (pathMap.toString().indexOf('.cleanset') != -1) {
                 //this.log.info(' Long subkey ' + Subvalue.length + ' / ' + Subvalue[3]);
                 if (Subvalue.length == 6) {
@@ -1106,8 +1106,8 @@ class Dreame extends utils.Adapter {
     });
   }
   async getType(element, createpath) {
-    var setrolT = ['string', 'text'];
-    var Typeof = Object.prototype.toString
+    const setrolT = ['string', 'text'];
+    const Typeof = Object.prototype.toString
       .call(element)
       .match(/\s([\w]+)/)[1]
       .toLowerCase();
@@ -1335,19 +1335,19 @@ class Dreame extends utils.Adapter {
           }
         }
         if (id.toString().indexOf('.cleanset') != -1) {
-          var RoomIdx = id.lastIndexOf('.');
-          var RoomOjct = id.substring(0, RoomIdx);
+          const RoomIdx = id.lastIndexOf('.');
+          const RoomOjct = id.substring(0, RoomIdx);
           //this.log.info(' ======> Changed:' + id + ' to ' + state.val);
-          var RetRoomSettings = '';
+          let RetRoomSettings = '';
           if (id.split('.')[5] === 'Update') {
             UpdateCleanset = state.val === true ? true : false;
           }
           if (id.split('.')[5] === 'Start-Clean') {
-            let GetCleanChange = state.val;
+            const GetCleanChange = state.val;
             if (GetCleanChange) {
               try {
-                let GetCleanRoomState = await this.getStatesAsync('*.cleanset.*.Cleaning');
-                var GetRoomIdOb,
+                const GetCleanRoomState = await this.getStatesAsync('*.cleanset.*.Cleaning');
+                let GetRoomIdOb,
                   GetRoomId,
                   GetRepeatsOb,
                   GetRepeats,
@@ -1355,14 +1355,14 @@ class Dreame extends utils.Adapter {
                   GetSuctionLevel,
                   GetWaterVolumeOb,
                   GetWaterVolume;
-                var GetMultiId = 0;
-                var ToGetString = '{\"selects\":[';
-                for (let idx in GetCleanRoomState) {
+                let GetMultiId = 0;
+                let ToGetString = '{\"selects\":[';
+                for (const idx in GetCleanRoomState) {
                   if (GetCleanRoomState[idx].val == 1) {
                     ToGetString += GetMultiId === 0 ? '[' : ',[';
                     GetMultiId += 1;
-                    var RIdx = idx.lastIndexOf('.');
-                    var RPath = idx.substring(0, RIdx);
+                    const RIdx = idx.lastIndexOf('.');
+                    const RPath = idx.substring(0, RIdx);
                     //start-clean[{"piid": 1,"value": 18},{"piid": 10,"value": "{\"selects\": [[3,1,3,2,1]]}"}]
                     //Room ID, Repeats, Suction Level, Water Volume, Multi Room Id
                     GetRoomIdOb = await this.getStateAsync(RPath + '.RoomOrder');
