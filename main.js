@@ -313,6 +313,9 @@ class Dreame extends utils.Adapter {
                   if (Object.hasOwnProperty.call(iotKeyValue.keyDefine, key)) {
                     const element = iotKeyValue.keyDefine[key];
                     if (element['en'] && element['en'] !== 'null') {
+                      this.log.debug('Device: ' + JSON.stringify(device));
+                      this.log.debug(`Set ${device.did}.${key.replace(/\./g, '-')} to ${element['en']}`);
+
                       this.states[device.did][key.replace(/\./g, '-')] = element['en'];
                     }
                   }
