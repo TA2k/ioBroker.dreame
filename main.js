@@ -644,7 +644,7 @@ class Dreame extends utils.Adapter {
               },
               native: {},
             });
-            this.extendObject(device.did + '.' + path + '.remote.fetchMap', {
+            this.extendObject(device.did + '.' + path + '.fetchMap', {
               type: 'state',
               common: {
                 name: 'Fetch Map from Device',
