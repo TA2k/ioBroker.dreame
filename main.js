@@ -1241,11 +1241,11 @@ class Dreame extends utils.Adapter {
       });
       delete multiMap.mapInfo;
       delete multiMap.floorMapInfo;
-      this.json2iob.parse(device.did + '.map.maps.' + stateMapId, multiMap);
+      this.json2iob.parse(device.did + '.map.maps.' + stateMapId + '.info', multiMap);
       await this.extendObject(device.did + '.map.maps.' + stateMapId + '.image', {
         type: 'state',
         common: {
-          name: 'Map ' + stateMapId,
+          name: 'Map Image' + stateMapId,
           type: 'image',
           role: 'state',
           read: true,
