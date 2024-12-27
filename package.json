@@ -22,8 +22,11 @@
   "dependencies": {
     "@iobroker/adapter-core": "^3.2.3",
     "axios": "^1.7.9",
-    "json2iob": "^2.6.12",
-    "mqtt": "^5.10.3"
+    "canvas": "^3.0.0",
+    "crypto-js": "^4.2.0",
+    "json2iob": "^2.6.13",
+    "mqtt": "^5.10.3",
+    "pako": "^2.1.0"
   },
   "devDependencies": {
     "@alcalzone/release-script": "^3.8.0",
@@ -38,7 +41,7 @@
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
-    "globals": "^15.13.0",
+    "globals": "^15.14.0",
     "prettier": "^3.4.2",
     "typescript": "~5.7.2"
   },
