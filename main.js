@@ -644,6 +644,18 @@ class Dreame extends utils.Adapter {
               },
               native: {},
             });
+            this.extendObject(device.did + '.' + path + '.remote.fetchMap', {
+              type: 'state',
+              common: {
+                name: 'Fetch Map from Device',
+                type: 'boolean',
+                role: 'button',
+                write: true,
+                read: false,
+                def: false,
+              },
+              native: {},
+            });
             const states = {};
             if (action['value-list']) {
               for (const value of action['value-list']) {
@@ -732,6 +744,9 @@ class Dreame extends utils.Adapter {
   }
   async updateDevicesViaSpec() {
     for (const device of this.deviceArray) {
+      if (this.config.getMap) {
+        this.getMap(device);
+      }
       if (this.specStatusDict[device.did]) {
         //split array in chunks of 50
         const chunkSize = 50;
@@ -1245,7 +1260,7 @@ class Dreame extends utils.Adapter {
       await this.extendObject(device.did + '.map.maps.' + stateMapId + '.image', {
         type: 'state',
         common: {
-          name: 'Map Image' + stateMapId,
+          name: 'Map Image ' + stateMapId,
           type: 'image',
           role: 'state',
           read: true,
@@ -1520,6 +1535,13 @@ class Dreame extends utils.Adapter {
         }
         if (id.split('.')[4] === 'Refresh') {
           this.updateDevicesViaSpec();
+          return;
+        }
+        if (id.split('.')[4] === 'fetchMap') {
+          const device = this.deviceArray.filter((obj) => {
+            return obj.did === deviceId;
+          })[0];
+          this.getMap(device, false);
           return;
         }
         //{"id":0,"method":"app_start","params":[{"clean_mop":0}]}
