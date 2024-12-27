@@ -11,8 +11,8 @@ const Json2iob = require('json2iob');
 const crypto = require('crypto');
 const mqtt = require('mqtt');
 const zlib = require('node:zlib');
-const { createCanvas, Canvas, Image } = require('canvas');
-const decodeMultiMapData = require('./lib/dreame');
+const { createCanvas, Canvas, Image, ImageData } = require('canvas');
+const { decodeMultiMapData } = require('./lib/dreame');
 const DreameLevel = Object.freeze({
   0: 'Silent',
   1: 'Basic',
@@ -112,6 +112,7 @@ class Dreame extends utils.Adapter {
     await this.login();
     if (this.session.access_token) {
       await this.getDeviceList();
+
       await this.fetchSpecs();
       await this.createRemotes();
       await this.updateDevicesViaSpec();
@@ -373,6 +374,7 @@ class Dreame extends utils.Adapter {
               states: { latestStatus: this.states[device.did] },
               channelName: 'General Updated at Start',
             });
+            await this.getMap(device, true);
           }
         } else {
           this.log.error('No Devices found: ' + JSON.stringify(response.data));
@@ -937,7 +939,7 @@ class Dreame extends utils.Adapter {
       this.log.info('MQTT Connection closed');
     });
   }
-  uncompress(In_Compressed, In_path) {
+  uncompress(In_Compressed) {
     const input_Raw = In_Compressed.replace(/-/g, '+').replace(/_/g, '/');
     const encodedData = Buffer.from(input_Raw, 'base64');
     const decode = zlib.inflateSync(encodedData);
@@ -1112,40 +1114,39 @@ class Dreame extends utils.Adapter {
     });
   }
 
-  async getMap(mapId, device) {
-    if (!mapId) {
-      const currentMapIdObject = await this.getStateAsync('map.currentMapId');
-      if (currentMapIdObject) {
-        mapId = currentMapIdObject.val;
-      }
-    }
-    if (!mapId) {
-      return;
-    }
-    const mapFileUrl = await this.sendCommand({
+  async getMap(device, fetchAllMaps) {
+    let mapFileName;
+    const mapFileNameResponse = await this.sendCommand({
       did: device.did,
       method: 'get_properties',
       params: [
         {
-          piid: 8,
+          piid: fetchAllMaps ? 9 : 8,
           siid: 6,
-          did: '790325865',
+          did: device.did,
         },
       ],
-    }).then((res) => {
-      if (res && res.result && res.result[0] && res.result[0].value) {
-        try {
-          const json = JSON.parse(res.result[0].value);
-          return json.object_name;
-        } catch (error) {
-          this.log.error('Error getting map url: ' + JSON.stringify(res));
-          this.log.error(error);
-        }
-      }
     });
-    if (!mapFileUrl) {
+    if (
+      mapFileNameResponse &&
+      mapFileNameResponse.result &&
+      mapFileNameResponse.result[0] &&
+      mapFileNameResponse.result[0].value
+    ) {
+      try {
+        const json = JSON.parse(mapFileNameResponse.result[0].value);
+        mapFileName = json.object_name;
+      } catch (error) {
+        this.log.error('Error getting map url: ' + JSON.stringify(mapFileNameResponse));
+        this.log.error(error);
+      }
+    }
+
+    if (!mapFileName) {
       return;
     }
+
+    const fileUrl = await this.getFile(mapFileName, device);
 
     const mapsContent = await this.requestClient({
       method: 'get',
@@ -1155,412 +1156,108 @@ class Dreame extends utils.Adapter {
         Connection: 'keep-alive',
         'User-Agent': 'Dreame_Smarthome/1043 CFNetwork/1240.0.4 Darwin/20.6.0',
       },
-      url: mapFileUrl,
+      url: fileUrl,
     }).catch((error) => {
       this.log.error('Error getting map content: ' + JSON.stringify(error));
       this.log.error(error);
     });
 
-    for (const mapsInfo of mapsContent) {
+    if (!fetchAllMaps) {
+      mapsContent.data = [{ id: mapsContent.data.curr_id, info: mapsContent.data.mapstr }];
+    }
+    for (const mapsInfo of mapsContent.data) {
       const mapId = mapsInfo.id;
       //find first = 1
       let firstMap = mapsInfo.info[0];
       for (const map of mapsInfo.info) {
-        if (map.first === 1) {
+        if (map.first === 1 || map.id === 0) {
           firstMap = map;
         }
       }
-      //decodeMultiMapData(firstMap.thb, 0);
-      const uncompressedMap = this.uncompress(firstMap.thb);
+      const multiMap = decodeMultiMapData(firstMap.thb || firstMap.map, 0);
+      //convert mapInfo bitmap to image
+      const canvas = createCanvas(multiMap.width, multiMap.height);
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      try {
-        const map = JSON.parse(uncompressedMap);
-        this.drawMap(map, mapId, device);
-      } catch (error) {
-        this.log.error('Error parsing map: ' + JSON.stringify(uncompressedMap));
-        this.log.error(error);
+      const bitmapArray = new Uint8ClampedArray(multiMap.width * multiMap.height * 4);
+      const colorPalette = [
+        [0, 0, 0], // Black
+        [255, 255, 255], // White
+        [255, 0, 0], // Red
+        [0, 200, 0], // Green
+        [0, 0, 255], // Blue
+        [255, 255, 0], // Yellow
+        [255, 0, 255], // Magenta
+        [0, 255, 255], // Cyan
+        [128, 0, 0], // Maroon
+        [0, 128, 0], // Dark Green
+        [0, 0, 128], // Navy
+        [128, 128, 0], // Olive
+        [128, 0, 128], // Purple
+        [0, 128, 128], // Teal
+        [192, 192, 192], // Silver
+        [128, 128, 128], // Gray
+        [255, 192, 203], // Pink
+        [255, 165, 0], // Orange
+        [255, 105, 180], // Hot Pink
+        [210, 105, 30], // Chocolate
+        [34, 139, 34], // Forest Green
+        [240, 230, 140], // Khaki
+        [255, 228, 196], // Bisque
+        [64, 224, 208], // Turquoise
+        [221, 160, 221], // Plum
+        [90, 90, 90], // Placeholder for transparency
+      ];
+      // Create an ImageData object
+      for (let i = 0; i < multiMap.mapInfo.length; i++) {
+        const colorIndex = multiMap.mapInfo[i];
+        const [r, g, b] = colorPalette[colorIndex] || [0, 0, 0]; // Default to black
+        let alpha = 255;
+        if (colorIndex === 0) {
+          alpha = 0;
+        }
+        bitmapArray[i * 4] = r; // Red
+        bitmapArray[i * 4 + 1] = g; // Green
+        bitmapArray[i * 4 + 2] = b; // Blue
+        bitmapArray[i * 4 + 3] = alpha; // Alpha (fully opaque)
       }
+
+      const imageData = new ImageData(bitmapArray, multiMap.width, multiMap.height);
+      ctx.putImageData(imageData, 0, 0);
+
+      // Save the image to a file
+      const buffer = canvas.toBuffer('image/png');
+      let stateMapId = multiMap.map_id;
+      if (!fetchAllMaps) {
+        stateMapId = 'current';
+      }
+      await this.extendObject(device.did + '.map', {
+        type: 'channel',
+        common: {
+          name: 'Map and map related controls',
+        },
+        native: {},
+      });
+
+      await this.extendObject(device.did + '.map.' + stateMapId, {
+        type: 'state',
+        common: {
+          name: 'Map ' + stateMapId,
+          type: 'file',
+          role: 'media',
+          read: true,
+        },
+        native: {},
+      });
+      await this.setState(device.did + '.map.' + mapId, 'data:image/png;base64,' + buffer.toString('base64'), true);
+
+      // const uncompressedMap = this.uncompress(firstMap.thb || firstMap.map);
     }
   }
-  async drawMap(map, mapId, device) {
-    //=======================>Start Map Color
-    const ColorsItems = [
-      '#abc7f8',
-      '#E6B3ff',
-      '#f9e07d',
-      '#b8e3ff',
-      '#b8d98d',
-      '#FFB399',
-      '#99FF99',
-      '#4DB3FF',
-      '#80B388',
-      '#E6B3B3',
-      '#FF99E6',
-      '#99E6E6',
-      '#809980',
-      '#E6FF80',
-      '#FF33FF',
-      '#FFFF99',
-      '#00B3E6',
-      '#E6B333',
-      '#3366E6',
-      '#999966',
-      '#99FF99',
-      '#B34D4D',
-      '#80B300',
-      '#809900',
-      '#6680B3',
-      '#66991A',
-      '#FF99E6',
-      '#CCFF1A',
-      '#FF1A66',
-      '#E6331A',
-      '#33FFCC',
-      '#66994D',
-      '#B366CC',
-      '#4D8000',
-      '#B33300',
-      '#CC80CC',
-      '#66664D',
-      '#991AFF',
-      '#E666FF',
-      '#1AB399',
-      '#E666B3',
-      '#33991A',
-      '#CC9999',
-      '#B3B31A',
-      '#00E680',
-      '#4D8066',
-      '#1AFF33',
-      '#999933',
-      '#FF3380',
-      '#CCCC00',
-      '#66E64D',
-      '#4D80CC',
-      '#9900B3',
-      '#E64D66',
-      '#4DB380',
-      '#FF4D4D',
-      '#6666FF',
-    ];
-    const ColorsCarpet = [
-      '#004080',
-      '#003366',
-      '#00264d',
-      '#000080',
-      '#000066',
-      '#00004d',
-      '#800080',
-      '#660066',
-      '#4d004d',
-      '#602020',
-      '#4d1919',
-      '#391313',
-      '#804000',
-      '#663300',
-      '#4d2600',
-      '#008000',
-      '#006600',
-      '#004d00',
-    ];
-    const RoomsStrokeColor = 'black';
-    const RoomsLineWidth = 4;
-    const WallColor = 'black';
-    const WallStrokeColor = 'black';
-    const WallLineWidth = 4;
-    const DoorsColor = 'black';
-    const DoorsStrokeColor = 'black';
-    const DoorsLineWidth = 2;
-    const ChargerColor = 'green';
-    const ChargerStrokeColor = 'white';
-    const ChargerLineWidth = 3;
-    const CarpetColor = 'black';
-    const CarpetStrokeColor = 'blue';
-    const CarpetLineWidth = 3;
-    //<=================End Map Color
-    //=================>Start Map Settings
-    let fullQuality = '';
-    const DH_ScaleValue = 20; // Min 14 | Default 14.5
-    //<=================End Map Settings
-    // const canvasMap = createCanvas(400, 400);
-    const canvas = createCanvas();
-    const context = canvas.getContext('2d');
-    canvas.height = 1024;
-    canvas.width = 1024;
-    let ExportHTML = '<html> <head> </head> <body>  <div id="Cam" class="CamPer">';
-    const DH_FillRooms = false;
-    const DH_RoomsNumberState = [];
-    const rooms = map['walls_info'].storeys[0].rooms; //First Map
-    //alert(JSON.stringify(rooms));
-    const doors = map['walls_info'].storeys[0].doors;
-    //alert(JSON.stringify(doors));
-    const carpet = map['carpet_info'];
-    //alert(JSON.stringify(carpet));
-    const funiture = map['funiture_info'];
-    const charger = map['charger'];
-    const origin = map['origin'];
-    //==================>Get Zero X and Y
-    let costXMin = Number.POSITIVE_INFINITY,
-      costXMax = Number.NEGATIVE_INFINITY,
-      tmpcostXMin = 0,
-      tmpcostXMax = 0,
-      costYMin = Number.POSITIVE_INFINITY,
-      costYMax = Number.NEGATIVE_INFINITY,
-      tmpcostYMin = 0,
-      tmpcostYMax = 0;
-    for (const iRoom in rooms) {
-      const walls = rooms[iRoom]['walls'];
-      //this.log.info(JSON.stringify(walls));
-      for (const iWall in walls) {
-        //=======================Get X
-        tmpcostXMin = walls[iWall]['beg_pt_x'];
-        if (tmpcostXMin < costXMin) {
-          costXMin = tmpcostXMin;
-        }
-        tmpcostXMin = walls[iWall]['end_pt_x'];
-        if (tmpcostXMin < costXMin) {
-          costXMin = tmpcostXMin;
-        }
-        tmpcostXMax = walls[iWall]['beg_pt_x'];
-        if (tmpcostXMax > costXMax) {
-          costXMax = tmpcostXMax;
-        }
-        tmpcostXMax = walls[iWall]['end_pt_x'];
-        if (tmpcostXMax > costXMax) {
-          costXMax = tmpcostXMax;
-        }
-        //=======================Get Y
-        tmpcostYMin = walls[iWall]['beg_pt_y'];
-        if (tmpcostYMin < costYMin) {
-          costYMin = tmpcostYMin;
-        }
-        tmpcostYMin = walls[iWall]['end_pt_y'];
-        if (tmpcostYMin < costYMin) {
-          costYMin = tmpcostYMin;
-        }
-        tmpcostYMax = walls[iWall]['beg_pt_y'];
-        if (tmpcostYMax > costYMax) {
-          costYMax = tmpcostYMax;
-        }
-        tmpcostYMax = walls[iWall]['end_pt_y'];
-        if (tmpcostYMax > costYMax) {
-          costYMax = tmpcostYMax;
-        }
-      }
-    }
-    const ScaleXZero = DH_ScaleValue / 10;
-    const ScaleYZero = DH_ScaleValue / 10 - 0.5;
-    origin[0] = 0 - (canvas.width - Math.round(costXMax + costXMin) + Math.round(costXMax)) * ScaleXZero;
-    origin[1] = 0 - (canvas.height - Math.round(costYMax + costYMin) + Math.round(costYMax)) * ScaleYZero;
 
-    this.log.debug('Max X Cordinate Segment ' + Math.round(costXMax) / DH_ScaleValue);
-    this.log.debug('Min X Cordinate Segment ' + Math.round(costXMin) / DH_ScaleValue);
-    this.log.debug('Max Y Cordinate Segment ' + Math.round(costYMax) / DH_ScaleValue);
-    this.log.debug('Min Y Cordinate Segment ' + Math.round(costYMin) / DH_ScaleValue);
-    this.log.debug('Zero X Cordinate Segment ' + origin[0] / DH_ScaleValue);
-    this.log.debug('Zero Y Cordinate Segment ' + origin[1] / DH_ScaleValue);
-
-    //==================>Create Wall Canvas
-    const iWallcanvas = createCanvas(canvas.width, canvas.height);
-    const Wallcontext = iWallcanvas.getContext('2d');
-    Wallcontext.clearRect(0, 0, canvas.width, canvas.height);
-    Wallcontext.fillStyle = WallColor;
-    Wallcontext.lineWidth = WallLineWidth;
-    Wallcontext.strokeStyle = WallStrokeColor;
-    //==================>Split Rooms Canvas
-    context.strokeStyle = RoomsStrokeColor;
-    //==================>Draw graphics Wall
-    const RoomsContext = [];
-    context.lineWidth = RoomsLineWidth;
-    for (const iRoom in rooms) {
-      //==================>Declare Room State
-      DH_RoomsNumberState.push(rooms[iRoom]['room_id']);
-      DH_RoomsNumberState[rooms[iRoom]['room_id']] = 0;
-      //<=====================Declare Room State
-      //==================>Split Rooms Canvas
-      const iRoomcanvas = createCanvas(canvas.width, canvas.height);
-      const Tempcontext = iRoomcanvas.getContext('2d');
-      let point1, point2;
-      Tempcontext.clearRect(0, 0, canvas.width, canvas.height);
-      Tempcontext.lineWidth = 6;
-      const iRoomID = rooms[iRoom]['room_id'];
-      const NewColorSegment = await this.hexToRgbA(ColorsItems[iRoomID]);
-      Tempcontext.fillStyle = NewColorSegment.RGBA;
-      //<==================End Split Rooms Canvas
-      context.fillStyle = NewColorSegment.RGBA;
-      const walls = rooms[iRoom]['walls'];
-      context.beginPath();
-      Wallcontext.beginPath();
-      Tempcontext.beginPath();
-      for (const iWall in walls) {
-        const point1 = {
-          x: (walls[iWall]['beg_pt_x'] + origin[0] * -1) / DH_ScaleValue,
-          y: (walls[iWall]['beg_pt_y'] + origin[1] * -1) / DH_ScaleValue,
-        };
-        Wallcontext.lineTo(point1.x, point1.y);
-        const point2 = {
-          x: (walls[iWall]['end_pt_x'] + origin[0] * -1) / DH_ScaleValue,
-          y: (walls[iWall]['end_pt_y'] + origin[1] * -1) / DH_ScaleValue,
-        };
-        //==================>Add Map Canvas
-        context.lineTo(point2.x, point2.y);
-        //==================>Add Wall Canvas
-        Wallcontext.lineTo(point2.x, point2.y);
-        //==================>Add Room Canvas
-        Tempcontext.lineTo(point2.x, point2.y);
-      }
-      context.closePath();
-      context.fill();
-      Wallcontext.stroke();
-      Wallcontext.closePath();
-      Tempcontext.closePath();
-      Tempcontext.fill();
-      fullQuality = iRoomcanvas.toDataURL('image/png', 1.0);
-
-      this.log.debug('Room N: ' + iRoomID + ': ' + fullQuality);
-
-      ExportHTML +=
-        ' <img id="Room' +
-        iRoomID +
-        '" class="mapimages"' +
-        'onclick="DH_SelectTheRoom(' +
-        iRoomID +
-        ')" src="' +
-        fullQuality +
-        '" >';
-    }
-    //Doors
-    context.globalAlpha = 1.0;
-    Wallcontext.fillStyle = DoorsColor;
-    Wallcontext.lineWidth = DoorsLineWidth;
-    Wallcontext.strokeStyle = DoorsStrokeColor;
-    for (const iDoors in doors) {
-      Wallcontext.beginPath();
-      //context.beginPath();
-      //alert(JSON.stringify(doors[iDoors]["beg_pt_x"]));
-      const point1 = {
-        x: (doors[iDoors]['beg_pt_x'] + origin[0] * -1) / DH_ScaleValue,
-        y: (doors[iDoors]['beg_pt_y'] + origin[1] * -1) / DH_ScaleValue,
-      };
-      const point2 = {
-        x: (doors[iDoors]['end_pt_x'] + origin[0] * -1) / DH_ScaleValue,
-        y: (doors[iDoors]['end_pt_y'] + origin[1] * -1) / DH_ScaleValue,
-      };
-      Wallcontext.globalCompositeOperation = 'destination-out';
-      Wallcontext.moveTo(point1.x, point1.y);
-      Wallcontext.lineTo(point2.x, point2.y);
-      Wallcontext.stroke();
-      Wallcontext.fill();
-      Wallcontext.closePath();
-    }
-    //Charger
-    context.beginPath();
-    context.lineWidth = ChargerLineWidth;
-    context.strokeStyle = ChargerStrokeColor;
-    context.globalAlpha = 0.2;
-    context.rect(
-      (charger[0] + origin[0] * -1) / DH_ScaleValue,
-      (charger[1] + origin[1] * -1) / DH_ScaleValue,
-      40 * (10 / DH_ScaleValue),
-      40 * (10 / DH_ScaleValue),
-    );
-    context.stroke();
-    context.closePath();
-    //carpet
-    context.globalCompositeOperation = 'source-over';
-    context.globalAlpha = 0.1;
-    context.fillStyle = CarpetColor;
-    context.beginPath();
-    context.lineWidth = CarpetLineWidth;
-    context.strokeStyle = CarpetStrokeColor;
-    //carpet Map
-    const iCarpetMapcanvas = createCanvas(canvas.width, canvas.height);
-    const iCarpetMapcontext = iCarpetMapcanvas.getContext('2d');
-    for (const icarpet in carpet) {
-      const iCarpetcanvas = createCanvas(canvas.width, canvas.height);
-      const Tempcontext = iCarpetcanvas.getContext('2d');
-      Tempcontext.clearRect(0, 0, canvas.width, canvas.height);
-      Tempcontext.globalAlpha = 0.2;
-      Tempcontext.beginPath();
-      Tempcontext.rect(
-        (carpet[icarpet][0] + origin[0] * -1) / DH_ScaleValue,
-        (carpet[icarpet][1] + origin[1] * -1) / DH_ScaleValue,
-        (Math.max(carpet[icarpet][0], carpet[icarpet][2]) - Math.min(carpet[icarpet][0], carpet[icarpet][2])) /
-          DH_ScaleValue,
-        (carpet[icarpet][3] - carpet[icarpet][1]) / DH_ScaleValue,
-      );
-      Tempcontext.stroke();
-      Tempcontext.fill();
-      Tempcontext.closePath();
-      //carpet Map
-      iCarpetMapcontext.beginPath();
-      const iCarpetID = parseInt(icarpet);
-      const NewColorCarpet = await this.DH_hexToRgbA(ColorsCarpet[iCarpetID]);
-      iCarpetMapcontext.fillStyle = NewColorCarpet.RGBA;
-
-      iCarpetMapcontext.rect(
-        (carpet[icarpet][0] + origin[0] * -1) / DH_ScaleValue,
-        (carpet[icarpet][1] + origin[1] * -1) / DH_ScaleValue,
-        (Math.max(carpet[icarpet][0], carpet[icarpet][2]) - Math.min(carpet[icarpet][0], carpet[icarpet][2])) /
-          DH_ScaleValue,
-        (carpet[icarpet][3] - carpet[icarpet][1]) / DH_ScaleValue,
-      );
-      //iCarpetMapcontext.stroke();
-      iCarpetMapcontext.fill();
-      iCarpetMapcontext.closePath();
-
-      fullQuality = iCarpetcanvas.toDataURL('image/png', 1.0);
-
-      this.log.debug("Carpet N': " + carpet[icarpet][4] + ': ' + fullQuality);
-
-      ExportHTML +=
-        ' <img id="Carpet' +
-        icarpet +
-        '" class="DH_Carpetimages"' +
-        'onclick="DH_SelectTheCarpet(' +
-        icarpet +
-        ')" src="' +
-        fullQuality +
-        '" >';
-    }
-    fullQuality = iCarpetMapcanvas.toDataURL('image/png', 1.0);
-
-    this.log.debug('Carpet Map: ' + fullQuality);
-
-    ExportHTML += ' <img id="CarpetMap" class="DH_CarpetMap" src="' + fullQuality + '" >';
-
-    fullQuality = canvas.toDataURL('image/png', 1.0);
-
-    this.log.debug('BG: ' + fullQuality);
-
-    ExportHTML += ' <img id="BG" class="DH_BGMapimages" src="' + fullQuality + '" >';
-    fullQuality = iWallcanvas.toDataURL('image/png', 1.0);
-
-    this.log.debug('Walls: ' + fullQuality);
-  }
-
-  async hexToRgbA(hex) {
-    let Color;
-    Color = hex.substring(1).split('');
-    if (Color.length == 3) {
-      Color = [Color[0], Color[0], Color[1], Color[1], Color[2], Color[2]];
-    }
-    Color = '0x' + Color.join('');
-    const ColR = (Color >> 16) & 255;
-    const ColG = (Color >> 8) & 255;
-    const ColB = Color & 255;
-    const ColA = 255;
-    const RGBA = 'rgba(' + [ColR, ColG, ColB, ColA].join(',') + ')';
-    return {
-      RGBA: RGBA,
-      R: ColR,
-      G: ColG,
-      B: ColB,
-      A: ColA,
-    };
-  }
   async getFile(url, device) {
-    const fileUrl = await this.requestClient({
+    return await this.requestClient({
       method: 'post',
       url: 'https://eu.iot.dreame.tech:13267/dreame-user-iot/iotfile/getDownloadUrl',
       headers: {
@@ -1592,19 +1289,6 @@ class Dreame extends utils.Adapter {
         this.log.error('Error getting file: ' + JSON.stringify(error));
         this.log.error(error);
       });
-    //fetch zip file
-    const file = await this.requestClient({
-      method: 'get',
-      url: fileUrl,
-      responseType: 'arraybuffer',
-    })
-      .then((res) => {
-        return res.data;
-      })
-      .catch((error) => {
-        this.log.error('Error getting file: ' + JSON.stringify(error));
-        this.log.error(error);
-      });
   }
 
   async sendCommand(data) {
@@ -1620,7 +1304,7 @@ class Dreame extends utils.Adapter {
         from: 'XXXXXX',
       },
     };
-    await this.requestClient({
+    return await this.requestClient({
       method: 'post',
       url: 'https://eu.iot.dreame.tech:13267/dreame-iot-com-10000/device/sendCommand',
       headers: {
@@ -1628,7 +1312,6 @@ class Dreame extends utils.Adapter {
         'dreame-meta': 'cv=i_829',
         'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
         'tenant-id': '000000',
-        host: 'eu.iot.dreame.tech:13267',
         authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
         'content-type': 'application/json',
         'dreame-auth': 'bearer ' + this.session.access_token,
@@ -1911,7 +1594,7 @@ class Dreame extends utils.Adapter {
                   GetWaterVolumeOb,
                   GetWaterVolume;
                 let GetMultiId = 0;
-                let ToGetString = '{\"selects\":[';
+                let ToGetString = '{"selects":[';
                 for (const idx in GetCleanRoomState) {
                   if (GetCleanRoomState[idx].val == 1) {
                     ToGetString += GetMultiId === 0 ? '[' : ',[';
