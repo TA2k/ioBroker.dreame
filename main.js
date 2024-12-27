@@ -1170,7 +1170,7 @@ class Dreame extends utils.Adapter {
       //find first = 1
       let firstMap = mapsInfo.info[0];
       for (const map of mapsInfo.info) {
-        if (map.first === 1 || map.id === 0) {
+        if (map.first === 0 || map.id === 0) {
           firstMap = map;
         }
       }
