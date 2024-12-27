@@ -1241,18 +1241,22 @@ class Dreame extends utils.Adapter {
       });
       delete multiMap.mapInfo;
       delete multiMap.floorMapInfo;
-      this.json2iob.parse(device.did + '.map.maps.' + stateMapId, JSON.stringify(multiMap));
+      this.json2iob.parse(device.did + '.map.maps.' + stateMapId, multiMap);
       await this.extendObject(device.did + '.map.maps.' + stateMapId + '.image', {
         type: 'state',
         common: {
           name: 'Map ' + stateMapId,
-          type: 'file',
-          role: 'media',
+          type: 'image',
+          role: 'state',
           read: true,
         },
         native: {},
       });
-      await this.setState(device.did + '.map.' + mapId, 'data:image/png;base64,' + buffer.toString('base64'), true);
+      await this.setState(
+        device.did + '.map.maps.' + stateMapId + '.image',
+        'data:image/png;base64,' + buffer.toString('base64'),
+        true,
+      );
 
       // const uncompressedMap = this.uncompress(firstMap.thb || firstMap.map);
     }
