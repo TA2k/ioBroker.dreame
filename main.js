@@ -1232,15 +1232,17 @@ class Dreame extends utils.Adapter {
       if (!fetchAllMaps) {
         stateMapId = 'current';
       }
-      await this.extendObject(device.did + '.map', {
+      await this.extendObject(device.did + '.map.maps', {
         type: 'channel',
         common: {
-          name: 'Map and map related controls',
+          name: 'Maps extracted from Dreame',
         },
         native: {},
       });
-
-      await this.extendObject(device.did + '.map.' + stateMapId, {
+      delete multiMap.mapInfo;
+      delete multiMap.floorMapInfo;
+      this.json2iob.parse(device.did + '.map.maps.' + stateMapId, JSON.stringify(multiMap));
+      await this.extendObject(device.did + '.map.maps.' + stateMapId + '.image', {
         type: 'state',
         common: {
           name: 'Map ' + stateMapId,
