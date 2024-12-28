@@ -17,22 +17,22 @@
         "zh-cn": "应用电子邮件"
       },
       "newLine": true,
-      "sm": 3,
+      "sm": 12,
       "xs": 12,
-      "md": 4,
+      "md": 6,
       "lg": 3,
-      "xl": 2
+      "xl": 3
     },
     "password": {
       "type": "password",
       "newLine": true,
       "repeat": false,
       "visible": true,
-      "sm": 3,
+      "sm": 12,
       "xs": 12,
-      "md": 4,
+      "md": 6,
       "lg": 3,
-      "xl": 2,
+      "xl": 3,
       "label": {
         "en": "App Password",
         "de": "App-Passwort",
@@ -50,11 +50,11 @@
     "getMap": {
       "type": "checkbox",
       "newLine": true,
-      "sm": 3,
+      "sm": 12,
       "xs": 12,
-      "md": 4,
+      "md": 6,
       "lg": 3,
-      "xl": 2,
+      "xl": 3,
       "label": {
         "en": "Get Map",
         "de": "Karte abrufen",
