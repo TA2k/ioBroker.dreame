@@ -43,7 +43,6 @@
         "zh-cn": "首次出版"
       }
     },
-    "title": "Dreame",
     "titleLang": {
       "en": "Dreame",
       "de": "Dreame",
@@ -70,13 +69,8 @@
       "uk": "Адаптер для домашніх пристроїв Dreame",
       "zh-cn": "Dreame 家用设备适配器"
     },
-    "authors": [
-      "TA2k <tombox2020@gmail.com>"
-    ],
-    "keywords": [
-      "dreame",
-      "dreamehome"
-    ],
+    "authors": ["TA2k <tombox2020@gmail.com>"],
+    "keywords": ["dreame", "dreamehome"],
     "licenseInformation": {
       "type": "free",
       "license": "MIT"
@@ -113,12 +107,8 @@
       }
     }
   },
-  "encryptedNative": [
-    "password"
-  ],
-  "protectedNative": [
-    "password"
-  ],
+  "encryptedNative": ["password"],
+  "protectedNative": ["password"],
   "native": {
     "username": "",
     "password": "",

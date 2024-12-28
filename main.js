@@ -1511,6 +1511,10 @@ class Dreame extends utils.Adapter {
    */
   onUnload(callback) {
     try {
+      this.updateInterval && clearInterval(this.updateInterval);
+      this.refreshTokenInterval && clearInterval(this.refreshTokenInterval);
+      this.mqttClient && this.mqttClient.end();
+
       callback();
     } catch (e) {
       callback();
