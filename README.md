@@ -111,6 +111,9 @@ dreame.0.XXXX.map.curid
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### 0.2.0 (2024-12-28)
+
+- add simple maps
 
 ### 0.1.0 (2024-12-14)
 

@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "news": {
+      "0.2.0": {
+        "en": "add simple maps",
+        "de": "einfache karten hinzufügen",
+        "ru": "добавить простые карты",
+        "pt": "adicionar mapas simples",
+        "nl": "eenvoudige kaarten toevoegen",
+        "fr": "ajouter des cartes simples",
+        "it": "aggiungere semplici mappe",
+        "es": "añadir mapas simples",
+        "pl": "dodaj proste mapy",
+        "uk": "додати прості карти",
+        "zh-cn": "添加简单的地图"
+      },
       "0.1.0": {
         "en": "bugfixes",
         "de": "bugfixes",
