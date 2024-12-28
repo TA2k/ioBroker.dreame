@@ -74,7 +74,11 @@
       "type": "number",
       "newLine": true,
       "min": 1,
-      "sm": 2,
+      "sm": 12,
+      "xs": 12,
+      "md": 6,
+      "lg": 3,
+      "xl": 3,
       "label": {
         "en": "Update interval (in minutes)",
         "de": "Aktualisierungsintervall (in Minuten)",
