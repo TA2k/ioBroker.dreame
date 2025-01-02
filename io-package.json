@@ -112,7 +112,7 @@
     "username": "",
     "password": "",
     "interval": 30,
-    "getMap": false
+    "getMap": true
   },
   "objects": [],
   "instanceObjects": [

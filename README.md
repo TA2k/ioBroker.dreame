@@ -11,6 +11,8 @@
 
 **Tests:** ![Test and Release](https://github.com/TA2k/ioBroker.dreame/workflows/Test%20and%20Release/badge.svg)
 
+**This adapter uses Sentry libraries to automatically report exceptions and code errors to the developers.** For more details and for information how to disable the error reporting see [Sentry-Plugin Documentation](https://github.com/ioBroker/plugin-sentry#plugin-sentry)! Sentry reporting is used starting with js-controller 3.0.
+
 ## dreame adapter for ioBroker
 
 Adapter for dreame home devices tested with L10 L20 and x40
@@ -111,6 +113,7 @@ dreame.0.XXXX.map.curid
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+
 ### 0.2.0 (2024-12-28)
 
 - add simple maps
