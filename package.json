@@ -23,12 +23,14 @@
   "dependencies": {
     "@iobroker/adapter-core": "^3.2.3",
     "axios": "^1.7.9",
-    "canvas": "^3.0.0",
     "crypto-js": "^4.2.0",
     "json2iob": "^2.6.13",
     "mqtt": "^5.10.3",
     "pako": "^2.1.0"
   },
+  "optionalDependencies": {
+      "canvas": "^3.0.0"
+    },
   "devDependencies": {
     "@alcalzone/release-script": "^3.8.0",
     "@alcalzone/release-script-plugin-iobroker": "^3.7.2",

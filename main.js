@@ -11,7 +11,18 @@ const Json2iob = require('json2iob');
 const crypto = require('crypto');
 const mqtt = require('mqtt');
 const zlib = require('node:zlib');
-const { createCanvas, Canvas, Image, ImageData } = require('canvas');
+//check if canvas is available because is optional dependency
+let canvasAvailable = false;
+try {
+  require.resolve('canvas');
+  canvasAvailable = true;
+} catch (e) {
+  canvasAvailable = false;
+}
+if (canvasAvailable) {
+  const { createCanvas, Canvas, Image, ImageData } = require('canvas');
+}
+
 const { decodeMultiMapData } = require('./lib/dreame');
 const DreameLevel = Object.freeze({
   0: 'Silent',
@@ -73,6 +84,9 @@ class Dreame extends utils.Adapter {
     this.on('ready', this.onReady.bind(this));
     this.on('stateChange', this.onStateChange.bind(this));
     this.on('unload', this.onUnload.bind(this));
+    if (!canvasAvailable) {
+      this.log.warn('Canvas not available. Map will not be available');
+    }
     this.deviceArray = [];
     this.states = {};
     this.json2iob = new Json2iob(this);
@@ -1191,6 +1205,10 @@ class Dreame extends utils.Adapter {
       }
       const multiMap = decodeMultiMapData(firstMap.thb || firstMap.map, 0);
       //convert mapInfo bitmap to image
+      if (!canvasAvailable) {
+        this.log.debug('Canvas not available, cannot create map image');
+        return;
+      }
       const canvas = createCanvas(multiMap.width, multiMap.height);
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
