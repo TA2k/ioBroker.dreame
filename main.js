@@ -1276,7 +1276,7 @@ class Dreame extends utils.Adapter {
         type: 'state',
         common: {
           name: 'Map Image ' + stateMapId,
-          type: 'image',
+          type: 'string',
           role: 'state',
           read: true,
         },
