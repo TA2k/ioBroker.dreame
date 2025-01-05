@@ -1,7 +1,5 @@
 'use strict';
 
-import { create } from 'axios';
-
 /*
  * Created with @iobroker/create-adapter v2.6.3
  */
