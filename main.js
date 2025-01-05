@@ -1,5 +1,7 @@
 'use strict';
 
+import { create } from 'axios';
+
 /*
  * Created with @iobroker/create-adapter v2.6.3
  */
@@ -81,7 +83,7 @@ class Dreame extends utils.Adapter {
     this.on('ready', this.onReady.bind(this));
     this.on('stateChange', this.onStateChange.bind(this));
     this.on('unload', this.onUnload.bind(this));
-    if (!canvasAvailable) {
+    if (!createCanvas) {
       this.log.warn('Canvas not available. Map will not be available');
     }
     this.deviceArray = [];
@@ -1202,7 +1204,7 @@ class Dreame extends utils.Adapter {
       }
       const multiMap = decodeMultiMapData(firstMap.thb || firstMap.map, 0);
       //convert mapInfo bitmap to image
-      if (!canvasAvailable) {
+      if (!createCanvas) {
         this.log.debug('Canvas not available, cannot create map image');
         return;
       }
