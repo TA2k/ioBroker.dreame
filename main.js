@@ -12,15 +12,12 @@ const crypto = require('crypto');
 const mqtt = require('mqtt');
 const zlib = require('node:zlib');
 //check if canvas is available because is optional dependency
-let canvasAvailable = false;
+let createCanvas;
+let ImageData;
 try {
-  require.resolve('canvas');
-  canvasAvailable = true;
+  ({ createCanvas, ImageData } = require('canvas'));
 } catch (e) {
-  canvasAvailable = false;
-}
-if (canvasAvailable) {
-  const { createCanvas, Canvas, Image, ImageData } = require('canvas');
+  console.log('Canvas not available. No Map will be available');
 }
 
 const { decodeMultiMapData } = require('./lib/dreame');
