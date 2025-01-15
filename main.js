@@ -81,9 +81,7 @@ class Dreame extends utils.Adapter {
     this.on('ready', this.onReady.bind(this));
     this.on('stateChange', this.onStateChange.bind(this));
     this.on('unload', this.onUnload.bind(this));
-    if (!createCanvas) {
-      this.log.warn('Canvas not available. Map will not be available');
-    }
+
     this.deviceArray = [];
     this.states = {};
     this.json2iob = new Json2iob(this);
@@ -112,6 +110,9 @@ class Dreame extends utils.Adapter {
     if (!this.config.username || !this.config.password) {
       this.log.error('Please set username and password in the instance settings');
       return;
+    }
+    if (!createCanvas) {
+      this.log.warn('Canvas not available. Map will not be available');
     }
     this.updateInterval = null;
     this.reLoginTimeout = null;
