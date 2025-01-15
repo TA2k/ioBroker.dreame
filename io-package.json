@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "news": {
+      "0.2.1": {
+        "en": "fix for canvas installation",
+        "de": "befestigung für leinwandinstallation",
+        "ru": "для монтажа холста",
+        "pt": "correção para instalação de tela",
+        "nl": "fix voor canvas installatie",
+        "fr": "correction pour installation de toile",
+        "it": "fissaggio per installazione di tela",
+        "es": "fijación para instalación de tela",
+        "pl": "urządzenie do montażu płótna",
+        "uk": "фіксація для монтажу полотна",
+        "zh-cn": "画布安装的固定"
+      },
       "0.2.0": {
         "en": "add simple maps",
         "de": "einfache karten hinzufügen",
@@ -69,8 +82,13 @@
       "uk": "Адаптер для домашніх пристроїв Dreame",
       "zh-cn": "Dreame 家用设备适配器"
     },
-    "authors": ["TA2k <tombox2020@gmail.com>"],
-    "keywords": ["dreame", "dreamehome"],
+    "authors": [
+      "TA2k <tombox2020@gmail.com>"
+    ],
+    "keywords": [
+      "dreame",
+      "dreamehome"
+    ],
     "licenseInformation": {
       "type": "free",
       "license": "MIT"
@@ -106,8 +124,12 @@
       }
     }
   },
-  "encryptedNative": ["password"],
-  "protectedNative": ["password"],
+  "encryptedNative": [
+    "password"
+  ],
+  "protectedNative": [
+    "password"
+  ],
   "native": {
     "username": "",
     "password": "",
