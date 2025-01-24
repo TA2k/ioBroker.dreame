@@ -113,6 +113,10 @@ dreame.0.XXXX.map.curid
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### 0.2.2 (2025-01-24)
+
+- reduce cpu load while cleaning
+
 ### 0.2.1 (2025-01-15)
 
 - fix for canvas installation
