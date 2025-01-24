@@ -118,6 +118,7 @@ class Dreame extends utils.Adapter {
     this.reLoginTimeout = null;
     this.refreshTokenTimeout = null;
     this.session = {};
+    this.firstStart = true;
     this.subscribeStates('*.remote.*');
     this.subscribeStates('*.cleanset.*');
     this.log.info('Login to Dreame Cloud...');
@@ -337,6 +338,13 @@ class Dreame extends utils.Adapter {
               type: 'device',
               common: {
                 name: device.customName || device.deviceInfo.displayName || device.model,
+              },
+              native: {},
+            });
+            this.extendObject(device.did + '.map', {
+              type: 'channel',
+              common: {
+                name: 'Map and map related controls',
               },
               native: {},
             });
@@ -903,16 +911,12 @@ class Dreame extends utils.Adapter {
           }
           if (JSON.stringify(element.siid) === '6' && JSON.stringify(element.piid) === '1') {
             //this.log.info(' Map data:' + JSON.stringify(element.value));
-            const encode = JSON.stringify(element.value);
-            this.extendObject(element.did + '.map', {
-              type: 'channel',
-              common: {
-                name: 'Map and map related controls',
-              },
-              native: {},
-            });
-            const mappath = `${element.did}` + '.map.';
-            this.setMapInfos(encode, mappath);
+            if (this.config.getMap || this.firstStart) {
+              this.firstStart = false;
+              const encode = JSON.stringify(element.value);
+              const mappath = `${element.did}` + '.map.';
+              this.setMapInfos(encode, mappath);
+            }
           }
           //this.log.info(' Map data:' + JSON.stringify(element.siid) + ' => ' + JSON.stringify(element.piid));
           let path = this.specPropsToIdDict[element.did][element.siid + '-' + element.piid];
