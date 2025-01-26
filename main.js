@@ -1385,50 +1385,55 @@ class Dreame extends utils.Adapter {
   }
 
   async getType(element, createpath) {
-    const setrolT = ['string', 'text'];
-    const Typeof = Object.prototype.toString
-      .call(element)
-      .match(/\s([\w]+)/)[1]
-      .toLowerCase();
-    switch (Typeof) {
-      case 'object':
-        setrolT[0] = 'json';
-        setrolT[1] = 'Object';
-        break;
-      case 'array':
-        setrolT[0] = 'json';
-        setrolT[1] = 'Array';
-        break;
-      case 'boolean':
-        setrolT[0] = 'boolean';
-        setrolT[1] = 'switch';
-        break;
-      case 'number':
-        setrolT[0] = 'number';
-        setrolT[1] = 'value';
-        break;
-      case 'undefined':
-        setrolT[0] = 'string';
-        setrolT[1] = 'text';
-        break;
-    }
-    let Stwrite = false;
+    let write = false;
     if (createpath.toString().indexOf('.cleanset') != -1) {
-      Stwrite = true;
+      write = true;
     }
+    if (createpath.replace) {
+      createpath = createpath.replace(this.FORBIDDEN_CHARS, '_');
+    }
+    const type = element !== null ? typeof element : 'mixed';
+
     await this.extendObject(createpath, {
       type: 'state',
       common: {
         name: createpath,
-        type: setrolT[0].toString(),
-        role: setrolT[1].toString(),
-        write: Stwrite,
+        type: type,
+        role: this.getRoleCleanset(element, write),
+        write: write,
         read: true,
       },
       native: {},
     });
-    //this.log.info(' ======> common Type:' + setrolT + " / " + setrolT[1] + " / " + Typeof + " ==> " + element);
   }
+  getRoleCleanset(element, write) {
+    if (typeof element === 'boolean' && !write) {
+      return 'indicator';
+    }
+    if (typeof element === 'boolean' && write) {
+      return 'switch';
+    }
+    if (typeof element === 'number' && !write) {
+      if (element && element.toString().length === 13) {
+        if (element > 1500000000000 && element < 2000000000000) {
+          return 'value.time';
+        }
+      } else if (element && element.toFixed().toString().length === 10) {
+        if (element > 1500000000 && element < 2000000000) {
+          return 'value.time';
+        }
+      }
+      return 'value';
+    }
+    if (typeof element === 'number' && write) {
+      return 'level';
+    }
+    if (typeof element === 'string') {
+      return 'text';
+    }
+    return 'state';
+  }
+
   async jsonFromString(str) {
     const matches = str.match(/[{\[]{1}([,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]|".*?")+[}\]]{1}/gis);
     return Object.assign({}, ...matches.map((m) => m)); //JSON.parse(m)));
