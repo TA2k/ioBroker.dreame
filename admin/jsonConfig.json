@@ -1,4 +1,5 @@
 {
+  "type": "panel",
   "i18n": false,
   "items": {
     "username": {
