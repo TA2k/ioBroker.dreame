@@ -1003,6 +1003,13 @@ class Dreame extends utils.Adapter {
     if (!jsonread) {
       return;
     }
+    await this.extendObject(In_path + '.cleanset', {
+      type: 'channel',
+      common: {
+        name: 'Cleaning Settings',
+      },
+      native: {},
+    });
     await this.setObjectNotExists(In_path + 'cleanset.Update', {
       type: 'state',
       common: {
@@ -1278,6 +1285,13 @@ class Dreame extends utils.Adapter {
         type: 'channel',
         common: {
           name: 'Maps extracted from Dreame',
+        },
+        native: {},
+      });
+      await this.extendObject(device.did + '.map.maps.' + stateMapId, {
+        type: 'channel',
+        common: {
+          name: 'Map ' + stateMapId,
         },
         native: {},
       });
