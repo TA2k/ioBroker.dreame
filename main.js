@@ -1083,6 +1083,13 @@ class Dreame extends utils.Adapter {
             if (value != null) {
               const pathMap = In_path + key + '.' + Subkey;
               if (pathMap.toString().indexOf('.cleanset') != -1) {
+                await this.extendObject(pathMap, {
+                  type: 'channel',
+                  common: {
+                    name: 'Cleaning Settings for Room: ' + Subkey,
+                  },
+                  native: {},
+                });
                 //this.log.info(' Long subkey ' + Subvalue.length + ' / ' + Subvalue[3]);
                 if (Subvalue.length == 6) {
                   if (UpdateCleanset) {
