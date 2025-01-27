@@ -1003,7 +1003,7 @@ class Dreame extends utils.Adapter {
     if (!jsonread) {
       return;
     }
-    await this.extendObject(In_path + '.cleanset', {
+    await this.extendObject(In_path + 'cleanset', {
       type: 'channel',
       common: {
         name: 'Cleaning Settings',
