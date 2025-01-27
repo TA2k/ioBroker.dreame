@@ -464,7 +464,7 @@ class Dreame extends utils.Adapter {
           },
           native: {},
         });
-        this.setObjectNotExists(device.did + '.remotePlugins.customCommand', {
+        await this.extendObject(device.did + '.remotePlugins.customCommand', {
           type: 'state',
           common: {
             name: 'Send Custom command via Plugin',
@@ -483,7 +483,7 @@ class Dreame extends utils.Adapter {
           params = remote.params;
         }
         try {
-          this.setObjectNotExists(device.did + '.remotePlugins.' + name, {
+          await this.extendObject(device.did + '.remotePlugins.' + name, {
             type: 'state',
             common: {
               name: name + ' ' + params || '',
