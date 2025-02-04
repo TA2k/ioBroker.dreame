@@ -107,12 +107,112 @@ dreame.0.XXXX.status.6-99
 oder
 dreame.0.XXXX.map.curid
 
+### Control Clean Modes
+
+Enable CleanGenius:
+
+```
+[
+            {
+
+                "value": "{\"k\":\"SmartHost\",\"v\":1}",
+                "siid": 4,
+                "piid": 50
+            }
+        ]
+```
+
+Disable CleanGenius:
+
+```
+ [
+            {
+
+                "value": "{\"k\":\"SmartHost\",\"v\":0}",
+                "siid": 4,
+                "piid": 50
+            }
+        ]
+```
+
+CleanGenius Deep Cleaning: \"v\":2
+
+CleanGenius Mode: value: 3 or value 2
+
+```
+[
+            {
+
+                "value": 2,
+                "siid": 28,
+                "piid": 5
+            }
+        ]
+
+```
+
+Change Cleaning Mode:
+
+```
+[
+{
+
+                "value": 5122,
+                "siid": 4,
+                "piid": 23
+            }
+        ]
+```
+
+Values: 5120, 5121, 5122...
+
+Vaccuum Mode:
+
+```
+[
+{
+
+                "value": 2,
+                "siid": 4,
+                "piid": 4
+            }
+        ]
+
+```
+
+Mop Intensity:
+
+```
+[
+            {
+
+                "value": 28,
+                "siid": 28,
+                "piid": 1
+            }
+        ]
+```
+
+Route:
+
+```
+ [
+            {
+
+                "value": "{\"k\":\"CleanRoute\",\"v\":1}",
+                "siid": 4,
+                "piid": 50
+            }
+        ]
+```
+
 ## Changelog
 
 <!--
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+
 ### 0.2.2 (2025-01-24)
 
 - reduce cpu load while cleaning
@@ -156,3 +256,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+````
+
+```
+
+```
+````
