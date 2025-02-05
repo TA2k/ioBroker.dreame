@@ -110,29 +110,28 @@ dreame.0.XXXX.map.curid
 ### Control Clean Modes
 
 Enable CleanGenius:
+dreame.0.XXXXXX.remote.customCommand
 
 ```
 [
-            {
-
-                "value": "{\"k\":\"SmartHost\",\"v\":1}",
-                "siid": 4,
-                "piid": 50
-            }
-        ]
+  {
+    "value": "{\"k\":\"SmartHost\",\"v\":1}",
+    "siid": 4,
+    "piid": 50
+  }
+]
 ```
 
 Disable CleanGenius:
 
 ```
- [
-            {
-
-                "value": "{\"k\":\"SmartHost\",\"v\":0}",
-                "siid": 4,
-                "piid": 50
-            }
-        ]
+[
+  {
+    "value": "{\"k\":\"SmartHost\",\"v\":0}",
+    "siid": 4,
+    "piid": 50
+  }
+]
 ```
 
 CleanGenius Deep Cleaning: \"v\":2

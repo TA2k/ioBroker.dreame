@@ -1617,7 +1617,6 @@ class Dreame extends utils.Adapter {
           },
         };
         if (stateObject && stateObject.native.piid) {
-          data.data.method = 'set_properties';
           data.data.params = {
             did: deviceId,
             siid: stateObject.native.siid,
