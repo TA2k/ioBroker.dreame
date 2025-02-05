@@ -1894,7 +1894,7 @@ class Dreame extends utils.Adapter {
             }
           }
         }
-        const methodArray = ['set_properties', 'action'];
+        const methodArray = ['action'];
         for (const method of methodArray) {
           this.log.info(`Send: ${JSON.stringify(data)} to ${deviceId}`);
           data.data.method = method;
