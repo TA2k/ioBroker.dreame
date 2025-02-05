@@ -945,7 +945,12 @@ class Dreame extends utils.Adapter {
                 write: true,
                 read: true,
               },
-              native: {},
+              native: {
+                siid: element.siid,
+                piid: element.piid,
+                aiid: element.aiid,
+                did: element.did,
+              },
             });
           }
           if (path) {
