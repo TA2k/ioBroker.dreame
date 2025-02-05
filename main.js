@@ -1894,58 +1894,62 @@ class Dreame extends utils.Adapter {
             }
           }
         }
-        this.log.info(`Send: ${JSON.stringify(data)} to ${deviceId}`);
-        await this.requestClient({
-          method: 'post',
-          url: 'https://eu.iot.dreame.tech:13267/dreame-iot-com-10000/device/sendCommand',
-          headers: {
-            'user-agent': 'Dart/3.2 (dart:io)',
-            'dreame-meta': 'cv=i_829',
-            'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
-            'tenant-id': '000000',
-            host: 'eu.iot.dreame.tech:13267',
-            authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
-            'content-type': 'application/json',
-            'dreame-auth': 'bearer ' + this.session.access_token,
-          },
-          data: data,
-        })
-          .then(async (res) => {
-            if (res.data.code !== 0) {
-              this.log.error('Error setting device state');
-              this.log.error(JSON.stringify(res.data));
-              return;
-            }
-            if (res.data.result && res.data.result.length > 0) {
-              res.data = res.data.result[0];
-            }
-            this.log.info(JSON.stringify(res.data));
-            if (!res.data.result) {
-              return;
-            }
-            const result = res.data.result;
-            if (result.out) {
-              const path = this.specActiosnToIdDict[result.did][result.siid + '-' + result.aiid];
-              this.log.debug(path);
-              const stateObject = await this.getObjectAsync(path);
-              if (stateObject && stateObject.native.out) {
-                const out = stateObject.native.out;
-                for (const outItem of out) {
-                  const index = out.indexOf(outItem);
-                  const outPath = this.specPropsToIdDict[result.did][result.siid + '-' + outItem];
-                  // await this.setState(outPath, result.out[index], true);
-                  this.json2iob.parse(outPath, result.out[index]);
-                  this.log.info('Set ' + outPath + ' to ' + result.out[index]);
-                }
-              } else {
-                this.log.info(JSON.stringify(result.out));
-              }
-            }
+        const methodArray = ['set_properties', 'action'];
+        for (const method of methodArray) {
+          this.log.info(`Send: ${JSON.stringify(data)} to ${deviceId}`);
+          data.data.method = method;
+          await this.requestClient({
+            method: 'post',
+            url: 'https://eu.iot.dreame.tech:13267/dreame-iot-com-10000/device/sendCommand',
+            headers: {
+              'user-agent': 'Dart/3.2 (dart:io)',
+              'dreame-meta': 'cv=i_829',
+              'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
+              'tenant-id': '000000',
+              host: 'eu.iot.dreame.tech:13267',
+              authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
+              'content-type': 'application/json',
+              'dreame-auth': 'bearer ' + this.session.access_token,
+            },
+            data: data,
           })
-          .catch(async (error) => {
-            this.log.error(error);
-            error.response && this.log.error(JSON.stringify(error.response.data));
-          });
+            .then(async (res) => {
+              if (res.data.code !== 0) {
+                this.log.error('Error setting device state');
+                this.log.error(JSON.stringify(res.data));
+                return;
+              }
+              if (res.data.result && res.data.result.length > 0) {
+                res.data = res.data.result[0];
+              }
+              this.log.info(JSON.stringify(res.data));
+              if (!res.data.result) {
+                return;
+              }
+              const result = res.data.result;
+              if (result.out) {
+                const path = this.specActiosnToIdDict[result.did][result.siid + '-' + result.aiid];
+                this.log.debug(path);
+                const stateObject = await this.getObjectAsync(path);
+                if (stateObject && stateObject.native.out) {
+                  const out = stateObject.native.out;
+                  for (const outItem of out) {
+                    const index = out.indexOf(outItem);
+                    const outPath = this.specPropsToIdDict[result.did][result.siid + '-' + outItem];
+                    // await this.setState(outPath, result.out[index], true);
+                    this.json2iob.parse(outPath, result.out[index]);
+                    this.log.info('Set ' + outPath + ' to ' + result.out[index]);
+                  }
+                } else {
+                  this.log.info(JSON.stringify(result.out));
+                }
+              }
+            })
+            .catch(async (error) => {
+              this.log.error(error);
+              error.response && this.log.error(JSON.stringify(error.response.data));
+            });
+        }
         this.refreshTimeout = setTimeout(async () => {
           this.log.info('Update devices');
           await this.updateDevicesViaSpec();
