@@ -57,8 +57,8 @@
       "lg": 3,
       "xl": 3,
       "label": {
-        "en": "Get Map",
-        "de": "Karte abrufen",
+        "en": "Get Map (high cpu usage)",
+        "de": "Karte abrufen (hoher CPU-Verbrauch)",
         "ru": "Получить карту",
         "pt": "Obter mapa",
         "nl": "Kaart ophalen",
