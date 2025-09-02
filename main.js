@@ -599,6 +599,21 @@ class Dreame extends utils.Adapter {
           if (property.unit && property.unit !== 'none') {
             unit = property.unit;
           }
+
+          // Override max constraint for fault properties
+          let minValue = property['value-range'] ? property['value-range'][0] : undefined;
+          let maxValue = property['value-range'] ? property['value-range'][1] : undefined;
+
+          // Check if this is a fault property and remove max constraint
+          if (
+            typeName.toLowerCase().includes('fault') ||
+            property.description.toLowerCase().includes('fault') ||
+            service.description.toLowerCase().includes('fault')
+          ) {
+            this.log.debug(`Removing max constraint for fault property: ${typeName}`);
+            maxValue = undefined; // Remove max constraint entirely for fault codes
+          }
+
           await this.extendObject(device.did + '.' + path + '.' + typeName, {
             type: 'state',
             common: {
@@ -606,8 +621,8 @@ class Dreame extends utils.Adapter {
               type: 'mixed',
               role: role,
               unit: unit,
-              min: property['value-range'] ? property['value-range'][0] : undefined,
-              max: property['value-range'] ? property['value-range'][1] : undefined,
+              min: minValue,
+              max: maxValue,
               states: property['value-list'] ? states : undefined,
               write: write,
               read: true,
@@ -724,6 +739,21 @@ class Dreame extends utils.Adapter {
             if (action.unit && action.unit !== 'none') {
               unit = action.unit;
             }
+
+            // Override max constraint for fault actions
+            let minActionValue = action['value-range'] ? action['value-range'][0] : undefined;
+            let maxActionValue = action['value-range'] ? action['value-range'][1] : undefined;
+
+            // Check if this is a fault action and remove max constraint
+            if (
+              typeName.toLowerCase().includes('fault') ||
+              action.description.toLowerCase().includes('fault') ||
+              service.description.toLowerCase().includes('fault')
+            ) {
+              this.log.debug(`Removing max constraint for fault action: ${typeName}`);
+              maxActionValue = undefined; // Remove max constraint entirely for fault codes
+            }
+
             await this.extendObject(device.did + '.' + path + '.' + typeName, {
               type: 'state',
               common: {
@@ -731,8 +761,8 @@ class Dreame extends utils.Adapter {
                 type: 'mixed',
                 role: role,
                 unit: unit,
-                min: action['value-range'] ? action['value-range'][0] : undefined,
-                max: action['value-range'] ? action['value-range'][1] : undefined,
+                min: minActionValue,
+                max: maxActionValue,
                 states: action['value-list'] ? states : undefined,
                 write: write,
                 read: true,
