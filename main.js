@@ -66,6 +66,153 @@ const DreameRoomClean = Object.freeze({
   0: 'No',
   1: 'Yes',
 });
+
+// HA-kompatible Property Namen (aus Home Assistant dreame-vacuum types.py)
+const PROPERTY_NAME_MAP = Object.freeze({
+  // SIID 2 - Vacuum (Robot Cleaner)
+  '2-1': 'state',
+  '2-2': 'error',
+  // SIID 3 - Battery
+  '3-1': 'battery_level',
+  '3-2': 'charging_status',
+  // SIID 4 - Vacuum Extend (Hauptservice)
+  '4-1': 'status',
+  '4-2': 'cleaning_time',
+  '4-3': 'cleaned_area',
+  '4-4': 'suction_level',
+  '4-5': 'water_volume',
+  '4-6': 'water_tank',
+  '4-7': 'task_status',
+  '4-8': 'cleaning_start_time',
+  '4-9': 'clean_log_file_name',
+  '4-10': 'cleaning_properties',
+  '4-11': 'resume_cleaning',
+  '4-12': 'carpet_boost',
+  '4-13': 'clean_log_status',
+  '4-14': 'serial_number',
+  '4-15': 'remote_control',
+  '4-16': 'mop_cleaning_remainder',
+  '4-17': 'cleaning_paused',
+  '4-18': 'faults',
+  '4-19': 'nation_matched',
+  '4-20': 'relocation_status',
+  '4-21': 'obstacle_avoidance',
+  '4-22': 'ai_detection',
+  '4-23': 'cleaning_mode',
+  '4-24': 'upload_map',
+  '4-25': 'self_wash_base_status',
+  '4-26': 'customized_cleaning',
+  '4-27': 'child_lock',
+  '4-28': 'carpet_sensitivity',
+  '4-29': 'tight_mopping',
+  '4-30': 'cleaning_cancel',
+  '4-31': 'y_clean',
+  '4-32': 'water_electrolysis',
+  '4-33': 'carpet_recognition',
+  '4-34': 'self_clean',
+  '4-35': 'warn_status',
+  '4-36': 'carpet_avoidance',
+  '4-37': 'auto_add_detergent',
+  '4-38': 'capability',
+  '4-39': 'save_water_tips',
+  '4-40': 'drying_time',
+  '4-41': 'no_water_warning',
+  '4-45': 'auto_mount_mop',
+  '4-46': 'mop_wash_level',
+  '4-47': 'scheduled_clean',
+  '4-48': 'quick_command',
+  '4-49': 'intelligent_recognition',
+  '4-50': 'auto_switch_settings',
+  '4-51': 'auto_water_refilling',
+  '4-52': 'mop_in_station',
+  '4-53': 'mop_pad_installed',
+  // SIID 5 - DND
+  '5-1': 'dnd',
+  '5-2': 'dnd_start',
+  '5-3': 'dnd_end',
+  '5-4': 'dnd_task',
+  // SIID 6 - Map
+  '6-1': 'map_data',
+  '6-2': 'frame_info',
+  '6-3': 'object_name',
+  '6-4': 'map_extend_data',
+  '6-5': 'robot_time',
+  '6-6': 'result_code',
+  '6-7': 'multi_floor_map',
+  '6-8': 'map_list',
+  '6-9': 'recovery_map_list',
+  '6-10': 'map_recovery',
+  '6-11': 'map_recovery_status',
+  '6-13': 'old_map_data',
+  '6-14': 'backup_map_status',
+  '6-15': 'wifi_map',
+  // SIID 7 - Audio
+  '7-1': 'volume',
+  '7-2': 'voice_packet_id',
+  '7-3': 'voice_change_status',
+  '7-4': 'voice_change',
+  // SIID 8 - Time
+  '8-1': 'timezone',
+  '8-2': 'schedule',
+  '8-3': 'schedule_id',
+  '8-4': 'schedule_cancel_reason',
+  '8-5': 'cruise_schedule',
+  // SIID 9 - Main Brush
+  '9-1': 'main_brush_time_left',
+  '9-2': 'main_brush_left',
+  // SIID 10 - Side Brush
+  '10-1': 'side_brush_time_left',
+  '10-2': 'side_brush_left',
+  // SIID 11 - Filter
+  '11-1': 'filter_left',
+  '11-2': 'filter_time_left',
+  // SIID 12 - Clean Logs / Statistics
+  '12-1': 'first_cleaning_date',
+  '12-2': 'total_cleaning_time',
+  '12-3': 'cleaning_count',
+  '12-4': 'total_cleaned_area',
+  // SIID 13 - Map Saving
+  '13-1': 'map_saving',
+  // SIID 15 - Collect Dust / Auto Empty
+  '15-1': 'auto_dust_collecting',
+  '15-2': 'auto_empty_frequency',
+  '15-3': 'dust_collection',
+  '15-5': 'auto_empty_status',
+  // SIID 16 - Sensor
+  '16-1': 'sensor_dirty_left',
+  '16-2': 'sensor_dirty_time_left',
+  // SIID 17 - Secondary Filter
+  '17-1': 'secondary_filter_left',
+  '17-2': 'secondary_filter_time_left',
+  // SIID 18 - Mop
+  '18-1': 'mop_pad_left',
+  '18-2': 'mop_pad_time_left',
+  // SIID 19 - Silver Ion
+  '19-1': 'silver_ion_time_left',
+  '19-2': 'silver_ion_left',
+  // SIID 20 - Detergent
+  '20-1': 'detergent_left',
+  '20-2': 'detergent_time_left',
+  // SIID 10001 - Camera/Stream
+  '10001-1': 'stream_status',
+  '10001-2': 'stream_audio',
+  '10001-4': 'stream_record',
+  '10001-5': 'take_photo',
+  '10001-6': 'stream_keep_alive',
+  '10001-7': 'stream_fault',
+  '10001-9': 'camera_brightness',
+  '10001-10': 'camera_light',
+  '10001-99': 'stream_property',
+  '10001-101': 'stream_cruise_point',
+  '10001-103': 'stream_task',
+  '10001-1003': 'stream_upload',
+  '10001-1100': 'stream_code',
+  '10001-1101': 'stream_set_code',
+  '10001-1102': 'stream_verify_code',
+  '10001-1103': 'stream_reset_code',
+  '10001-2003': 'stream_space',
+});
+
 let UpdateCleanset = true;
 let CheckRCObject = false;
 let CheckSCObject = false;
@@ -555,7 +702,11 @@ class Dreame extends utils.Adapter {
             type: property.type,
             access: property.access,
           };
-          const typeName = property.type.split(':')[3];
+          const siidPiid = `${siid}-${piid}`;
+          const specTypeName = property.type.split(':')[3];
+          // Priority: 1. HA Mapping, 2. Spec Name (if not empty/numeric), 3. SIID-PIID
+          const typeName = PROPERTY_NAME_MAP[siidPiid]
+            || (specTypeName && isNaN(specTypeName) ? specTypeName : siidPiid);
           let path = 'status';
           let write = false;
 
@@ -612,7 +763,7 @@ class Dreame extends utils.Adapter {
           }
 
           // Override max constraint for fault properties
-          let minValue = property['value-range'] ? property['value-range'][0] : undefined;
+          const minValue = property['value-range'] ? property['value-range'][0] : undefined;
           let maxValue = property['value-range'] ? property['value-range'][1] : undefined;
 
           // Check if this is a fault property and remove max constraint
@@ -752,7 +903,7 @@ class Dreame extends utils.Adapter {
             }
 
             // Override max constraint for fault actions
-            let minActionValue = action['value-range'] ? action['value-range'][0] : undefined;
+            const minActionValue = action['value-range'] ? action['value-range'][0] : undefined;
             let maxActionValue = action['value-range'] ? action['value-range'][1] : undefined;
 
             // Check if this is a fault action and remove max constraint
