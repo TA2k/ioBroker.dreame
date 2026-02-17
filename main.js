@@ -699,7 +699,7 @@ class Dreame extends utils.Adapter {
             piid: piid,
             did: device.did,
             model: device.model,
-            name: PROPERTY_NAME_MAP[siidPiid]+siidPiid || (service.description + ' - ' + property.description + ' ' + siidPiid),
+            name: PROPERTY_NAME_MAP[siidPiid]+' ' +siidPiid || (service.description + ' - ' + property.description + ' ' + siidPiid),
             type: property.type,
             access: property.access,
           };
