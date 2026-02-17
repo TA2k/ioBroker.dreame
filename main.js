@@ -930,7 +930,9 @@ class Dreame extends utils.Adapter {
         message = JSON.parse(message.toString());
         //this.log.info(' Get Message:' + JSON.stringify(message));
       } catch (error) {
-        this.log.error(error);
+        // Large status messages from Dreame MQTT broker are truncated at 4096 bytes server-side
+        // This is a known limitation - log as info instead of error
+        this.log.info(`MQTT message JSON parse failed (likely truncated by server): ${error.message}`);
         return;
       }
       if (message.data && message.data.method === 'properties_changed') {
