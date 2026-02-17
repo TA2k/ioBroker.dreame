@@ -7,6 +7,7 @@
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
 const axios = require('axios').default;
+const axiosRetry = require('axios-retry').default;
 const Json2iob = require('json2iob');
 const crypto = require('crypto');
 const mqtt = require('mqtt');
@@ -88,6 +89,16 @@ class Dreame extends utils.Adapter {
     this.requestClient = axios.create({
       withCredentials: true,
       timeout: 3 * 60 * 1000, //3min client timeout
+    });
+    axiosRetry(this.requestClient, {
+      retries: 3,
+      retryDelay: axiosRetry.exponentialDelay,
+      onRetry: (retryCount, error) => {
+        this.log.debug(`Retry ${retryCount}: ${error.message}`);
+      },
+      onMaxRetryTimesExceeded: (error) => {
+        this.log.error(`Request failed after 3 retries: ${error.message}`);
+      },
     });
     this.remoteCommands = {};
     this.specStatusDict = {};
@@ -858,26 +869,15 @@ class Dreame extends utils.Adapter {
               }
             })
             .catch((error) => {
-              if (error.response) {
-                if (error.response.status === 401) {
-                  error.response && this.log.debug(JSON.stringify(error.response.data));
-                  this.log.info(' receive 401 error. Refresh Token in 60 seconds');
-                  this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
-                  this.refreshTokenTimeout = setTimeout(() => {
-                    this.refreshToken();
-                  }, 1000 * 60);
-
-                  return;
-                }
-
-                this.log.error(error);
-                error.stack && this.log.error(error.stack);
-                error.response && this.log.error(JSON.stringify(error.response.data));
-                return;
+              if (error.response && error.response.status === 401) {
+                this.log.debug(JSON.stringify(error.response.data));
+                this.log.info('Receive 401 error. Refresh Token in 60 seconds');
+                this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
+                this.refreshTokenTimeout = setTimeout(() => {
+                  this.refreshToken();
+                }, 1000 * 60);
               }
-
-              this.log.debug(error);
-              this.log.debug(JSON.stringify(error));
+              // Other errors already logged by axios-retry onMaxRetryTimesExceeded
             });
         }
       }
@@ -994,11 +994,15 @@ class Dreame extends utils.Adapter {
       }
     });
     this.mqttClient.on('error', async (error) => {
-      this.log.error(error);
-      if (error.message && error.message.includes('Not authorized')) {
+      const errorMessage = error.message || String(error);
+      if (errorMessage.includes('ECONNRESET')) {
+        this.log.info('MQTT connection reset, reconnecting...');
+      } else if (errorMessage.includes('Not authorized')) {
         this.log.error('Not authorized to connect to MQTT');
         this.setState('info.connection', false, true);
         await this.refreshToken();
+      } else {
+        this.log.error('MQTT error: ' + errorMessage);
       }
     });
     this.mqttClient.on('close', () => {
@@ -1419,23 +1423,18 @@ class Dreame extends utils.Adapter {
         this.log.debug('Command response: ' + JSON.stringify(res.data));
 
         if (res.data.code !== 0) {
-          this.log.error('Error sending command: ' + JSON.stringify(dataToSend));
-          this.log.error(JSON.stringify(res.data));
+          this.log.warn('Command failed: ' + JSON.stringify(res.data));
           return {};
         }
         if (!res.data.data) {
-          this.log.error('Error sending command: ' + JSON.stringify(dataToSend));
-          this.log.error('No response');
-          this.log.error(JSON.stringify(res.data));
+          this.log.warn('No response data');
           return {};
         }
 
         return res.data.data;
       })
-      .catch((error) => {
-        this.log.error('Error sending command: ' + JSON.stringify(dataToSend));
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
+      .catch(() => {
+        // Error already logged by axios-retry onMaxRetryTimesExceeded
         return {};
       });
   }
