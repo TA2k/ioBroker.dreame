@@ -693,20 +693,17 @@ class Dreame extends utils.Adapter {
           } else {
             piid++;
           }
+          const siidPiid = `${siid}-${piid}`;
           const remote = {
             siid: siid,
             piid: piid,
             did: device.did,
             model: device.model,
-            name: service.description + ' ' + property.description + ' ' + service.iid + '-' + property.iid,
+            name: PROPERTY_NAME_MAP[siidPiid] || (service.description + ' ' + property.description),
             type: property.type,
             access: property.access,
           };
-          const siidPiid = `${siid}-${piid}`;
-          const specTypeName = property.type.split(':')[3];
-          // Priority: 1. HA Mapping, 2. Spec Name (if not empty/numeric), 3. SIID-PIID
-          const typeName = PROPERTY_NAME_MAP[siidPiid]
-            || (specTypeName && isNaN(specTypeName) ? specTypeName : siidPiid);
+          const typeName = property.type.split(':')[3];
           let path = 'status';
           let write = false;
 
