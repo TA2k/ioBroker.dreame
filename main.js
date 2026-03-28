@@ -9,7 +9,7 @@ const utils = require('@iobroker/adapter-core');
 const axios = require('axios').default;
 const axiosRetry = require('axios-retry').default;
 const Json2iob = require('json2iob');
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 const mqtt = require('mqtt');
 const zlib = require('node:zlib');
 //check if canvas is available because is optional dependency
