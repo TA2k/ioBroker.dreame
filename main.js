@@ -356,7 +356,7 @@ class Dreame extends utils.Adapter {
     if (!createCanvas) {
       this.log.warn('Canvas not available. Map will not be available');
     }
-    this.brand = BRAND_CONFIG[this.config.type || 'dreame'];
+    this.brand = BRAND_CONFIG[this.config.cloudService || 'dreame'];
     this.rlcHeader = this.computeRlc();
     this.updateInterval = null;
     this.mowerMapInterval = null;
@@ -366,7 +366,7 @@ class Dreame extends utils.Adapter {
     this.firstStart = true;
     this.subscribeStates('*.remote.*');
     this.subscribeStates('*.cleanset.*');
-    this.log.info(`Login to ${(this.config.type || 'dreame').toUpperCase()} Cloud...`);
+    this.log.info(`Login to ${(this.config.cloudService || 'dreame').toUpperCase()} Cloud...`);
     await this.login();
     if (this.session.access_token) {
       await this.getDeviceList();
@@ -1395,8 +1395,8 @@ class Dreame extends utils.Adapter {
           if (path) {
             this.log.debug(`Set ${path} to ${element.value}`);
             if (element.value != null) {
-              this.setState(path, JSON.stringify(element.value), true);
-              // this.json2iob.parse(path, JSON.stringify(element.value));
+              const val = typeof element.value === 'object' ? JSON.stringify(element.value) : element.value;
+              this.setState(path, val, true);
             }
           }
         }
@@ -2184,7 +2184,7 @@ class Dreame extends utils.Adapter {
       method: 'action',
       params: {
         did: device.did,
-        siid: 5,
+        siid: 2,
         aiid: 50,
         in: [payload],
       },
