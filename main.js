@@ -22,6 +22,28 @@ try {
 }
 
 const { decodeMultiMapData } = require('./lib/dreame');
+
+const BRAND_CONFIG = {
+  dreame: {
+    domain: 'eu.iot.dreame.tech:13267',
+    tenantId: '000000',
+    authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
+    meta: 'cv=i_829',
+    rlcKey: 'EETjszu*XI5znHsI',
+    mqttFallback: 'app.mt.eu.iot.dreame.tech:19973',
+    iotComPrefix: '10000',
+  },
+  mova: {
+    domain: 'eu.iot.mova-tech.com:13267',
+    tenantId: '000002',
+    authorization: 'Basic bW92YV9hcHA6VjdLb0NoTFc4dkhBQ3FHYg==',
+    meta: 'cv=i_829',
+    rlcKey: 'gigxlmqwZ]7oWZUF',
+    mqttFallback: 'app.mt.eu.iot.mova-tech.com:19974',
+    iotComPrefix: '20000',
+  },
+};
+
 const DreameLevel = Object.freeze({
   0: 'Silent',
   1: 'Basic',
@@ -334,6 +356,8 @@ class Dreame extends utils.Adapter {
     if (!createCanvas) {
       this.log.warn('Canvas not available. Map will not be available');
     }
+    this.brand = BRAND_CONFIG[this.config.type || 'dreame'];
+    this.rlcHeader = this.computeRlc();
     this.updateInterval = null;
     this.mowerMapInterval = null;
     this.reLoginTimeout = null;
@@ -342,7 +366,7 @@ class Dreame extends utils.Adapter {
     this.firstStart = true;
     this.subscribeStates('*.remote.*');
     this.subscribeStates('*.cleanset.*');
-    this.log.info('Login to Dreame Cloud...');
+    this.log.info(`Login to ${(this.config.type || 'dreame').toUpperCase()} Cloud...`);
     await this.login();
     if (this.session.access_token) {
       await this.getDeviceList();
@@ -366,17 +390,32 @@ class Dreame extends utils.Adapter {
     }
   }
 
+  computeRlc() {
+    const cipher = crypto.createCipheriv('aes-128-ecb', this.brand.rlcKey, null);
+    let encrypted = cipher.update('eu|en|DE', 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return encrypted;
+  }
+
+  getHeaders() {
+    return {
+      'user-agent': 'Dart/3.2 (dart:io)',
+      'dreame-meta': this.brand.meta,
+      'dreame-rlc': this.rlcHeader,
+      'tenant-id': this.brand.tenantId,
+      host: this.brand.domain,
+      authorization: this.brand.authorization,
+      'content-type': 'application/json',
+      ...(this.session.access_token ? { 'dreame-auth': 'bearer ' + this.session.access_token } : {}),
+    };
+  }
+
   async login() {
     await this.requestClient({
       method: 'post',
-      url: 'https://eu.iot.dreame.tech:13267/dreame-auth/oauth/token',
+      url: `https://${this.brand.domain}/dreame-auth/oauth/token`,
       headers: {
-        'user-agent': 'Dart/3.2 (dart:io)',
-        'dreame-meta': 'cv=i_829',
-        'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
-        'tenant-id': '000000',
-        host: 'eu.iot.dreame.tech:13267',
-        authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
+        ...this.getHeaders(),
         'content-type': 'application/x-www-form-urlencoded',
         'dreame-auth': 'bearer',
       },
@@ -409,17 +448,8 @@ class Dreame extends utils.Adapter {
     await this.requestClient({
       method: 'post',
       maxBodyLength: Infinity,
-      url: 'https://eu.iot.dreame.tech:13267/dreame-user-iot/iotuserbind/device/listV2',
-      headers: {
-        'user-agent': 'Dart/3.2 (dart:io)',
-        'dreame-meta': 'cv=i_829',
-        'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
-        'tenant-id': '000000',
-        host: 'eu.iot.dreame.tech:13267',
-        authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
-        'content-type': 'application/json',
-        'dreame-auth': 'bearer ' + this.session.access_token,
-      },
+      url: `https://${this.brand.domain}/dreame-user-iot/iotuserbind/device/listV2`,
+      headers: this.getHeaders(),
       data: {
         sharedStatus: 1,
         current: 1,
@@ -829,6 +859,22 @@ class Dreame extends utils.Adapter {
       common: { name: 'Send Custom Command', type: 'string', role: 'text', read: true, write: true },
       native: {},
     });
+    await this.extendObject(`${did}.remote.generate-3dmap`, {
+      type: 'state',
+      common: { name: 'Generate 3D LIDAR Map', type: 'boolean', role: 'button', read: false, write: true },
+      native: {},
+    });
+    await this.extendObject(`${did}.status.3dmap-url`, {
+      type: 'state',
+      common: { name: '3D Map Download URL', type: 'string', role: 'text.url', read: true, write: false, def: '' },
+      native: {},
+    });
+    await this.extendObject(`${did}.status.3dmap-progress`, {
+      type: 'state',
+      common: { name: '3D Map Generation Progress', type: 'number', role: 'value', read: true, write: false, unit: '%', def: 0 },
+      native: {},
+    });
+    this.specPropsToIdDict[did]['2-54'] = `${did}.status.3dmap-progress`;
 
     this.log.info(`Mower states created: ${statusStates.length} status, ${remoteStates.length} remote, ${actionStates.length} actions`);
   }
@@ -1171,17 +1217,8 @@ class Dreame extends utils.Adapter {
           };
           await this.requestClient({
             method: 'post',
-            url: 'https://eu.iot.dreame.tech:13267/dreame-iot-com-10000/device/sendCommand',
-            headers: {
-              'user-agent': 'Dart/3.2 (dart:io)',
-              'dreame-meta': 'cv=i_829',
-              'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
-              'tenant-id': '000000',
-              host: 'eu.iot.dreame.tech:13267',
-              authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
-              'content-type': 'application/json',
-              'dreame-auth': 'bearer ' + this.session.access_token,
-            },
+            url: `https://${this.brand.domain}/dreame-iot-com-${this.brand.iotComPrefix}/device/sendCommand`,
+            headers: this.getHeaders(),
             data: data,
           })
             .then(async (res) => {
@@ -1248,7 +1285,7 @@ class Dreame extends utils.Adapter {
     if (this.mqttClient) {
       this.mqttClient.end();
     }
-    const url = this.deviceArray[0].bindDomain || 'app.mt.eu.iot.dreame.tech:19973';
+    const url = this.deviceArray[0].bindDomain || this.brand.mqttFallback;
     this.mqttClient = mqtt.connect('mqtts://' + url, {
       clientId: 'p_' + crypto.randomBytes(8).toString('hex'),
       username: this.session.uid,
@@ -1297,6 +1334,12 @@ class Dreame extends utils.Adapter {
           }
           const device = this.deviceArray.find((d) => String(d.did) === did);
           if (this.isMower(device) && element.siid === 1) {
+            continue;
+          }
+          if (this.isMower(device) && element.siid === 99 && element.piid === 20) {
+            this.log.info('3D map upload complete for ' + did);
+            await this.setState(did + '.status.3dmap-progress', 100, true);
+            this.fetch3DMapUrl(device);
             continue;
           }
           if (this.isMower(device) && element.siid === 2 && element.piid === 1) {
@@ -1745,17 +1788,8 @@ class Dreame extends utils.Adapter {
     try {
       const response = await this.requestClient({
         method: 'post',
-        url: 'https://eu.iot.dreame.tech:13267/dreame-user-iot/iotuserdata/getDeviceData',
-        headers: {
-          'user-agent': 'Dart/3.2 (dart:io)',
-          'dreame-meta': 'cv=i_829',
-          'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
-          'tenant-id': '000000',
-          host: 'eu.iot.dreame.tech:13267',
-          authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
-          'content-type': 'application/json',
-          'dreame-auth': 'bearer ' + this.session.access_token,
-        },
+        url: `https://${this.brand.domain}/dreame-user-iot/iotuserdata/getDeviceData`,
+        headers: this.getHeaders(),
         data: { did: device.did },
       });
 
@@ -2077,16 +2111,8 @@ class Dreame extends utils.Adapter {
   async getFile(url, device) {
     return await this.requestClient({
       method: 'post',
-      url: 'https://eu.iot.dreame.tech:13267/dreame-user-iot/iotfile/getDownloadUrl',
-      headers: {
-        'user-agent': 'Dart/3.2 (dart:io)',
-        'dreame-meta': 'cv=i_829',
-        'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
-        'tenant-id': '000000',
-        authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
-        'content-type': 'application/json',
-        'dreame-auth': 'bearer ' + this.session.access_token,
-      },
+      url: `https://${this.brand.domain}/dreame-user-iot/iotfile/getDownloadUrl`,
+      headers: this.getHeaders(),
       data: {
         did: device.did,
         model: device.model,
@@ -2124,16 +2150,8 @@ class Dreame extends utils.Adapter {
     };
     return await this.requestClient({
       method: 'post',
-      url: 'https://eu.iot.dreame.tech:13267/dreame-iot-com-10000/device/sendCommand',
-      headers: {
-        'user-agent': 'Dart/3.2 (dart:io)',
-        'dreame-meta': 'cv=i_829',
-        'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
-        'tenant-id': '000000',
-        authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
-        'content-type': 'application/json',
-        'dreame-auth': 'bearer ' + this.session.access_token,
-      },
+      url: `https://${this.brand.domain}/dreame-iot-com-${this.brand.iotComPrefix}/device/sendCommand`,
+      headers: this.getHeaders(),
       data: dataToSend,
     })
       .then((res) => {
@@ -2158,6 +2176,46 @@ class Dreame extends utils.Adapter {
         // Error already logged by axios-retry onMaxRetryTimesExceeded
         return {};
       });
+  }
+
+  async sendMowerCommand(device, payload) {
+    const result = await this.sendCommand({
+      did: device.did,
+      method: 'action',
+      params: {
+        did: device.did,
+        siid: 5,
+        aiid: 50,
+        in: [payload],
+      },
+    });
+    if (result && result.result && result.result.out) {
+      return result.result.out[0];
+    }
+    return result;
+  }
+
+  async fetch3DMapUrl(device) {
+    try {
+      const result = await this.sendMowerCommand(device, { m: 'g', t: 'OBJ', d: { type: '3dmap' } });
+      if (!result || !result.d || !result.d.name) {
+        this.log.info('No 3D map available for ' + device.model);
+        return;
+      }
+      const filename = result.d.name[0] || Object.values(result.d.name)[0];
+      if (!filename) {
+        this.log.info('No 3D map filename found');
+        return;
+      }
+      this.log.info('3D map object: ' + filename);
+      const downloadUrl = await this.getFile(filename, device);
+      if (downloadUrl) {
+        await this.setState(device.did + '.status.3dmap-url', downloadUrl, true);
+        this.log.info('3D map URL updated for ' + device.model);
+      }
+    } catch (e) {
+      this.log.error('Error fetching 3D map URL: ' + e.message);
+    }
   }
 
   async getType(element, createpath) {
@@ -2278,14 +2336,9 @@ class Dreame extends utils.Adapter {
   async refreshToken() {
     await this.requestClient({
       method: 'post',
-      url: 'https://eu.iot.dreame.tech:13267/dreame-auth/oauth/token',
+      url: `https://${this.brand.domain}/dreame-auth/oauth/token`,
       headers: {
-        'user-agent': 'Dart/3.2 (dart:io)',
-        'dreame-meta': 'cv=i_829',
-        'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
-        'tenant-id': '000000',
-        host: 'eu.iot.dreame.tech:13267',
-        authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
+        ...this.getHeaders(),
         'content-type': 'application/x-www-form-urlencoded',
       },
       data: {
@@ -2354,6 +2407,16 @@ class Dreame extends utils.Adapter {
           this.getMap(device, false);
           return;
         }
+        if (id.split('.')[4] === 'generate-3dmap') {
+          const device = this.deviceArray.find((obj) => obj.did === deviceId);
+          if (!this.isMower(device)) return;
+          this.log.info('Generating 3D LIDAR map for ' + device.model);
+          await this.setState(device.did + '.status.3dmap-progress', 0, true);
+          await this.setState(device.did + '.status.3dmap-url', '', true);
+          await this.sendMowerCommand(device, { m: 'a', p: 0, o: 10, d: { idx: 0 } });
+          this.log.info('3D map generation triggered, waiting for MQTT progress updates');
+          return;
+        }
         //{"id":0,"method":"app_start","params":[{"clean_mop":0}]}
 
         const stateObject = await this.getObjectAsync(id);
@@ -2417,7 +2480,7 @@ class Dreame extends utils.Adapter {
           const RoomIdx = id.lastIndexOf('.');
           const RoomOjct = id.substring(0, RoomIdx);
           //this.log.info(' ======> Changed:' + id + ' to ' + state.val);
-          let RetRoomSettings = '';
+          let RetRoomSettings;
           if (id.split('.')[5] === 'Update') {
             UpdateCleanset = state.val === true ? true : false;
           }
@@ -2476,17 +2539,8 @@ class Dreame extends utils.Adapter {
                   };
                   await this.requestClient({
                     method: 'post',
-                    url: 'https://eu.iot.dreame.tech:13267/dreame-iot-com-10000/device/sendCommand',
-                    headers: {
-                      'user-agent': 'Dart/3.2 (dart:io)',
-                      'dreame-meta': 'cv=i_829',
-                      'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
-                      'tenant-id': '000000',
-                      host: 'eu.iot.dreame.tech:13267',
-                      authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
-                      'content-type': 'application/json',
-                      'dreame-auth': 'bearer ' + this.session.access_token,
-                    },
+                    url: `https://${this.brand.domain}/dreame-iot-com-${this.brand.iotComPrefix}/device/sendCommand`,
+                    headers: this.getHeaders(),
                     data: data,
                   })
                     .then(async (res) => {
@@ -2657,17 +2711,8 @@ class Dreame extends utils.Adapter {
 
         await this.requestClient({
           method: 'post',
-          url: 'https://eu.iot.dreame.tech:13267/dreame-iot-com-10000/device/sendCommand',
-          headers: {
-            'user-agent': 'Dart/3.2 (dart:io)',
-            'dreame-meta': 'cv=i_829',
-            'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
-            'tenant-id': '000000',
-            host: 'eu.iot.dreame.tech:13267',
-            authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
-            'content-type': 'application/json',
-            'dreame-auth': 'bearer ' + this.session.access_token,
-          },
+          url: `https://${this.brand.domain}/dreame-iot-com-${this.brand.iotComPrefix}/device/sendCommand`,
+          headers: this.getHeaders(),
           data: data,
         })
           .then(async (res) => {
