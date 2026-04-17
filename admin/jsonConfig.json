@@ -2,6 +2,63 @@
   "type": "panel",
   "i18n": false,
   "items": {
+    "cloudService": {
+      "type": "select",
+      "options": [
+        {
+          "label": {
+            "en": "Dreame",
+            "de": "Dreame",
+            "ru": "Dreame",
+            "pt": "Dreame",
+            "nl": "Dreame",
+            "fr": "Dreame",
+            "it": "Dreame",
+            "es": "Dreame",
+            "pl": "Dreame",
+            "uk": "Dreame",
+            "zh-cn": "Dreame"
+          },
+          "value": "dreame"
+        },
+        {
+          "label": {
+            "en": "MOVA",
+            "de": "MOVA",
+            "ru": "MOVA",
+            "pt": "MOVA",
+            "nl": "MOVA",
+            "fr": "MOVA",
+            "it": "MOVA",
+            "es": "MOVA",
+            "pl": "MOVA",
+            "uk": "MOVA",
+            "zh-cn": "MOVA"
+          },
+          "value": "mova"
+        }
+      ],
+      "label": {
+        "en": "Cloud Service",
+        "de": "Cloud-Dienst",
+        "ru": "Облачный сервис",
+        "pt": "Serviço em nuvem",
+        "nl": "Clouddienst",
+        "fr": "Service cloud",
+        "it": "Servizio cloud",
+        "es": "Servicio en la nube",
+        "pl": "Usługa chmurowa",
+        "uk": "Хмарний сервіс",
+        "zh-cn": "云服务"
+      },
+      "default": "dreame",
+      "newLine": true,
+      "sm": 12,
+      "xs": 12,
+      "md": 6,
+      "lg": 3,
+      "xl": 3
+    },
     "username": {
       "type": "text",
       "label": {

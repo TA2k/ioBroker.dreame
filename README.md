@@ -183,6 +183,12 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### 0.3.2 (2026-04-17)
+
+- fix 3D LIDAR map SIID bug (siid:5 → siid:2 for aiid:50)
+- fix MQTT value type coercion (numbers no longer stringified)
+- fix cloudService config field (renamed from reserved keyword "type")
+
 ### 0.3.1 (2026-04-17)
 
 - add MOVA brand support (MOVA 600, MOVA 1000)

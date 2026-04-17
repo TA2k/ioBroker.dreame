@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "news": {
+      "0.3.2": {
+        "en": "fix 3D LIDAR map SIID bug (siid:5 → siid:2 for aiid:50)\nfix MQTT value type coercion (numbers no longer stringified)\nfix cloudService config field (renamed from reserved keyword \"type\")",
+        "de": "3D-LIDAR-Karte SIID-Bug behoben (siid:5 → siid:2 für aiid:50)\nMQTT-Werttyp-Konvertierung behoben (Zahlen werden nicht mehr als String gespeichert)\ncloudService-Konfigurationsfeld behoben (umbenannt von reserviertem Schlüsselwort \"type\")",
+        "ru": "исправлен баг SIID 3D LIDAR карты (siid:5 → siid:2 для aiid:50)\nисправлено приведение типов значений MQTT (числа больше не преобразуются в строки)\nисправлено поле конфигурации cloudService (переименовано с зарезервированного ключевого слова \"type\")",
+        "pt": "corrigido bug SIID do mapa 3D LIDAR (siid:5 → siid:2 para aiid:50)\ncorrigida coerção de tipo de valor MQTT (números não são mais convertidos em string)\ncorrigido campo de configuração cloudService (renomeado de palavra-chave reservada \"type\")",
+        "nl": "3D LIDAR kaart SIID bug opgelost (siid:5 → siid:2 voor aiid:50)\nMQTT waarde type conversie opgelost (nummers worden niet meer als string opgeslagen)\ncloudService configuratieveld opgelost (hernoemd van gereserveerd sleutelwoord \"type\")",
+        "fr": "correction du bug SIID de la carte 3D LIDAR (siid:5 → siid:2 pour aiid:50)\ncorrection de la coercition de type de valeur MQTT (les nombres ne sont plus convertis en chaîne)\ncorrection du champ de configuration cloudService (renommé depuis le mot-clé réservé \"type\")",
+        "it": "corretto bug SIID mappa 3D LIDAR (siid:5 → siid:2 per aiid:50)\ncorretta coercizione tipo valore MQTT (i numeri non vengono più convertiti in stringa)\ncorretto campo configurazione cloudService (rinominato da parola chiave riservata \"type\")",
+        "es": "corregido bug SIID del mapa 3D LIDAR (siid:5 → siid:2 para aiid:50)\ncorregida coerción de tipo de valor MQTT (los números ya no se convierten en cadena)\ncorregido campo de configuración cloudService (renombrado de palabra clave reservada \"type\")",
+        "pl": "naprawiono błąd SIID mapy 3D LIDAR (siid:5 → siid:2 dla aiid:50)\nnaprawiono konwersję typu wartości MQTT (liczby nie są już konwertowane na string)\nnaprawiono pole konfiguracji cloudService (zmieniono nazwę z zarezerwowanego słowa kluczowego \"type\")",
+        "uk": "виправлено баг SIID 3D LIDAR карти (siid:5 → siid:2 для aiid:50)\nвиправлено приведення типів значень MQTT (числа більше не перетворюються на рядки)\nвиправлено поле конфігурації cloudService (перейменовано із зарезервованого ключового слова \"type\")",
+        "zh-cn": "修复3D激光雷达地图SIID错误 (siid:5 → siid:2 用于 aiid:50)\n修复MQTT值类型转换 (数字不再转换为字符串)\n修复cloudService配置字段 (从保留关键字\"type\"重命名)"
+      },
       "0.3.1": {
         "en": "add MOVA brand support (MOVA 600, MOVA 1000)\nadd Cloud Service selector (Dreame/MOVA) in adapter settings\ncentralize API configuration (domain, auth, headers) per brand\ncompute dreame-rlc header dynamically via AES-128-ECB\nadd mower support (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)\ndedicated mower states (status, remote, map)\nmower map rendering via iotuserdata API\nautomatic map polling during mowing\nfilter vacuum-only services for mower devices\nfix SIID+3 action bug for mower\nadd 3D LIDAR map generation and download URL\nadd retry logic for API requests\nfix JSON parsing errors (downgrade to info)\nupdate datapoint names and IDs",
         "de": "MOVA-Markenunterstützung hinzugefügt (MOVA 600, MOVA 1000)\nCloud-Service-Auswahl (Dreame/MOVA) in Adaptereinstellungen\nAPI-Konfiguration (Domain, Auth, Header) pro Marke zentralisiert\ndreame-rlc Header dynamisch per AES-128-ECB berechnet\nMäher-Unterstützung hinzugefügt (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)\nDedizierte Mäher-States (Status, Remote, Karte)\nMäher-Kartenrendering via iotuserdata API\nAutomatisches Karten-Polling während des Mähens\nVacuum-only Services für Mäher gefiltert\nSIID+3 Action-Bug für Mäher behoben\n3D-LIDAR-Kartengenerierung und Download-URL hinzugefügt\nRetry-Logik für API-Anfragen hinzugefügt\nJSON-Parsing-Fehler behoben (auf Info herabgestuft)\nDatapoint-Namen und IDs aktualisiert",
@@ -148,7 +161,7 @@
   "encryptedNative": ["password"],
   "protectedNative": ["password"],
   "native": {
-    "type": "dreame",
+    "cloudService": "dreame",
     "username": "",
     "password": "",
     "interval": 30,
