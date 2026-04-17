@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.2.2",
+    "version": "0.3.0",
     "news": {
+      "0.3.0": {
+        "en": "add mower support (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)",
+        "de": "Mäher-Unterstützung hinzugefügt (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)",
+        "ru": "добавлена поддержка газонокосилок (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)",
+        "pt": "adicionado suporte para cortador (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)",
+        "nl": "maaier ondersteuning toegevoegd (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)",
+        "fr": "ajout du support tondeuse (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)",
+        "it": "aggiunto supporto tosaerba (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)",
+        "es": "añadido soporte cortacésped (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)",
+        "pl": "dodano obsługę kosiarki (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)",
+        "uk": "додано підтримку газонокосарки (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)",
+        "zh-cn": "添加割草机支持 (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)"
+      },
       "0.2.2": {
         "en": "reduce cpu load while cleaning",
         "de": "reduzieren cpu-last bei der reinigung",

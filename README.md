@@ -15,194 +15,145 @@
 
 ## dreame adapter for ioBroker
 
-Adapter for dreame home devices tested with L10 L20 and x40
+Adapter for Dreame robot vacuums and robot mowers.
 
-#### deviceId.status
+**Tested with:** L10, L20, X40, A2 1200 (Mower)
 
-Current Status of the devices
+---
 
-#### deviceId.remote
+## Vacuum (L10, L20, X40, ...)
 
-Remote control of the devices
-Start: dreame.0.xxxxx.remote.start-sweep
-Stop: dreame.0.xxxxx.remote.start-charge
+### deviceId.status
 
-Start Shortcut:
+Current status of the device (battery, charging, cleaning mode, etc.)
 
-dreame.0.XXXXXXXX.remote.start-clean
+### deviceId.remote
 
-```
+Remote control of the device.
+
+Start: `dreame.0.XXXXX.remote.start-sweep`
+Stop: `dreame.0.XXXXX.remote.start-charge`
+
+#### Start Shortcut
+
+`dreame.0.XXXXXXXX.remote.start-clean`
+
+```json
 [
-                {
-                    "piid": 1,
-                    "value": 25
-                },
-                {
-                    "piid": 10,
-                    "value": "32"
-                }
+  { "piid": 1, "value": 25 },
+  { "piid": 10, "value": "32" }
 ]
 ```
 
-"value": "32" -> Shortcut id
+`"value": "32"` = Shortcut ID (see `dreame.0.XXXXX.status.4-48`, names are base64 encoded)
 
-List of shortcuts:
+#### Room Cleaning
 
-dreame.0.XXXXX.status.4-48
+`dreame.0.XXXX.remote.start-clean`
 
-Names are base64 encoded
-If there is no 4-48 state you have to start a short cut
-
-### Room cleaning
-
-dreame.0.XXXX.remote.start-clean
-
-```
- [
-                {
-                    "piid": 1,
-                    "value": 18
-                },
-                {
-                    "piid": 10,
-                    "value": "{\"selects\":[[X,1,3,2,1]]}"
-                }
-            ]
-```
-
-X = room id
-
-Multiple Rooms:
-
-```
- [
-                {
-                    "piid": 1,
-                    "value": 18
-                },
-                {
-                    "piid": 10,
-                    "value": "{\"selects\":[[X,1,3,2,1],[Y,1,3,2,1]]}"
-                }
-            ]
-```
-
-X = room 1
-Y = room 2
-
-Karte wechseln
-dreame.XXXXXXX.remote.update-map
-
-```
- [
-                {
-                    "piid": 4,
-                    "value": "{\"sm\":{},\"mapid\":X}"
-                }
-            ]
-```
-
-X = mapId
-dreame.0.XXXX.status.6-99
-oder
-dreame.0.XXXX.map.curid
-
-### Control Clean Modes
-
-Enable CleanGenius:
-dreame.0.XXXXXX.remote.customCommand
-
-```
+```json
 [
-  {
-    "value": "{\"k\":\"SmartHost\",\"v\":1}",
-    "siid": 4,
-    "piid": 50
-  }
+  { "piid": 1, "value": 18 },
+  { "piid": 10, "value": "{\"selects\":[[X,1,3,2,1]]}" }
 ]
 ```
 
-Disable CleanGenius:
+X = Room ID. Multiple rooms: `{\"selects\":[[X,1,3,2,1],[Y,1,3,2,1]]}`
 
-```
-[
-  {
-    "value": "{\"k\":\"SmartHost\",\"v\":0}",
-    "siid": 4,
-    "piid": 50
-  }
-]
+#### Switch Map
+
+`dreame.0.XXXXXXX.remote.update-map`
+
+```json
+[{ "piid": 4, "value": "{\"sm\":{},\"mapid\":X}" }]
 ```
 
-CleanGenius Deep Cleaning: \"v\":2
+X = mapId (see `dreame.0.XXXX.status.6-99` or `dreame.0.XXXX.map.curid`)
 
-CleanGenius Mode: value: 3 or value 2
+#### Control Clean Modes
 
-```
-[
-            {
+Via `dreame.0.XXXXXX.remote.customCommand`:
 
-                "value": 2,
-                "siid": 28,
-                "piid": 5
-            }
-        ]
+| Action           | siid | piid | value                                   |
+| ---------------- | ---- | ---- | --------------------------------------- |
+| CleanGenius On   | 4    | 50   | `{"k":"SmartHost","v":1}`               |
+| CleanGenius Off  | 4    | 50   | `{"k":"SmartHost","v":0}`               |
+| CleanGenius Deep | 4    | 50   | `{"k":"SmartHost","v":2}`               |
+| Cleaning Mode    | 4    | 23   | 5120, 5121, 5122...                     |
+| Vacuum Mode      | 4    | 4    | 0=Quiet, 1=Standard, 2=Medium, 3=Strong |
+| Mop Intensity    | 28   | 1    | 28                                      |
+| Route            | 4    | 50   | `{"k":"CleanRoute","v":1}`              |
+| CleanGenius Mode | 28   | 5    | 2 or 3                                  |
 
-```
+---
 
-Change Cleaning Mode:
+## Mower (A2, A2 1200, ...)
 
-```
-[
+The adapter supports Dreame robotic mowers with dedicated states and map rendering.
+
+### Mower Status
+
+| State           | Description                                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------------------------- |
+| status          | Mower status (1=Mowing, 2=Standby, 3=Paused, 5=Returning, 6=Charging, 11=Mapping, 13=Charged, 14=Updating) |
+| fault           | Error code                                                                                                 |
+| battery-level   | Battery percentage                                                                                         |
+| charging-state  | Charging state                                                                                             |
+| work-mode       | Current work mode                                                                                          |
+| mowing-time     | Current mowing time (min)                                                                                  |
+| mowing-area     | Current mowed area (m²)                                                                                    |
+| task-status     | Task status                                                                                                |
+| faults          | Fault details                                                                                              |
+| warn-status     | Warning status                                                                                             |
+| total-mow-time  | Total mowing time (min)                                                                                    |
+| total-mow-count | Total mow count                                                                                            |
+| total-mow-area  | Total mowed area (m²)                                                                                      |
+
+### Mower Remote
+
+| State               | Description                         |
+| ------------------- | ----------------------------------- |
+| start-mow           | Start mowing                        |
+| stop-mow            | Stop mowing                         |
+| start-zone-mow      | Start zone mowing (value: zone IDs) |
+| start-charge        | Return to dock                      |
+| start-mow-ext       | Start mowing extended               |
+| stop-mow-ext        | Stop mowing extended                |
+| obstacle-avoidance  | Obstacle avoidance on/off           |
+| ai-detection        | AI detection on/off                 |
+| child-lock          | Child lock on/off                   |
+| dnd-enable          | Do not disturb on/off               |
+| dnd-start / dnd-end | DND time range                      |
+| schedule            | Mow schedule                        |
+| fetchMap            | Fetch map from device (button)      |
+| customCommand       | Send custom MIoT command            |
+
+### Mower Map
+
+Map data is fetched via the Dreame iotuserdata API (not MQTT like vacuums).
+
+| State        | Description                           |
+| ------------ | ------------------------------------- |
+| mapImage     | Rendered map as PNG (base64 data URL) |
+| slot0.zone_X | Zone data (name, area, mowing time)   |
+| mowingPath   | Raw mowing path coordinates           |
+| settings     | Mowing settings per zone              |
+| schedule     | Mowing schedule                       |
+
+**Map polling:** The map is fetched on adapter start and via the `fetchMap` button. During active mowing (status 1, 3, 5, 11) the map is automatically polled every 30 seconds to track the mowing path.
+
+**Map rendering:** Requires the optional `canvas` npm package. The map shows zones (green), contours (white outlines), mowing path (yellow), forbidden areas (red), and obstacles (red circles).
+
+#### Custom Commands for Mower
+
+Via `dreame.0.XXXXXX.remote.customCommand`:
+
+```json
 {
-
-                "value": 5122,
-                "siid": 4,
-                "piid": 23
-            }
-        ]
-```
-
-Values: 5120, 5121, 5122...
-
-Vaccuum Mode:
-
-```
-[
-{
-
-                "value": 2,
-                "siid": 4,
-                "piid": 4
-            }
-        ]
-
-```
-
-Mop Intensity:
-
-```
-[
-            {
-
-                "value": 28,
-                "siid": 28,
-                "piid": 1
-            }
-        ]
-```
-
-Route:
-
-```
- [
-            {
-
-                "value": "{\"k\":\"CleanRoute\",\"v\":1}",
-                "siid": 4,
-                "piid": 50
-            }
-        ]
+  "siid": 5,
+  "aiid": 9,
+  "in": [{ "order": 4, "region": [1], "type": "order" }]
+}
 ```
 
 ## Changelog
@@ -211,6 +162,17 @@ Route:
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### 0.3.0 (2026-04-17)
+
+- add mower support (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)
+- dedicated mower states (status, remote, map)
+- mower map rendering via iotuserdata API
+- automatic map polling during mowing
+- filter vacuum-only services for mower devices
+- fix SIID+3 action bug for mower
+- add retry logic for API requests
+- fix JSON parsing errors (downgrade to info)
+- update datapoint names and IDs
 
 ### 0.2.2 (2025-01-24)
 
@@ -255,10 +217,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-````
-
-```
-
-```
-````
