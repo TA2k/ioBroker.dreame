@@ -15,9 +15,25 @@
 
 ## dreame adapter for ioBroker
 
-Adapter for Dreame robot vacuums and robot mowers.
+Adapter for Dreame and MOVA robot vacuums and robot mowers.
 
-**Tested with:** L10, L20, X40, A2 1200 (Mower)
+**Supported brands:** Dreame, MOVA (select in adapter settings)
+
+**Tested with:** L10, L20, X40, A2 1200 (Mower), MOVA 600, MOVA 1000
+
+---
+
+## Configuration
+
+| Setting | Description |
+| --- | --- |
+| Cloud Service | Select **Dreame** or **MOVA** depending on your app |
+| App Email | Your Dreame/MOVA app login email |
+| App Password | Your Dreame/MOVA app password |
+| Get Map | Enable map rendering (higher CPU usage) |
+| Update interval | Polling interval in minutes |
+
+> MOVA devices (600, 1000) use the same cloud backend as Dreame but with different domains. Select **MOVA** if you use the MOVA app.
 
 ---
 
@@ -126,23 +142,28 @@ The adapter supports Dreame robotic mowers with dedicated states and map renderi
 | dnd-start / dnd-end | DND time range                      |
 | schedule            | Mow schedule                        |
 | fetchMap            | Fetch map from device (button)      |
+| generate-3dmap      | Generate 3D LIDAR map (button)      |
 | customCommand       | Send custom MIoT command            |
 
 ### Mower Map
 
 Map data is fetched via the Dreame iotuserdata API (not MQTT like vacuums).
 
-| State        | Description                           |
-| ------------ | ------------------------------------- |
-| mapImage     | Rendered map as PNG (base64 data URL) |
-| slot0.zone_X | Zone data (name, area, mowing time)   |
-| mowingPath   | Raw mowing path coordinates           |
-| settings     | Mowing settings per zone              |
-| schedule     | Mowing schedule                       |
+| State           | Description                              |
+| --------------- | ---------------------------------------- |
+| mapImage        | Rendered map as PNG (base64 data URL)    |
+| slot0.zone_X    | Zone data (name, area, mowing time)      |
+| mowingPath      | Raw mowing path coordinates              |
+| settings        | Mowing settings per zone                 |
+| schedule        | Mowing schedule                          |
+| 3dmap-url       | 3D LIDAR map download URL (pre-signed)   |
+| 3dmap-progress  | 3D map generation progress (0-100%)      |
 
 **Map polling:** The map is fetched on adapter start and via the `fetchMap` button. During active mowing (status 1, 3, 5, 11) the map is automatically polled every 30 seconds to track the mowing path.
 
 **Map rendering:** Requires the optional `canvas` npm package. The map shows zones (green), contours (white outlines), mowing path (yellow), forbidden areas (red), and obstacles (red circles).
+
+**3D LIDAR Map:** Press `generate-3dmap` to trigger the mower to scan and upload a 3D point cloud map. Progress is tracked in `3dmap-progress`. Once complete, the pre-signed download URL is written to `3dmap-url`. The URL is temporary and expires after some hours.
 
 #### Custom Commands for Mower
 
@@ -162,14 +183,19 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### 0.3.0 (2026-04-17)
+### 0.3.1 (2026-04-17)
 
+- add MOVA brand support (MOVA 600, MOVA 1000)
+- add Cloud Service selector (Dreame/MOVA) in adapter settings
+- centralize API configuration (domain, auth, headers) per brand
+- compute dreame-rlc header dynamically via AES-128-ECB
 - add mower support (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)
 - dedicated mower states (status, remote, map)
 - mower map rendering via iotuserdata API
 - automatic map polling during mowing
 - filter vacuum-only services for mower devices
 - fix SIID+3 action bug for mower
+- add 3D LIDAR map generation and download URL
 - add retry logic for API requests
 - fix JSON parsing errors (downgrade to info)
 - update datapoint names and IDs
