@@ -66,6 +66,40 @@ const DreameRoomClean = Object.freeze({
   0: 'No',
   1: 'Yes',
 });
+const DEVICE_STATUS_STATES = Object.freeze({
+  vacuum: {
+    1: 'Cleaning', 2: 'Standby', 3: 'Paused', 4: 'Paused', 5: 'Returning to charge',
+    6: 'Charging', 7: 'Mopping', 8: 'Mop Drying', 9: 'Mop Washing', 10: 'Returning to wash',
+    11: 'Mapping', 12: 'Cleaning', 13: 'Charging Completed', 14: 'Upgrading',
+    15: 'Summon to clean', 16: 'Self-Repairing', 17: 'Returning to install the mop pad',
+    18: 'Returning to remove the mop pad', 19: 'Automatic water supply and drainage self testing',
+    20: 'Cleaning Mop Pad and Adding Water', 21: 'Cleaning paused', 22: 'Auto-Emptying',
+    23: 'Remote Controlled Cleaning', 24: 'Smart Charging', 25: 'Second cleaning underway',
+    26: 'Following', 27: 'Spot cleaning', 28: 'Returning for dust collection',
+    29: 'Waiting for tasks', 30: 'Cleaning the washboard base',
+    33: 'Water Supply and Drainage Emptying', 97: 'Shortcut running',
+    98: 'Camera Monitoring', 99: 'Camera monitoring paused',
+  },
+  mower: {
+    1: 'Working', 2: 'Standby', 3: 'Working', 4: 'Paused', 5: 'Returning Charge',
+    6: 'Charging', 11: 'Mapping', 13: 'Charging Completed', 14: 'Upgrading',
+  },
+  swbot: {
+    0: 'Online', 1: 'Charging', 2: 'Charging complete', 3: 'Updating',
+  },
+  airp: {
+    1: 'Working', 2: 'Standby',
+  },
+  hold: {
+    1: 'Mopping', 2: 'Offline', 3: 'Standby', 4: 'Charging', 5: 'Self-Cleaning',
+    6: 'Drying', 7: 'Sleeping Mode', 8: 'Vacuuming', 9: 'Adding clean water',
+    10: 'Pausing', 11: 'Pausing', 12: 'Pausing', 13: 'OTA Upgrading',
+    14: 'Voice Package Upgrading', 15: 'Charging Completed', 16: 'Mopping', 17: 'Mopping',
+    18: 'Mopping', 19: 'Mopping', 20: 'Mopping', 21: 'Mopping', 22: 'Mopping',
+    23: 'Drying', 24: 'Drying', 25: 'Drying', 26: 'Self-Cleaning', 27: 'Self-Cleaning',
+    28: 'Self-Cleaning',
+  },
+});
 
 // HA-kompatible Property Namen (aus Home Assistant dreame-vacuum types.py)
 const PROPERTY_NAME_MAP = Object.freeze({
@@ -213,6 +247,22 @@ const PROPERTY_NAME_MAP = Object.freeze({
   '10001-2003': 'stream_space',
 });
 
+const MOWER_PROPERTY_NAME_MAP = Object.freeze({
+  '9-1': 'blades_time_left',
+  '9-2': 'blades_left',
+  '4-42': 'map_index',
+  '4-43': 'map_name',
+  '4-44': 'cruise_type',
+  '4-50': 'lensbrush_left',
+  '4-58': 'task_type',
+  '4-59': 'pet_detective',
+  '4-62': 'back_clean_mode',
+  '4-63': 'cleaning_progress',
+  '4-83': 'device_capability',
+  '12-5': 'total_runtime',
+  '12-6': 'total_cruise_time',
+});
+
 let UpdateCleanset = true;
 let CheckRCObject = false;
 let CheckSCObject = false;
@@ -255,6 +305,18 @@ class Dreame extends utils.Adapter {
   /**
    * Is called when databases are connected and adapter received configuration.
    */
+  isMower(device) {
+    return device && device.model && device.model.includes('mower');
+  }
+  getDeviceType(device) {
+    if (!device || !device.model) return 'vacuum';
+    const model = device.model.toLowerCase();
+    if (model.includes('mower')) return 'mower';
+    if (model.includes('swbot')) return 'swbot';
+    if (model.includes('airp')) return 'airp';
+    if (model.includes('hold')) return 'hold';
+    return 'vacuum';
+  }
   async onReady() {
     this.setState('info.connection', false, true);
     if (this.config.interval < 0.5) {
@@ -273,6 +335,7 @@ class Dreame extends utils.Adapter {
       this.log.warn('Canvas not available. Map will not be available');
     }
     this.updateInterval = null;
+    this.mowerMapInterval = null;
     this.reLoginTimeout = null;
     this.refreshTokenTimeout = null;
     this.session = {};
@@ -548,11 +611,23 @@ class Dreame extends utils.Adapter {
                 }
               }
             }
+            const deviceType = this.getDeviceType(device);
+            if (!this.states[device.did]) {
+              this.states[device.did] = {};
+            }
+            if (!this.states[device.did]['2-1'] && DEVICE_STATUS_STATES[deviceType]) {
+              this.states[device.did]['2-1'] = DEVICE_STATUS_STATES[deviceType];
+              this.log.info(`Using local status states for ${device.model} (type: ${deviceType})`);
+            }
             this.json2iob.parse(device.did + '.general', device, {
               states: { latestStatus: this.states[device.did] },
               channelName: 'General Updated at Start',
             });
-            await this.getMap(device, true);
+            if (this.isMower(device)) {
+              await this.getMowerMap(device);
+            } else {
+              await this.getMap(device, true);
+            }
           }
         } else {
           this.log.error('No Devices found: ' + JSON.stringify(response.data));
@@ -585,7 +660,11 @@ class Dreame extends utils.Adapter {
           return obj.type;
         });
       if (type.length === 0) {
-        this.log.info(`No spec found for ${device.model} set to default spec type`);
+        if (this.isMower(device)) {
+          this.log.info(`No mower spec found for ${device.model}, using vacuum spec as base`);
+        } else {
+          this.log.info(`No spec found for ${device.model}, using default vacuum spec`);
+        }
         type[0] = 'urn:miot-spec-v2:device:vacuum:0000A006:dreame-r2320:1';
       }
       device.spec_type = type[0];
@@ -659,6 +738,100 @@ class Dreame extends utils.Adapter {
       }
     }
   }
+  async createMowerRemotes(device) {
+    const did = device.did;
+    this.log.info(`Creating mower-specific states for ${device.model}`);
+
+    const statusStates = [
+      { id: 'status', name: 'Mower Status', siid: 2, piid: 1, type: 'number', role: 'value' },
+      { id: 'fault', name: 'Error Code', siid: 2, piid: 2, type: 'number', role: 'value' },
+      { id: 'battery-level', name: 'Battery Level', siid: 3, piid: 1, type: 'number', role: 'value.battery', unit: '%' },
+      { id: 'charging-state', name: 'Charging State', siid: 3, piid: 2, type: 'number', role: 'value' },
+      { id: 'work-mode', name: 'Work Mode', siid: 4, piid: 1, type: 'number', role: 'value' },
+      { id: 'mowing-time', name: 'Mowing Time', siid: 4, piid: 2, type: 'number', role: 'value', unit: 'min' },
+      { id: 'mowing-area', name: 'Mowed Area', siid: 4, piid: 3, type: 'number', role: 'value', unit: 'm²' },
+      { id: 'task-status', name: 'Task Status', siid: 4, piid: 7, type: 'number', role: 'value' },
+      { id: 'serial-number', name: 'Serial Number', siid: 4, piid: 14, type: 'string', role: 'text' },
+      { id: 'faults', name: 'Faults', siid: 4, piid: 18, type: 'string', role: 'text' },
+      { id: 'warn-status', name: 'Warning Status', siid: 4, piid: 35, type: 'number', role: 'value' },
+      { id: 'mow-cancel', name: 'Mow Cancel', siid: 4, piid: 30, type: 'number', role: 'value' },
+      { id: 'first-mow-time', name: 'First Mow Time', siid: 12, piid: 1, type: 'number', role: 'value' },
+      { id: 'total-mow-time', name: 'Total Mow Time', siid: 12, piid: 2, type: 'number', role: 'value', unit: 'min' },
+      { id: 'total-mow-count', name: 'Total Mow Count', siid: 12, piid: 3, type: 'number', role: 'value' },
+      { id: 'total-mow-area', name: 'Total Mowed Area', siid: 12, piid: 4, type: 'number', role: 'value', unit: 'm²' },
+    ];
+
+    const remoteStates = [
+      { id: 'obstacle-avoidance', name: 'Obstacle Avoidance', siid: 4, piid: 21, type: 'number', role: 'switch' },
+      { id: 'ai-detection', name: 'AI Detection', siid: 4, piid: 22, type: 'number', role: 'switch' },
+      { id: 'mow-setting', name: 'Mow Setting', siid: 4, piid: 23, type: 'number', role: 'value' },
+      { id: 'custom-mowing', name: 'Custom Mowing', siid: 4, piid: 26, type: 'number', role: 'switch' },
+      { id: 'child-lock', name: 'Child Lock', siid: 4, piid: 27, type: 'number', role: 'switch' },
+      { id: 'dnd-enable', name: 'Do Not Disturb', siid: 5, piid: 1, type: 'boolean', role: 'switch' },
+      { id: 'dnd-start', name: 'DND Start Time', siid: 5, piid: 2, type: 'string', role: 'text' },
+      { id: 'dnd-end', name: 'DND End Time', siid: 5, piid: 3, type: 'string', role: 'text' },
+      { id: 'timezone', name: 'Timezone', siid: 8, piid: 1, type: 'string', role: 'text' },
+      { id: 'schedule', name: 'Mow Schedule', siid: 8, piid: 2, type: 'string', role: 'text' },
+    ];
+
+    const actionStates = [
+      { id: 'start-mow', name: 'Start Mowing', siid: 2, aiid: 1, in: [] },
+      { id: 'stop-mow', name: 'Stop Mowing', siid: 2, aiid: 2, in: [] },
+      { id: 'start-zone-mow', name: 'Start Zone Mowing', siid: 2, aiid: 3, in: [4] },
+      { id: 'start-charge', name: 'Return to Dock', siid: 3, aiid: 1, in: [] },
+      { id: 'start-mow-ext', name: 'Start Mow Extended', siid: 4, aiid: 1, in: [10, 1] },
+      { id: 'stop-mow-ext', name: 'Stop Mow Extended', siid: 4, aiid: 2, in: [] },
+    ];
+
+    await this.extendObject(did + '.status', { type: 'channel', common: { name: 'Mower Status' }, native: {} });
+    await this.extendObject(did + '.remote', { type: 'channel', common: { name: 'Mower Remote' }, native: {} });
+
+    for (const s of statusStates) {
+      const path = `${did}.status.${s.id}`;
+      await this.extendObject(path, {
+        type: 'state',
+        common: { name: s.name, type: s.type, role: s.role, read: true, write: false, unit: s.unit || '' },
+        native: { siid: s.siid, piid: s.piid, did: did },
+      });
+      this.specPropsToIdDict[did][`${s.siid}-${s.piid}`] = path;
+      if (s.siid <= 3) {
+        this.specStatusDict[did].push({ did: did, siid: s.siid, code: 0, piid: s.piid, updateTime: 0 });
+      }
+    }
+
+    for (const r of remoteStates) {
+      const path = `${did}.remote.${r.id}`;
+      await this.extendObject(path, {
+        type: 'state',
+        common: { name: r.name, type: r.type, role: r.role, read: true, write: true },
+        native: { siid: r.siid, piid: r.piid, did: did },
+      });
+      this.specPropsToIdDict[did][`${r.siid}-${r.piid}`] = path;
+    }
+
+    for (const a of actionStates) {
+      const path = `${did}.remote.${a.id}`;
+      await this.extendObject(path, {
+        type: 'state',
+        common: { name: a.name, type: 'string', role: 'text', read: true, write: true, def: JSON.stringify(a.in) },
+        native: { siid: a.siid, aiid: a.aiid, did: did },
+      });
+      this.specActiosnToIdDict[did][`${a.siid}-${a.aiid}`] = path;
+    }
+
+    await this.extendObject(`${did}.remote.fetchMap`, {
+      type: 'state',
+      common: { name: 'Fetch Mower Map', type: 'boolean', role: 'button', read: false, write: true },
+      native: {},
+    });
+    await this.extendObject(`${did}.remote.customCommand`, {
+      type: 'state',
+      common: { name: 'Send Custom Command', type: 'string', role: 'text', read: true, write: true },
+      native: {},
+    });
+
+    this.log.info(`Mower states created: ${statusStates.length} status, ${remoteStates.length} remote, ${actionStates.length} actions`);
+  }
   async extractRemotesFromSpec(device) {
     const spec = this.specs[device.spec_type];
     this.log.info(`Extracting remotes from spec for ${device.model} ${spec.description}`);
@@ -670,6 +843,10 @@ class Dreame extends utils.Adapter {
     this.specStatusDict[device.did] = [];
     this.specActiosnToIdDict[device.did] = {};
     this.specPropsToIdDict[device.did] = {};
+    if (this.isMower(device)) {
+      await this.createMowerRemotes(device);
+      return;
+    }
     for (const service of spec.services) {
       if (service.iid) {
         siid = service.iid;
@@ -685,7 +862,9 @@ class Dreame extends utils.Adapter {
         continue;
       }
       try {
-        //this.log.info(JSON.stringify(service));
+        const propertyNameMap = this.isMower(device)
+          ? { ...PROPERTY_NAME_MAP, ...MOWER_PROPERTY_NAME_MAP }
+          : PROPERTY_NAME_MAP;
         let piid = 0;
         for (const property of service.properties) {
           if (property.iid) {
@@ -694,12 +873,26 @@ class Dreame extends utils.Adapter {
             piid++;
           }
           const siidPiid = `${siid}-${piid}`;
+          if (this.isMower(device)) {
+            const mowerAllowProps = [
+              '2-1', '2-2', '2-3',
+              '3-1', '3-2',
+              '4-1', '4-2', '4-3', '4-7', '4-14', '4-18', '4-21', '4-22', '4-23', '4-26', '4-27', '4-30', '4-35',
+              '5-1', '5-2', '5-3',
+              '8-1', '8-2', '8-3', '8-4',
+              '12-1', '12-2', '12-3', '12-4',
+            ];
+            if (!mowerAllowProps.includes(siidPiid)) {
+              this.log.debug(`Skipping property ${siidPiid} for mower (not in whitelist)`);
+              continue;
+            }
+          }
           const remote = {
             siid: siid,
             piid: piid,
             did: device.did,
             model: device.model,
-            name: PROPERTY_NAME_MAP[siidPiid]+' ' +siidPiid || (service.description + ' - ' + property.description + ' ' + siidPiid),
+            name: propertyNameMap[siidPiid] ? propertyNameMap[siidPiid] + ' ' + siidPiid : service.description + ' - ' + property.description + ' ' + siidPiid,
             type: property.type,
             access: property.access,
           };
@@ -797,13 +990,15 @@ class Dreame extends utils.Adapter {
             },
           });
           if (property.access.includes('notify')) {
-            this.specStatusDict[device.did].push({
-              did: device.did,
-              siid: remote.siid,
-              code: 0,
-              piid: remote.piid,
-              updateTime: 0,
-            });
+            if (!this.isMower(device) || remote.siid <= 3) {
+              this.specStatusDict[device.did].push({
+                did: device.did,
+                siid: remote.siid,
+                code: 0,
+                piid: remote.piid,
+                updateTime: 0,
+              });
+            }
           }
           this.specPropsToIdDict[device.did][remote.siid + '-' + remote.piid] =
             device.did + '.' + path + '.' + typeName;
@@ -953,7 +1148,7 @@ class Dreame extends utils.Adapter {
   }
   async updateDevicesViaSpec() {
     for (const device of this.deviceArray) {
-      if (this.config.getMap) {
+      if (this.config.getMap && !this.isMower(device)) {
         this.getMap(device);
       }
       if (this.specStatusDict[device.did]) {
@@ -991,16 +1186,16 @@ class Dreame extends utils.Adapter {
           })
             .then(async (res) => {
               if (res.data.code !== 0) {
-                if (res.data.code === -8) {
+                if (res.data.code === -8 || res.data.code === 80001) {
                   this.log.debug(
-                    `Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`,
+                    `Error getting spec update for ${device.name || device.model} (${device.did}) with ${JSON.stringify(data)}`,
                   );
 
                   this.log.debug(JSON.stringify(res.data));
                   return;
                 }
                 this.log.info(
-                  `Error getting spec update for ${device.name} (${device.did}) with ${JSON.stringify(data)}`,
+                  `Error getting spec update for ${device.name || device.model} (${device.did}) with ${JSON.stringify(data)}`,
                 );
                 this.log.debug(JSON.stringify(res.data));
                 return;
@@ -1084,9 +1279,11 @@ class Dreame extends utils.Adapter {
         return;
       }
       if (message.data && message.data.method === 'properties_changed') {
+        const messageDid = String(message.did || message.data.did || '');
         for (const element of message.data.params) {
-          if (!this.specPropsToIdDict[element.did]) {
-            this.log.debug(`No spec found for ${element.did}`);
+          const did = String(element.did || messageDid);
+          if (!this.specPropsToIdDict[did]) {
+            this.log.debug(`No spec found for ${did}`);
             continue;
           }
           if (JSON.stringify(element.siid) === '6' && JSON.stringify(element.piid) === '1') {
@@ -1094,15 +1291,34 @@ class Dreame extends utils.Adapter {
             if (this.config.getMap || this.firstStart) {
               this.firstStart = false;
               const encode = JSON.stringify(element.value);
-              const mappath = `${element.did}` + '.map.';
+              const mappath = `${did}` + '.map.';
               this.setMapInfos(encode, mappath);
             }
           }
-          //this.log.info(' Map data:' + JSON.stringify(element.siid) + ' => ' + JSON.stringify(element.piid));
-          let path = this.specPropsToIdDict[element.did][element.siid + '-' + element.piid];
+          const device = this.deviceArray.find((d) => String(d.did) === did);
+          if (this.isMower(device) && element.siid === 1) {
+            continue;
+          }
+          if (this.isMower(device) && element.siid === 2 && element.piid === 1) {
+            const mowingStates = [1, 3, 5, 11];
+            const isMowing = mowingStates.includes(element.value);
+            if (isMowing && !this.mowerMapInterval) {
+              this.log.info(`Mower ${did} started mowing (status=${element.value}), starting map polling`);
+              this.getMowerMap(device);
+              this.mowerMapInterval = setInterval(() => {
+                this.getMowerMap(device);
+              }, 30 * 1000);
+            } else if (!isMowing && this.mowerMapInterval) {
+              this.log.info(`Mower ${did} stopped mowing (status=${element.value}), stopping map polling`);
+              clearInterval(this.mowerMapInterval);
+              this.mowerMapInterval = null;
+              this.getMowerMap(device);
+            }
+          }
+          let path = this.specPropsToIdDict[did][element.siid + '-' + element.piid];
           if (!path) {
-            this.log.debug(`No path found for ${element.did} ${element.siid}-${element.piid}`);
-            path = `${element.did}.status.${element.siid}-${element.piid}`;
+            this.log.debug(`No path found for ${did} ${element.siid}-${element.piid}`);
+            path = `${did}.status.${element.siid}-${element.piid}`;
             await this.extendObject(path, {
               type: 'state',
               common: {
@@ -1115,7 +1331,7 @@ class Dreame extends utils.Adapter {
               native: {},
             });
             this.setState(path, JSON.stringify(element.value), true);
-            path = `${element.did}.remote.${element.siid}-${element.piid}`;
+            path = `${did}.remote.${element.siid}-${element.piid}`;
             await this.extendObject(path, {
               type: 'state',
               common: {
@@ -1129,7 +1345,7 @@ class Dreame extends utils.Adapter {
                 siid: element.siid,
                 piid: element.piid,
                 aiid: element.aiid,
-                did: element.did,
+                did: did,
               },
             });
           }
@@ -1289,6 +1505,9 @@ class Dreame extends utils.Adapter {
                 //this.log.info(' Long subkey ' + Subvalue.length + ' / ' + Subvalue[3]);
                 if (Subvalue.length == 6) {
                   if (UpdateCleanset) {
+                    const did = In_path.split('.')[0];
+                    const cleansetDevice = this.deviceArray.find((d) => String(d.did) === String(did));
+                    const isMowerDevice = this.isMower(cleansetDevice);
                     for (let i = 0; i < Subvalue.length; i += 1) {
                       //1: DreameLevel, 2: DreameWaterVolume, 3: DreameRepeat, 4: DreameRoomNumber, 5: DreameCleaningMode, 6: Route
                       //map-req[{"piid": 2,"value": "{\"req_type\":1,\"frame_type\":I,\"force_type\":1}"}]
@@ -1298,15 +1517,17 @@ class Dreame extends utils.Adapter {
                       pathMap = In_path + key + '.' + Subkey + '.RoomOrder';
                       this.getType(parseFloat(Subvalue[3]), pathMap);
                       this.setState(pathMap, parseFloat(Subvalue[3]), true);
-                      pathMap = In_path + key + '.' + Subkey + '.Level';
-                      this.setcleansetPath(pathMap, DreameLevel);
-                      this.setState(pathMap, Subvalue[0], true);
-                      pathMap = In_path + key + '.' + Subkey + '.CleaningMode';
-                      this.setcleansetPath(pathMap, DreameCleaningMode);
-                      this.setState(pathMap, Subvalue[4], true);
-                      pathMap = In_path + key + '.' + Subkey + '.WaterVolume';
-                      this.setcleansetPath(pathMap, DreameWaterVolume);
-                      this.setState(pathMap, Subvalue[1], true);
+                      if (!isMowerDevice) {
+                        pathMap = In_path + key + '.' + Subkey + '.Level';
+                        this.setcleansetPath(pathMap, DreameLevel);
+                        this.setState(pathMap, Subvalue[0], true);
+                        pathMap = In_path + key + '.' + Subkey + '.CleaningMode';
+                        this.setcleansetPath(pathMap, DreameCleaningMode);
+                        this.setState(pathMap, Subvalue[4], true);
+                        pathMap = In_path + key + '.' + Subkey + '.WaterVolume';
+                        this.setcleansetPath(pathMap, DreameWaterVolume);
+                        this.setState(pathMap, Subvalue[1], true);
+                      }
                       pathMap = In_path + key + '.' + Subkey + '.Repeat';
                       this.setcleansetPath(pathMap, DreameRepeat);
                       this.setState(pathMap, Subvalue[2], true);
@@ -1507,6 +1728,352 @@ class Dreame extends utils.Adapter {
     }
   }
 
+  reassembleChunks(data, prefix) {
+    const totalSize = parseInt(data[`${prefix}.info`] || '0', 10);
+    if (!totalSize) return '';
+    let result = '';
+    for (let i = 0; ; i++) {
+      const key = `${prefix}.${i}`;
+      if (data[key] === undefined) break;
+      result += data[key];
+      if (result.length >= totalSize) break;
+    }
+    return result.substring(0, totalSize);
+  }
+
+  async getMowerMap(device) {
+    try {
+      const response = await this.requestClient({
+        method: 'post',
+        url: 'https://eu.iot.dreame.tech:13267/dreame-user-iot/iotuserdata/getDeviceData',
+        headers: {
+          'user-agent': 'Dart/3.2 (dart:io)',
+          'dreame-meta': 'cv=i_829',
+          'dreame-rlc': '1a9bb36e6b22617cf465363ba7c232fb131899d593e8d1a1-1',
+          'tenant-id': '000000',
+          host: 'eu.iot.dreame.tech:13267',
+          authorization: 'Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg=',
+          'content-type': 'application/json',
+          'dreame-auth': 'bearer ' + this.session.access_token,
+        },
+        data: { did: device.did },
+      });
+
+      if (!response.data || response.data.code !== 0 || !response.data.data) {
+        this.log.debug('No mower userdata: ' + JSON.stringify(response.data));
+        return;
+      }
+      const userData = response.data.data;
+
+      const basePath = device.did + '.map';
+      await this.extendObject(basePath, {
+        type: 'channel',
+        common: { name: 'Mower Map Data' },
+        native: {},
+      });
+
+      // Canvas rendering
+      let parsedMapData = null;
+      let parsedPathData = null;
+
+      // MAP data
+      const mapRaw = this.reassembleChunks(userData, 'MAP');
+      if (mapRaw) {
+        try {
+          parsedMapData = JSON.parse(mapRaw);
+          const mapData = parsedMapData;
+          for (let slotIdx = 0; slotIdx < mapData.length; slotIdx++) {
+            const entry = typeof mapData[slotIdx] === 'string' ? JSON.parse(mapData[slotIdx]) : mapData[slotIdx];
+            const slotPath = basePath + '.slot' + slotIdx;
+            await this.extendObject(slotPath, {
+              type: 'channel',
+              common: { name: 'Map Slot ' + slotIdx },
+              native: {},
+            });
+
+            if (entry.totalArea != null) {
+              await this.setObjectAndState(slotPath + '.totalArea', 'Total Area', 'number', 'value', entry.totalArea);
+            }
+            if (entry.boundary) {
+              await this.setObjectAndState(slotPath + '.boundary', 'Boundary', 'string', 'json', JSON.stringify(entry.boundary));
+            }
+            await this.setObjectAndState(slotPath + '.mapIndex', 'Map Index', 'number', 'value', entry.mapIndex);
+            await this.setObjectAndState(slotPath + '.hasBack', 'Has Back', 'number', 'value', entry.hasBack);
+            if (entry.md5sum) {
+              await this.setObjectAndState(slotPath + '.md5sum', 'MD5 Checksum', 'string', 'value', entry.md5sum);
+            }
+
+            if (entry.mowingAreas && entry.mowingAreas.value) {
+              for (const [zoneId, zone] of entry.mowingAreas.value) {
+                const zonePath = slotPath + '.zone' + zoneId;
+                await this.extendObject(zonePath, {
+                  type: 'channel',
+                  common: { name: zone.name || 'Zone ' + zoneId },
+                  native: {},
+                });
+                await this.setObjectAndState(zonePath + '.name', 'Zone Name', 'string', 'value', zone.name || '');
+                await this.setObjectAndState(zonePath + '.area', 'Area m²', 'number', 'value', zone.area || 0);
+                await this.setObjectAndState(zonePath + '.time', 'Total Mowing Time', 'number', 'value.interval', zone.time || 0);
+                await this.setObjectAndState(zonePath + '.etime', 'Effective Mowing Time', 'number', 'value.interval', zone.etime || 0);
+                await this.setObjectAndState(zonePath + '.path', 'Zone Boundary Polygon', 'string', 'json', JSON.stringify(zone.path));
+              }
+            }
+
+            if (entry.contours && entry.contours.value) {
+              for (const [contourId, contour] of entry.contours.value) {
+                const cId = Array.isArray(contourId) ? contourId.join('_') : contourId;
+                const contourPath = slotPath + '.contour' + cId;
+                await this.extendObject(contourPath, {
+                  type: 'channel',
+                  common: { name: 'Contour ' + cId },
+                  native: {},
+                });
+                await this.setObjectAndState(contourPath + '.type', 'Contour Type', 'number', 'value', contour.type);
+                await this.setObjectAndState(contourPath + '.path', 'Contour Polygon', 'string', 'json', JSON.stringify(contour.path));
+              }
+            }
+
+            if (entry.forbiddenAreas && entry.forbiddenAreas.value.length > 0) {
+              await this.setObjectAndState(slotPath + '.forbiddenAreas', 'Forbidden Areas', 'string', 'json', JSON.stringify(entry.forbiddenAreas.value));
+            }
+            if (entry.obstacles && entry.obstacles.value.length > 0) {
+              await this.setObjectAndState(slotPath + '.obstacles', 'Obstacles', 'string', 'json', JSON.stringify(entry.obstacles.value));
+            }
+          }
+        } catch (e) {
+          this.log.warn('Error parsing mower MAP data: ' + e.message);
+        }
+      }
+
+      // M_PATH data
+      const pathRaw = this.reassembleChunks(userData, 'M_PATH');
+      if (pathRaw) {
+        try {
+          parsedPathData = JSON.parse(pathRaw);
+          const pathData = parsedPathData;
+          let segments = 0;
+          let points = 0;
+          for (const entry of pathData) {
+            if (entry === null) continue;
+            if (entry[0] === 32767 && entry[1] === -32768) { segments++; continue; }
+            points++;
+          }
+          await this.setObjectAndState(basePath + '.mowingPath', 'Mowing Path Coordinates', 'string', 'json', pathRaw);
+          await this.setObjectAndState(basePath + '.pathSegments', 'Path Segments', 'number', 'value', segments + 1);
+          await this.setObjectAndState(basePath + '.pathPoints', 'Path Points', 'number', 'value', points);
+        } catch (e) {
+          this.log.warn('Error parsing mower M_PATH data: ' + e.message);
+        }
+      }
+
+      // SETTINGS data
+      if (userData['SETTINGS.0']) {
+        try {
+          const settings = JSON.parse(userData['SETTINGS.0']);
+          const settingsPath = basePath + '.settings';
+          await this.extendObject(settingsPath, {
+            type: 'channel',
+            common: { name: 'Mower Settings' },
+            native: {},
+          });
+          await this.setObjectAndState(settingsPath + '.raw', 'Raw Settings', 'string', 'json', userData['SETTINGS.0']);
+          if (settings[0] && settings[0].settings) {
+            for (const [zoneId, s] of Object.entries(settings[0].settings)) {
+              const zPath = settingsPath + '.zone' + zoneId;
+              await this.extendObject(zPath, {
+                type: 'channel',
+                common: { name: 'Zone ' + zoneId + ' Settings' },
+                native: {},
+              });
+              await this.setObjectAndState(zPath + '.mowingHeight', 'Mowing Height', 'number', 'value', s.mowingHeight || 0);
+              await this.setObjectAndState(zPath + '.edgeMowingWalkMode', 'Edge Mowing Walk Mode', 'number', 'value', s.edgeMowingWalkMode || 0);
+              await this.setObjectAndState(zPath + '.edgeMowingAuto', 'Auto Edge Mowing', 'number', 'value', s.edgeMowingAuto || 0);
+              await this.setObjectAndState(zPath + '.cutterPosition', 'Cutter Position', 'number', 'value', s.cutterPosition || 0);
+              await this.setObjectAndState(zPath + '.obstacleAvoidanceEnabled', 'Obstacle Avoidance', 'number', 'value', s.obstacleAvoidanceEnabled || 0);
+              await this.setObjectAndState(zPath + '.mowingDirection', 'Mowing Direction', 'number', 'value', s.mowingDirection || 0);
+            }
+          }
+        } catch (e) {
+          this.log.warn('Error parsing mower SETTINGS: ' + e.message);
+        }
+      }
+
+      // SCHEDULE data
+      if (userData['SCHEDULE.0']) {
+        await this.setObjectAndState(basePath + '.schedule', 'Mowing Schedule', 'string', 'json', userData['SCHEDULE.0']);
+      }
+
+      // Canvas rendering
+      if (parsedMapData) {
+        await this.renderMowerMap(device, parsedMapData, parsedPathData);
+      }
+
+      this.log.debug('Mower map data updated for ' + device.did);
+    } catch (error) {
+      this.log.warn('Error fetching mower map data: ' + error.message);
+      this.log.debug(error.stack);
+    }
+  }
+
+  async setObjectAndState(id, name, type, role, value) {
+    await this.extendObject(id, {
+      type: 'state',
+      common: { name: name, type: type, role: role, read: true, write: false },
+      native: {},
+    });
+    await this.setState(id, value, true);
+  }
+
+  async renderMowerMap(device, mapData, pathData) {
+    if (!createCanvas) {
+      this.log.debug('Canvas not available, cannot render mower map');
+      return;
+    }
+    try {
+      const entry = typeof mapData[0] === 'string' ? JSON.parse(mapData[0]) : mapData[0];
+      if (!entry || !entry.boundary) return;
+
+      const b = entry.boundary;
+      const mapW = b.x2 - b.x1;
+      const mapH = b.y2 - b.y1;
+      if (mapW <= 0 || mapH <= 0) return;
+
+      const maxPx = 800;
+      const scale = Math.min(maxPx / mapW, maxPx / mapH);
+      const cW = Math.ceil(mapW * scale);
+      const cH = Math.ceil(mapH * scale);
+
+      const canvas = createCanvas(cW, cH);
+      const ctx = canvas.getContext('2d');
+
+      const toX = (x) => (x - b.x1) * scale;
+      const toY = (y) => (b.y2 - y) * scale;
+
+      // Background
+      ctx.fillStyle = '#1a3a1a';
+      ctx.fillRect(0, 0, cW, cH);
+
+      // Mowing zones (filled)
+      if (entry.mowingAreas && entry.mowingAreas.value) {
+        const zoneColors = ['rgba(76, 175, 80, 0.4)', 'rgba(33, 150, 243, 0.4)', 'rgba(255, 193, 7, 0.4)', 'rgba(156, 39, 176, 0.4)'];
+        for (let zi = 0; zi < entry.mowingAreas.value.length; zi++) {
+          const zone = entry.mowingAreas.value[zi][1];
+          if (!zone.path || zone.path.length < 3) continue;
+          ctx.beginPath();
+          ctx.moveTo(toX(zone.path[0].x), toY(zone.path[0].y));
+          for (let i = 1; i < zone.path.length; i++) {
+            ctx.lineTo(toX(zone.path[i].x), toY(zone.path[i].y));
+          }
+          ctx.closePath();
+          ctx.fillStyle = zoneColors[zi % zoneColors.length];
+          ctx.fill();
+          ctx.strokeStyle = '#4CAF50';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+
+      // Forbidden areas (red)
+      if (entry.forbiddenAreas && entry.forbiddenAreas.value.length > 0) {
+        for (const [, area] of entry.forbiddenAreas.value) {
+          if (!area.path || area.path.length < 3) continue;
+          ctx.beginPath();
+          ctx.moveTo(toX(area.path[0].x), toY(area.path[0].y));
+          for (let i = 1; i < area.path.length; i++) {
+            ctx.lineTo(toX(area.path[i].x), toY(area.path[i].y));
+          }
+          ctx.closePath();
+          ctx.fillStyle = 'rgba(244, 67, 54, 0.5)';
+          ctx.fill();
+          ctx.strokeStyle = '#F44336';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+
+      // Contours (outline)
+      if (entry.contours && entry.contours.value) {
+        for (const [, contour] of entry.contours.value) {
+          if (!contour.path || contour.path.length < 3) continue;
+          ctx.beginPath();
+          ctx.moveTo(toX(contour.path[0].x), toY(contour.path[0].y));
+          for (let i = 1; i < contour.path.length; i++) {
+            ctx.lineTo(toX(contour.path[i].x), toY(contour.path[i].y));
+          }
+          ctx.closePath();
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      }
+
+      // Mowing path (M_PATH coordinates are ~10x smaller than MAP coordinates)
+      if (pathData && pathData.length > 0) {
+        ctx.strokeStyle = 'rgba(255, 235, 59, 0.6)';
+        ctx.lineWidth = 0.8;
+        let penDown = false;
+        for (const pt of pathData) {
+          if (pt === null) { penDown = false; continue; }
+          const [px, py] = pt;
+          if (px === 32767 && py === -32768) {
+            if (penDown) ctx.stroke();
+            penDown = false;
+            continue;
+          }
+          const cx = toX(px * 10);
+          const cy = toY(py * 10);
+          if (!penDown) {
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            penDown = true;
+          } else {
+            ctx.lineTo(cx, cy);
+          }
+        }
+        if (penDown) ctx.stroke();
+      }
+
+      // Obstacles (red circles)
+      if (entry.obstacles && entry.obstacles.value.length > 0) {
+        ctx.fillStyle = '#FF5722';
+        for (const [, obs] of entry.obstacles.value) {
+          if (obs.x != null && obs.y != null) {
+            ctx.beginPath();
+            ctx.arc(toX(obs.x), toY(obs.y), 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // Zone labels
+      if (entry.mowingAreas && entry.mowingAreas.value) {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'center';
+        for (const [, zone] of entry.mowingAreas.value) {
+          if (!zone.name || !zone.path || zone.path.length === 0) continue;
+          let cx = 0, cy = 0;
+          for (const p of zone.path) { cx += p.x; cy += p.y; }
+          cx /= zone.path.length;
+          cy /= zone.path.length;
+          ctx.fillText(zone.name, toX(cx), toY(cy));
+        }
+      }
+
+      const buffer = canvas.toBuffer('image/png');
+      const basePath = device.did + '.map';
+      await this.extendObject(basePath + '.mapImage', {
+        type: 'state',
+        common: { name: 'Mower Map Image', type: 'string', role: 'state', read: true, write: false },
+        native: {},
+      });
+      await this.setState(basePath + '.mapImage', 'data:image/png;base64,' + buffer.toString('base64'), true);
+      this.log.debug('Mower map image rendered: ' + cW + 'x' + cH + 'px');
+    } catch (e) {
+      this.log.warn('Error rendering mower map: ' + e.message);
+    }
+  }
+
   async getFile(url, device) {
     return await this.requestClient({
       method: 'post',
@@ -1573,7 +2140,11 @@ class Dreame extends utils.Adapter {
         this.log.debug('Command response: ' + JSON.stringify(res.data));
 
         if (res.data.code !== 0) {
-          this.log.warn('Command failed: ' + JSON.stringify(res.data));
+          if (res.data.code === 80001) {
+            this.log.debug('Command timeout: ' + JSON.stringify(res.data));
+          } else {
+            this.log.warn('Command failed: ' + JSON.stringify(res.data));
+          }
           return {};
         }
         if (!res.data.data) {
@@ -1742,6 +2313,7 @@ class Dreame extends utils.Adapter {
   onUnload(callback) {
     try {
       this.updateInterval && clearInterval(this.updateInterval);
+      this.mowerMapInterval && clearInterval(this.mowerMapInterval);
       this.refreshTokenInterval && clearInterval(this.refreshTokenInterval);
       this.mqttClient && this.mqttClient.end();
 
@@ -1775,6 +2347,10 @@ class Dreame extends utils.Adapter {
           const device = this.deviceArray.filter((obj) => {
             return obj.did === deviceId;
           })[0];
+          if (this.isMower(device)) {
+            this.getMowerMap(device);
+            return;
+          }
           this.getMap(device, false);
           return;
         }
@@ -1820,8 +2396,8 @@ class Dreame extends utils.Adapter {
           const device = this.deviceArray.filter((obj) => {
             return obj.did === deviceId;
           })[0];
-          if (device && device.model.includes('mower')) {
-            data.data.params.siid += 3;
+          if (this.isMower(device) && data.data.params.siid === 2) {
+            data.data.params.siid = 5;
           }
           // data.params.in = [];
         }
@@ -1873,9 +2449,9 @@ class Dreame extends utils.Adapter {
                     GetRepeatsOb = await this.getStateAsync(RPath + '.Repeat');
                     GetRepeats = GetRepeatsOb.val;
                     GetSuctionLevelOb = await this.getStateAsync(RPath + '.Level');
-                    GetSuctionLevel = GetSuctionLevelOb.val;
+                    GetSuctionLevel = GetSuctionLevelOb ? GetSuctionLevelOb.val : 0;
                     GetWaterVolumeOb = await this.getStateAsync(RPath + '.WaterVolume');
-                    GetWaterVolume = GetWaterVolumeOb.val;
+                    GetWaterVolume = GetWaterVolumeOb ? GetWaterVolumeOb.val : 0;
                     ToGetString +=
                       GetRoomId +
                       ',' +
