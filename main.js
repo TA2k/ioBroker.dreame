@@ -1285,7 +1285,7 @@ class Dreame extends utils.Adapter {
     if (this.mqttClient) {
       this.mqttClient.end();
     }
-    const url = this.deviceArray[0].bindDomain || this.brand.mqttFallback;
+    const url = (this.deviceArray[0] && this.deviceArray[0].bindDomain) || this.brand.mqttFallback;
     this.mqttClient = mqtt.connect('mqtts://' + url, {
       clientId: 'p_' + crypto.randomBytes(8).toString('hex'),
       username: this.session.uid,
