@@ -109,21 +109,25 @@ The adapter supports Dreame robotic mowers with dedicated states and map renderi
 
 ### Mower Status
 
-| State           | Description                                                                                                |
-| --------------- | ---------------------------------------------------------------------------------------------------------- |
-| status          | Mower status (1=Mowing, 2=Standby, 3=Paused, 5=Returning, 6=Charging, 11=Mapping, 13=Charged, 14=Updating) |
-| fault           | Error code                                                                                                 |
-| battery-level   | Battery percentage                                                                                         |
-| charging-state  | Charging state                                                                                             |
-| work-mode       | Current work mode                                                                                          |
-| mowing-time     | Current mowing time (min)                                                                                  |
-| mowing-area     | Current mowed area (m²)                                                                                    |
-| task-status     | Task status                                                                                                |
-| faults          | Fault details                                                                                              |
-| warn-status     | Warning status                                                                                             |
-| total-mow-time  | Total mowing time (min)                                                                                    |
-| total-mow-count | Total mow count                                                                                            |
-| total-mow-area  | Total mowed area (m²)                                                                                      |
+| State            | Description                                                                                                |
+| ---------------- | ---------------------------------------------------------------------------------------------------------- |
+| status           | Mower status (1=Mowing, 2=Standby, 3=Paused, 5=Returning, 6=Charging, 11=Mapping, 13=Charged, 14=Updating) |
+| fault            | Error code                                                                                                 |
+| battery-level    | Battery percentage                                                                                         |
+| charging-state   | Charging state                                                                                             |
+| work-mode        | Current work mode                                                                                          |
+| mowing-time      | Current mowing time (min)                                                                                  |
+| mowing-area      | Current mowed area (m²)                                                                                    |
+| task-status      | Task status                                                                                                |
+| faults           | Fault details                                                                                              |
+| warn-status      | Warning status                                                                                             |
+| settings-update  | Settings change via MQTT (2-51). Value: `[en,hours]`=Rain, `0/1`=Frost, `[en,start,end]`=LowSpeed          |
+| zone-status      | Zone mowing status per area                                                                                |
+| ai-obstacles     | AI detected obstacles                                                                                      |
+| self-check       | Self-check diagnostic result                                                                               |
+| total-mow-time   | Total mowing time (min)                                                                                    |
+| total-mow-count  | Total mow count                                                                                            |
+| total-mow-area   | Total mowed area (m²)                                                                                      |
 
 ### Mower Remote
 
