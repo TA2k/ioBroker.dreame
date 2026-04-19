@@ -657,6 +657,7 @@ class Dreame extends utils.Adapter {
             });
             if (this.isMower(device)) {
               await this.getMowerMap(device);
+              await this.loadMowerSettings(device);
               const dockState = await this.getStateAsync(device.did + '.status.dock-position');
               if (dockState && dockState.val) {
                 try {
@@ -785,7 +786,7 @@ class Dreame extends utils.Adapter {
       { id: 'status', name: 'Mower Status (2-1)', siid: 2, piid: 1, type: 'number', role: 'value', states: DEVICE_STATUS_STATES.mower },
       { id: 'fault', name: 'Error Code (2-2)', siid: 2, piid: 2, type: 'number', role: 'value' },
       { id: 'task-info', name: 'Task Execution Info (2-50)', siid: 2, piid: 50, type: 'string', role: 'json' },
-      { id: 'rain-protection', name: 'Rain Protection (2-51)', siid: 2, piid: 51, type: 'string', role: 'json' },
+      { id: 'settings-update', name: 'Settings Update (2-51)', siid: 2, piid: 51, type: 'string', role: 'json', desc: 'Generischer Settings-Trigger via MQTT. 2 Werte = Rain Protection (WRP), 1 Wert = Frost Protection (FDP), 3 Werte = Low Speed Nachts (LOW)' },
       { id: 'mowing-preference', name: 'Mowing Preference Update (2-52)', siid: 2, piid: 52, type: 'string', role: 'json' },
       { id: 'voice-download', name: 'Voice Download Progress (2-53)', siid: 2, piid: 53, type: 'number', role: 'value', unit: '%' },
       { id: 'ai-obstacles', name: 'AI Obstacle Detection (2-55)', siid: 2, piid: 55, type: 'string', role: 'json' },
@@ -816,6 +817,23 @@ class Dreame extends utils.Adapter {
       { id: 'total-mow-area', name: 'Total Mowed Area (12-4)', siid: 12, piid: 4, type: 'number', role: 'value', unit: 'm²' },
       { id: 'total-runtime', name: 'Total Runtime (12-5)', siid: 12, piid: 5, type: 'number', role: 'value', unit: 'min' },
       { id: 'total-cruise-time', name: 'Total Cruise Time (12-6)', siid: 12, piid: 6, type: 'number', role: 'value', unit: 'min' },
+      // getCFG Settings (kein siid/piid, befüllt via loadMowerSettings)
+      { id: 'rain-protection', name: 'Rain Protection (WRP)', type: 'string', role: 'json', desc: '[enabled, wait_hours, sensitivity]' },
+      { id: 'frost-protection', name: 'Frost Protection (FDP)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      { id: 'low-speed', name: 'Low Speed Night (LOW)', type: 'string', role: 'json', desc: '[enabled, start_min, end_min]' },
+      { id: 'dnd-settings', name: 'Do Not Disturb (DND)', type: 'string', role: 'json', desc: '[enabled, start_min, end_min]' },
+      { id: 'child-lock-cfg', name: 'Child Lock (CLS)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      { id: 'battery-config', name: 'Battery Config (BAT)', type: 'string', role: 'json', desc: '[return%, max%, charge_enabled, ?, start_min, end_min]' },
+      { id: 'volume', name: 'Volume (VOL)', type: 'number', role: 'value', unit: '%' },
+      { id: 'headlight', name: 'Headlight (LIT)', type: 'string', role: 'json', desc: '[enabled, start_min, end_min, l1, l2, l3, l4]' },
+      { id: 'ai-obstacle-cfg', name: 'AI Obstacle Avoidance (AOP)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      { id: 'camera-config', name: 'Camera/Recording (REC)', type: 'string', role: 'json', desc: '[enabled, sensitivity, mode, report, ...]' },
+      { id: 'anti-theft', name: 'Anti-Theft (STUN)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      { id: 'auto-task-adj', name: 'Auto Task Adjustment (ATA)', type: 'string', role: 'json', desc: '[0, 0, 0]' },
+      { id: 'path-display', name: 'Path Display (PATH)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      { id: 'weather-ref', name: 'Weather Forecast Ref (WRF)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      { id: 'grass-protection', name: 'Grass Protection (PROT)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      { id: 'consumables', name: 'Consumables (CMS)', type: 'string', role: 'json', desc: '[blade_min, brush_min, robot_min]' },
     ];
 
     const remoteStates = [
@@ -829,6 +847,25 @@ class Dreame extends utils.Adapter {
       { id: 'dnd-end', name: 'DND End Time (5-3)', siid: 5, piid: 3, type: 'string', role: 'text' },
       { id: 'timezone', name: 'Timezone (8-1)', siid: 8, piid: 1, type: 'string', role: 'text' },
       { id: 'schedule', name: 'Mow Schedule (8-2)', siid: 8, piid: 2, type: 'string', role: 'text' },
+    ];
+
+    // Plugin SET commands via action channel (siid:2 aiid:50, m:'s')
+    // Format: {m:'s', t:cfgKey, d:{value:X}} or d:{value:X, time:Y, ...}
+    const cfgRemotes = [
+      { id: 'set-rain-protection', name: 'Set Rain Protection (WRP)', cfgKey: 'WRP', type: 'string', role: 'json', desc: '{"value":1,"time":8,"sen":0} oder {"value":0}' },
+      { id: 'set-frost-protection', name: 'Set Frost Protection (FDP)', cfgKey: 'FDP', type: 'number', role: 'switch', desc: '0=off, 1=on' },
+      { id: 'set-low-speed', name: 'Set Low Speed Night (LOW)', cfgKey: 'LOW', type: 'string', role: 'json', desc: '{"value":1,"time":[1200,480]} oder {"value":0}' },
+      { id: 'set-dnd', name: 'Set Do Not Disturb (DND)', cfgKey: 'DND', type: 'string', role: 'json', desc: '{"value":1,"time":[1200,480]} oder {"value":0}' },
+      { id: 'set-child-lock', name: 'Set Child Lock (CLS)', cfgKey: 'CLS', type: 'number', role: 'switch', desc: '0=off, 1=on' },
+      { id: 'set-volume', name: 'Set Volume (VOL)', cfgKey: 'VOL', type: 'number', role: 'level.volume', desc: '0-100' },
+      { id: 'set-ai-obstacle', name: 'Set AI Obstacle (AOP)', cfgKey: 'AOP', type: 'number', role: 'switch', desc: '0=off, 1=on' },
+      { id: 'set-anti-theft', name: 'Set Anti-Theft (STUN)', cfgKey: 'STUN', type: 'number', role: 'switch', desc: '0=off, 1=on' },
+      { id: 'set-headlight', name: 'Set Headlight (LIT)', cfgKey: 'LIT', type: 'string', role: 'json', desc: '{"value":1,"time":[480,1200],"light":[1,1,1,1],"fill":0}' },
+      { id: 'set-path-display', name: 'Set Path Display (PATH)', cfgKey: 'PATH', type: 'number', role: 'switch', desc: '0=off, 1=on' },
+      { id: 'set-grass-protection', name: 'Set Grass Protection (PROT)', cfgKey: 'PROT', type: 'number', role: 'switch', desc: '0=off, 1=on' },
+      { id: 'reset-consumables', name: 'Reset Consumables (CMS)', cfgKey: 'CMS', type: 'string', role: 'json', desc: '{"value":[0,brush,robot]} — auf 0 gesetzte Werte werden zurückgesetzt' },
+      { id: 'find-robot', name: 'Find Robot', cfgKey: null, actionOp: 9, type: 'boolean', role: 'button', desc: 'Roboter suchen (Ton abspielen)' },
+      { id: 'lock-robot', name: 'Lock Robot', cfgKey: null, actionOp: 12, type: 'boolean', role: 'button', desc: 'Roboter sperren' },
     ];
 
     const actionStates = [
@@ -847,11 +884,13 @@ class Dreame extends utils.Adapter {
       const path = `${did}.status.${s.id}`;
       await this.extendObject(path, {
         type: 'state',
-        common: /** @type {any} */ ({ name: s.name, type: s.type, role: s.role, read: true, write: false, unit: s.unit || '', ...(s.states ? { states: s.states } : {}) }),
+        common: /** @type {any} */ ({ name: s.name, type: s.type, role: s.role, read: true, write: false, unit: s.unit || '', ...(s.states ? { states: s.states } : {}), ...(s.desc ? { desc: s.desc } : {}) }),
         native: { siid: s.siid, piid: s.piid, did: did },
       });
-      this.specPropsToIdDict[did][`${s.siid}-${s.piid}`] = path;
-      this.specStatusDict[did].push({ did: did, siid: s.siid, code: 0, piid: s.piid, updateTime: 0 });
+      if (s.siid && s.piid) {
+        this.specPropsToIdDict[did][`${s.siid}-${s.piid}`] = path;
+        this.specStatusDict[did].push({ did: did, siid: s.siid, code: 0, piid: s.piid, updateTime: 0 });
+      }
     }
 
     for (const r of remoteStates) {
@@ -862,6 +901,15 @@ class Dreame extends utils.Adapter {
         native: { siid: r.siid, piid: r.piid, did: did },
       });
       this.specPropsToIdDict[did][`${r.siid}-${r.piid}`] = path;
+    }
+
+    for (const c of cfgRemotes) {
+      const path = `${did}.remote.${c.id}`;
+      await this.extendObject(path, {
+        type: 'state',
+        common: /** @type {any} */ ({ name: c.name, type: c.type, role: c.role, read: true, write: true, ...(c.desc ? { desc: c.desc } : {}) }),
+        native: { cfgKey: c.cfgKey, actionOp: c.actionOp, did: did },
+      });
     }
 
     for (const a of actionStates) {
@@ -1523,6 +1571,10 @@ class Dreame extends utils.Adapter {
               this.mowerMapInterval = null;
               this.getMowerMap(device);
             }
+          }
+          // Plugin: prop.2.51 triggers loadSettingData() → getCFG() (L181455-181457)
+          if (this.isMower(device) && element.siid === 2 && element.piid === 51) {
+            this.loadMowerSettings(device);
           }
           let path = this.specPropsToIdDict[did][element.siid + '-' + element.piid];
           if (!path) {
@@ -2521,6 +2573,40 @@ class Dreame extends utils.Adapter {
     return result;
   }
 
+  // Plugin: loadSettingData() calls getCFG() (L183167-183191), parses result.d into individual settings
+  async loadMowerSettings(device) {
+    try {
+      const result = await this.sendMowerCommand(device, { m: 'g', t: 'CFG' });
+      if (!result || !result.d) {
+        this.log.debug('getCFG returned no data for ' + device.model);
+        return;
+      }
+      const cfg = result.d;
+      const did = device.did;
+      // Plugin: if WRP has only 2 elements, append sensitivity=0 (L183179-183180)
+      if (Array.isArray(cfg.WRP) && cfg.WRP.length === 2) {
+        cfg.WRP.push(0);
+      }
+      const mapping = {
+        WRP: 'rain-protection', FDP: 'frost-protection', LOW: 'low-speed',
+        DND: 'dnd-settings', CLS: 'child-lock-cfg', BAT: 'battery-config',
+        VOL: 'volume', LIT: 'headlight', AOP: 'ai-obstacle-cfg',
+        REC: 'camera-config', STUN: 'anti-theft', ATA: 'auto-task-adj',
+        PATH: 'path-display', WRF: 'weather-ref', PROT: 'grass-protection',
+        CMS: 'consumables',
+      };
+      for (const [key, stateId] of Object.entries(mapping)) {
+        if (cfg[key] !== undefined) {
+          const val = typeof cfg[key] === 'object' ? JSON.stringify(cfg[key]) : cfg[key];
+          this.setState(`${did}.status.${stateId}`, val, true);
+        }
+      }
+      this.log.debug(`Loaded ${Object.keys(mapping).filter((k) => cfg[k] !== undefined).length} settings for ${device.model}`);
+    } catch (error) {
+      this.log.warn(`Failed to load mower settings: ${error.message}`);
+    }
+  }
+
   async fetch3DMapUrl(device) {
     try {
       const result = await this.sendMowerCommand(device, { m: 'g', t: 'OBJ', d: { type: '3dmap' } });
@@ -2741,6 +2827,36 @@ class Dreame extends utils.Adapter {
           await this.setState(device.did + '.status.3dmap-url', '', true);
           await this.sendMowerCommand(device, { m: 'a', p: 0, o: 10, d: { idx: 0 } });
           this.log.info('3D map generation triggered, waiting for MQTT progress updates');
+          return;
+        }
+        // Plugin CFG SET/ACTION remotes (cfgKey or actionOp in native)
+        const stateObjCfg = await this.getObjectAsync(id);
+        if (stateObjCfg && stateObjCfg.native && (stateObjCfg.native.cfgKey || stateObjCfg.native.actionOp !== undefined)) {
+          const device = this.deviceArray.find((obj) => obj.did === deviceId);
+          if (!device || !this.isMower(device)) return;
+          if (stateObjCfg.native.actionOp !== undefined) {
+            // Action command: {m:'a', p:0, o:actionOp}
+            this.log.info(`Mower action o=${stateObjCfg.native.actionOp} for ${device.model}`);
+            await this.sendMowerCommand(device, { m: 'a', p: 0, o: stateObjCfg.native.actionOp });
+          } else {
+            // CFG SET command: {m:'s', t:cfgKey, d:{value:X}} or d:parsed JSON
+            const cfgKey = stateObjCfg.native.cfgKey;
+            let payload;
+            if (typeof state.val === 'string') {
+              try {
+                payload = JSON.parse(state.val);
+              } catch (e) {
+                this.log.error(`Invalid JSON for ${cfgKey}: ${state.val}`);
+                return;
+              }
+            } else {
+              payload = { value: state.val };
+            }
+            this.log.info(`Set mower CFG ${cfgKey}: ${JSON.stringify(payload)}`);
+            await this.sendMowerCommand(device, { m: 's', t: cfgKey, d: payload });
+          }
+          // Reload settings after change
+          setTimeout(() => this.loadMowerSettings(device), 2000);
           return;
         }
         //{"id":0,"method":"app_start","params":[{"clean_mop":0}]}
