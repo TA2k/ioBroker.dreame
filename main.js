@@ -103,8 +103,10 @@ const DEVICE_STATUS_STATES = Object.freeze({
     98: 'Camera Monitoring', 99: 'Camera monitoring paused',
   },
   mower: {
-    1: 'Working', 2: 'Standby', 3: 'Working', 4: 'Paused', 5: 'Returning Charge',
-    6: 'Charging', 11: 'Mapping', 13: 'Charging Completed', 14: 'Upgrading',
+    1: 'Mowing', 2: 'Standby', 3: 'Mowing', 4: 'Paused', 5: 'Returning to Charge',
+    6: 'Charging', 7: 'Error', 8: 'Raining Pause', 9: 'Initializing',
+    10: 'Leaving Station', 11: 'Mapping', 12: 'Border Mowing', 13: 'Charging Completed',
+    14: 'Upgrading', 15: 'Relocating', 16: 'Task Navigating',
   },
   swbot: {
     0: 'Online', 1: 'Charging', 2: 'Charging complete', 3: 'Updating',
@@ -782,6 +784,11 @@ class Dreame extends utils.Adapter {
     const statusStates = [
       { id: 'status', name: 'Mower Status', siid: 2, piid: 1, type: 'number', role: 'value' },
       { id: 'fault', name: 'Error Code', siid: 2, piid: 2, type: 'number', role: 'value' },
+      { id: 'task-info', name: 'Task Execution Info', siid: 2, piid: 50, type: 'string', role: 'json' },
+      { id: 'device-time', name: 'Device Time', siid: 2, piid: 51, type: 'string', role: 'json' },
+      { id: 'zone-status', name: 'Zone Status', siid: 2, piid: 56, type: 'string', role: 'json' },
+      { id: 'task-progress-flag', name: 'Task Progress Flag', siid: 2, piid: 62, type: 'number', role: 'value' },
+      { id: 'task-type', name: 'Task Type', siid: 2, piid: 65, type: 'string', role: 'text' },
       { id: 'battery-level', name: 'Battery Level', siid: 3, piid: 1, type: 'number', role: 'value.battery', unit: '%' },
       { id: 'charging-state', name: 'Charging State', siid: 3, piid: 2, type: 'number', role: 'value' },
       { id: 'work-mode', name: 'Work Mode', siid: 4, piid: 1, type: 'number', role: 'value' },
@@ -792,6 +799,9 @@ class Dreame extends utils.Adapter {
       { id: 'faults', name: 'Faults', siid: 4, piid: 18, type: 'string', role: 'text' },
       { id: 'warn-status', name: 'Warning Status', siid: 4, piid: 35, type: 'number', role: 'value' },
       { id: 'mow-cancel', name: 'Mow Cancel', siid: 4, piid: 30, type: 'number', role: 'value' },
+      { id: 'rtk-status', name: 'RTK Status', siid: 5, piid: 100, type: 'number', role: 'value' },
+      { id: 'gps-satellites', name: 'GPS Satellites', siid: 5, piid: 106, type: 'number', role: 'value' },
+      { id: 'positioning-mode', name: 'Positioning Mode', siid: 5, piid: 107, type: 'number', role: 'value' },
       { id: 'first-mow-time', name: 'First Mow Time', siid: 12, piid: 1, type: 'number', role: 'value' },
       { id: 'total-mow-time', name: 'Total Mow Time', siid: 12, piid: 2, type: 'number', role: 'value', unit: 'min' },
       { id: 'total-mow-count', name: 'Total Mow Count', siid: 12, piid: 3, type: 'number', role: 'value' },
@@ -831,9 +841,7 @@ class Dreame extends utils.Adapter {
         native: { siid: s.siid, piid: s.piid, did: did },
       });
       this.specPropsToIdDict[did][`${s.siid}-${s.piid}`] = path;
-      if (s.siid <= 3) {
-        this.specStatusDict[did].push({ did: did, siid: s.siid, code: 0, piid: s.piid, updateTime: 0 });
-      }
+      this.specStatusDict[did].push({ did: did, siid: s.siid, code: 0, piid: s.piid, updateTime: 0 });
     }
 
     for (const r of remoteStates) {
