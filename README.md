@@ -145,6 +145,20 @@ The adapter supports Dreame robotic mowers with dedicated states and map renderi
 | brush-health     | Brush health 0-100%                                                                                        |
 | robot-maintenance-hours | Robot maintenance hours (max 60h)                                                                   |
 | robot-maintenance-health | Robot maintenance health 0-100%                                                                    |
+| collision-avoidance | Collision avoidance (AutoSwitch LessColl): 0=off, 1=on                                              |
+| fill-light          | Fill light (AutoSwitch FillinLight): 0=off, 1=on                                                    |
+| clean-genius        | CleanGenius (AutoSwitch SmartHost): 0=Off, 1=Routine, 2=Deep                                        |
+| cleaning-route      | Cleaning route (AutoSwitch CleanRoute): 1=Standard, 2=Intensiv, 3=Deep, 4=Quick                     |
+| wider-corner        | Wider corner coverage (AutoSwitch MeticulousTwist): 0=Off, 1=HighFreq, 7=LowFreq                    |
+| floor-direction     | Floor direction cleaning (AutoSwitch MaterialDirectionClean): 0=off, 1=on                            |
+| pet-focused         | Pet focused cleaning (AutoSwitch PetPartClean): 0=off, 1=on                                         |
+| auto-charging       | Auto charging (AutoSwitch SmartCharge): 0=off, 1=on                                                 |
+| cutting-height      | Cutting height in mm (PRE)                                                                           |
+| obstacle-distance-cfg | Obstacle distance in mm (PRE)                                                                      |
+| mow-mode            | Mow mode (PRE): 0=Standard, 1=Efficient                                                             |
+| direction-change    | Direction change (PRE): 0=auto, 1=off                                                                |
+| edge-mowing         | Edge mowing (PRE): 0=off, 1=on                                                                      |
+| edge-detection      | Edge detection (PRE): 0=off, 1=on                                                                   |
 
 ### Mower Remote
 
@@ -179,6 +193,38 @@ The adapter supports Dreame robotic mowers with dedicated states and map renderi
 | fetchMap               | Fetch map from device (button)                                         |
 | generate-3dmap         | Generate 3D LIDAR map (button)                                         |
 | customCommand          | Send custom MIoT command                                               |
+| set-collision-avoidance | Set collision avoidance (AutoSwitch): 0=off, 1=on                     |
+| set-fill-light         | Set fill light (AutoSwitch): 0=off, 1=on                              |
+| set-clean-genius       | Set CleanGenius (AutoSwitch): 0=Off, 1=Routine, 2=Deep                |
+| set-cleaning-route     | Set cleaning route (AutoSwitch): 1=Standard, 2=Intensiv, 3=Deep, 4=Quick |
+| set-auto-charging      | Set auto charging (AutoSwitch): 0=off, 1=on                           |
+| set-cutting-height     | Set cutting height in mm (PRE)                                         |
+| set-mow-mode           | Set mow mode (PRE): 0=Standard, 1=Efficient                           |
+| set-edge-mowing        | Set edge mowing (PRE): 0=off, 1=on                                    |
+| set-edge-detection     | Set edge detection (PRE): 0=off, 1=on                                 |
+| set-direction-change   | Set direction change (PRE): 0=auto, 1=off                             |
+
+### Mower Shortcuts
+
+Shortcuts are parsed from property 4-48 (base64 encoded names). Each shortcut gets its own channel under `deviceId.shortcuts.{id}`:
+
+| State | Description |
+| ----- | ----------- |
+| name  | Decoded shortcut name |
+| running | Whether the shortcut is currently running |
+| start | Button to start the shortcut |
+
+### Mower History
+
+Cleaning history is fetched from the cloud API (last 20 mow sessions).
+
+| State | Description |
+| ----- | ----------- |
+| last-mow-date | Date of the last mowing session |
+| last-mow-duration | Duration of last session (min) |
+| last-mow-area | Area mowed in last session (m²) |
+| last-mow-completed | Whether last session completed successfully |
+| history-json | JSON array of last 20 sessions |
 
 ### Mower Map
 
@@ -218,6 +264,14 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### 0.3.5 (2026-04-19)
+
+- Add AutoSwitch properties (4-50): collision avoidance, fill light, CleanGenius, cleaning route, auto charging, etc.
+- Add PRE mowing preferences: cutting height, obstacle distance, mow mode, edge mowing, edge detection, direction change
+- Add shortcuts support (4-48): parsed names, running state, start buttons
+- Add cleaning history via cloud API (last 20 mow sessions with date, duration, area, completion)
+- Fix battery byte parsing (buf[11] & 0x7F + charging bit 7)
+
 ### 0.3.4 (2026-04-19)
 
 - Add mower settings states from getCFG (rain protection, frost protection, low speed, DND, battery config, volume, headlight, AI obstacle, camera, anti-theft, etc.)

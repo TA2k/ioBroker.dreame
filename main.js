@@ -367,6 +367,7 @@ class Dreame extends utils.Adapter {
     this.session = {};
     this.firstStart = true;
     this.subscribeStates('*.remote.*');
+    this.subscribeStates('*.shortcuts.*.start');
     this.subscribeStates('*.cleanset.*');
     this.log.info(`Login to ${(this.config.cloudService || 'dreame').toUpperCase()} Cloud...`);
     await this.login();
@@ -658,6 +659,7 @@ class Dreame extends utils.Adapter {
             if (this.isMower(device)) {
               await this.getMowerMap(device);
               await this.loadMowerSettings(device);
+              await this.loadMowerHistory(device);
               const dockState = await this.getStateAsync(device.did + '.status.dock-position');
               if (dockState && dockState.val) {
                 try {
@@ -838,6 +840,22 @@ class Dreame extends utils.Adapter {
       { id: 'brush-health', name: 'Brush Health (CMS)', type: 'number', role: 'value', unit: '%', desc: 'Bürsten-Zustand 0-100%' },
       { id: 'robot-maintenance-hours', name: 'Robot Maintenance Hours (CMS)', type: 'number', role: 'value', unit: 'h', desc: 'Roboter-Wartungsstunden (max 60h)' },
       { id: 'robot-maintenance-health', name: 'Robot Maintenance Health (CMS)', type: 'number', role: 'value', unit: '%', desc: 'Roboter-Wartungs-Zustand 0-100%' },
+      // AutoSwitch (4-50 JSON parsed, kein siid/piid)
+      { id: 'collision-avoidance', name: 'Collision Avoidance (LessColl)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      { id: 'fill-light', name: 'Fill Light (FillinLight)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      { id: 'clean-genius', name: 'CleanGenius (SmartHost)', type: 'number', role: 'value', desc: '0=Off, 1=Routine, 2=Deep' },
+      { id: 'cleaning-route', name: 'Cleaning Route (CleanRoute)', type: 'number', role: 'value', desc: '1=Standard, 2=Intensiv, 3=Deep, 4=Quick' },
+      { id: 'wider-corner', name: 'Wider Corner Coverage (MeticulousTwist)', type: 'number', role: 'value', desc: '0=Off, 1=HighFreq, 7=LowFreq' },
+      { id: 'floor-direction', name: 'Floor Direction Cleaning (MaterialDirectionClean)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      { id: 'pet-focused', name: 'Pet Focused Cleaning (PetPartClean)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      { id: 'auto-charging', name: 'Auto Charging (SmartCharge)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      // PRE Mähpräferenzen (getCFG, kein siid/piid)
+      { id: 'cutting-height', name: 'Cutting Height (PRE)', type: 'number', role: 'value', unit: 'mm', desc: 'Schnitthöhe' },
+      { id: 'obstacle-distance-cfg', name: 'Obstacle Distance (PRE)', type: 'number', role: 'value', unit: 'mm', desc: 'Hindernisabstand' },
+      { id: 'mow-mode', name: 'Mow Mode (PRE)', type: 'number', role: 'value', desc: '0=Standard, 1=Effizient' },
+      { id: 'direction-change', name: 'Direction Change (PRE)', type: 'number', role: 'value', desc: '0=auto, 1=aus' },
+      { id: 'edge-mowing', name: 'Edge Mowing (PRE)', type: 'number', role: 'value', desc: '0=aus, 1=an' },
+      { id: 'edge-detection', name: 'Edge Detection (PRE)', type: 'number', role: 'value', desc: '0=aus, 1=an' },
     ];
 
     const remoteStates = [
@@ -873,6 +891,18 @@ class Dreame extends utils.Adapter {
       { id: 'reset-robot-maintenance', name: 'Reset Robot Maintenance', cfgKey: 'CMS', resetIndex: 2, type: 'boolean', role: 'button', desc: 'Roboter-Wartungsstunden zurücksetzen (max 3600 min / 60h)' },
       { id: 'find-robot', name: 'Find Robot', cfgKey: null, actionOp: 9, type: 'boolean', role: 'button', desc: 'Roboter suchen (Ton abspielen)' },
       { id: 'lock-robot', name: 'Lock Robot', cfgKey: null, actionOp: 12, type: 'boolean', role: 'button', desc: 'Roboter sperren' },
+      // AutoSwitch (set_properties siid:4 piid:50)
+      { id: 'set-collision-avoidance', name: 'Set Collision Avoidance', autoSwitchKey: 'LessColl', type: 'number', role: 'switch', desc: '0=off, 1=on' },
+      { id: 'set-fill-light', name: 'Set Fill Light', autoSwitchKey: 'FillinLight', type: 'number', role: 'switch', desc: '0=off, 1=on' },
+      { id: 'set-clean-genius', name: 'Set CleanGenius', autoSwitchKey: 'SmartHost', type: 'number', role: 'value', desc: '0=Off, 1=Routine, 2=Deep' },
+      { id: 'set-cleaning-route', name: 'Set Cleaning Route', autoSwitchKey: 'CleanRoute', type: 'number', role: 'value', desc: '1=Standard, 2=Intensiv, 3=Deep, 4=Quick' },
+      { id: 'set-auto-charging', name: 'Set Auto Charging', autoSwitchKey: 'SmartCharge', type: 'number', role: 'switch', desc: '0=off, 1=on' },
+      // PRE (read-modify-write via getCFG)
+      { id: 'set-cutting-height', name: 'Set Cutting Height (mm)', cfgKey: 'PRE', preIndex: 2, type: 'number', role: 'value', desc: 'Schnitthöhe in mm' },
+      { id: 'set-mow-mode', name: 'Set Mow Mode', cfgKey: 'PRE', preIndex: 1, type: 'number', role: 'value', desc: '0=Standard, 1=Effizient' },
+      { id: 'set-edge-mowing', name: 'Set Edge Mowing', cfgKey: 'PRE', preIndex: 9, type: 'number', role: 'switch', desc: '0=aus, 1=an' },
+      { id: 'set-edge-detection', name: 'Set Edge Detection', cfgKey: 'PRE', preIndex: 8, type: 'number', role: 'switch', desc: '0=aus, 1=an' },
+      { id: 'set-direction-change', name: 'Set Direction Change', cfgKey: 'PRE', preIndex: 5, type: 'number', role: 'switch', desc: '0=auto, 1=aus' },
     ];
 
     const actionStates = [
@@ -915,7 +945,7 @@ class Dreame extends utils.Adapter {
       await this.extendObject(path, {
         type: 'state',
         common: /** @type {any} */ ({ name: c.name, type: c.type, role: c.role, read: true, write: true, ...(c.desc ? { desc: c.desc } : {}) }),
-        native: { cfgKey: c.cfgKey, actionOp: c.actionOp, resetIndex: c.resetIndex, did: did },
+        native: { cfgKey: c.cfgKey, actionOp: c.actionOp, resetIndex: c.resetIndex, preIndex: c.preIndex, autoSwitchKey: c.autoSwitchKey, did: did },
       });
     }
 
@@ -1586,11 +1616,20 @@ class Dreame extends utils.Adapter {
               clearInterval(this.mowerMapInterval);
               this.mowerMapInterval = null;
               this.getMowerMap(device);
+              setTimeout(() => this.loadMowerHistory(device), 5000);
             }
           }
           // Plugin: prop.2.51 triggers loadSettingData() → getCFG() (L181455-181457)
           if (this.isMower(device) && element.siid === 2 && element.piid === 51) {
             this.loadMowerSettings(device);
+          }
+          // AutoSwitch (4-50): parse JSON flags into individual states
+          if (this.isMower(device) && element.siid === 4 && element.piid === 50) {
+            this.parseAutoSwitch(did, element.value);
+          }
+          // Shortcuts (4-48): parse base64 names and running state
+          if (this.isMower(device) && element.siid === 4 && element.piid === 48) {
+            this.parseShortcuts(did, element.value);
           }
           let path = this.specPropsToIdDict[did][element.siid + '-' + element.piid];
           if (!path) {
@@ -2628,9 +2667,161 @@ class Dreame extends utils.Adapter {
           this.setState(`${did}.status.${ids[i]}-health`, health, true);
         }
       }
+      // PRE: [zone, mode, height_mm, obstacle_mm, coverage%, direction_change, adaptive, ?, edge_detection, auto_edge]
+      if (Array.isArray(cfg.PRE) && cfg.PRE.length >= 10) {
+        this.setState(`${did}.status.cutting-height`, cfg.PRE[2], true);
+        this.setState(`${did}.status.obstacle-distance-cfg`, cfg.PRE[3], true);
+        this.setState(`${did}.status.mow-mode`, cfg.PRE[1], true);
+        this.setState(`${did}.status.direction-change`, cfg.PRE[5], true);
+        this.setState(`${did}.status.edge-mowing`, cfg.PRE[9], true);
+        this.setState(`${did}.status.edge-detection`, cfg.PRE[8], true);
+      }
       this.log.debug(`Loaded ${Object.keys(mapping).filter((k) => cfg[k] !== undefined).length} settings for ${device.model}`);
     } catch (error) {
       this.log.warn(`Failed to load mower settings: ${error.message}`);
+    }
+  }
+
+  parseAutoSwitch(did, value) {
+    try {
+      const settings = typeof value === 'string' ? JSON.parse(value) : value;
+      const dict = {};
+      if (Array.isArray(settings)) {
+        for (const s of settings) dict[s.k] = s.v;
+      } else if (settings && settings.k) {
+        dict[settings.k] = settings.v;
+      }
+      const mapping = {
+        LessColl: 'collision-avoidance',
+        FillinLight: 'fill-light',
+        SmartHost: 'clean-genius',
+        CleanRoute: 'cleaning-route',
+        MeticulousTwist: 'wider-corner',
+        MaterialDirectionClean: 'floor-direction',
+        PetPartClean: 'pet-focused',
+        SmartCharge: 'auto-charging',
+      };
+      for (const [key, stateId] of Object.entries(mapping)) {
+        if (dict[key] !== undefined) {
+          this.setState(`${did}.status.${stateId}`, Number(dict[key]), true);
+        }
+      }
+    } catch (e) {
+      this.log.debug(`parseAutoSwitch error: ${e.message}`);
+    }
+  }
+
+  parseShortcuts(did, value) {
+    try {
+      const shortcuts = typeof value === 'string' ? JSON.parse(value) : value;
+      if (!Array.isArray(shortcuts)) return;
+      for (const sc of shortcuts) {
+        const name = Buffer.from(sc.name, 'base64').toString('utf-8');
+        const running = sc.state === '0' || sc.state === '1';
+        const path = `${did}.shortcuts.${sc.id}`;
+        this.extendObject(path, { type: 'channel', common: { name: name }, native: {} });
+        this.extendObject(path + '.name', {
+          type: 'state',
+          common: { name: 'Shortcut Name', type: 'string', role: 'text', read: true, write: false },
+          native: {},
+        });
+        this.setState(path + '.name', name, true);
+        this.extendObject(path + '.running', {
+          type: 'state',
+          common: { name: 'Running', type: 'boolean', role: 'indicator', read: true, write: false },
+          native: {},
+        });
+        this.setState(path + '.running', running, true);
+        this.extendObject(path + '.start', {
+          type: 'state',
+          common: { name: `Start "${name}"`, type: 'boolean', role: 'button', read: false, write: true },
+          native: { shortcutId: sc.id, did: did },
+        });
+      }
+    } catch (e) {
+      this.log.debug(`parseShortcuts error: ${e.message}`);
+    }
+  }
+
+  async loadMowerHistory(device) {
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      const thirtyDaysAgo = now - 30 * 24 * 60 * 60;
+      const response = await this.requestClient({
+        method: 'post',
+        url: `https://${this.brand.domain}/dreame-user-iot/iotstatus/history`,
+        headers: this.getHeaders(),
+        data: {
+          did: String(device.did),
+          siid: '4',
+          key: '4.1',
+          eiid: '1',
+          limit: 20,
+          region: 'eu',
+          uid: String(this.session.uid),
+          time_start: thirtyDaysAgo,
+          time_end: now,
+          from: thirtyDaysAgo,
+          type: 3,
+        },
+      });
+      if (!response.data || response.data.code !== 0) {
+        this.log.debug('No mower history: ' + JSON.stringify(response.data));
+        return;
+      }
+      const records = response.data.data;
+      if (!Array.isArray(records) || records.length === 0) {
+        this.log.debug('Empty mower history');
+        return;
+      }
+      const did = device.did;
+      const basePath = `${did}.history`;
+      await this.extendObject(basePath, { type: 'channel', common: { name: 'Mowing History' }, native: {} });
+
+      const historyList = [];
+      for (const record of records) {
+        const props = {};
+        if (Array.isArray(record.value)) {
+          for (const p of record.value) {
+            props[`${p.siid}-${p.piid}`] = p.value;
+          }
+        }
+        const entry = {
+          date: props['4-8'] ? new Date(props['4-8'] * 1000).toISOString() : record.updateTime ? new Date(record.updateTime * 1000).toISOString() : null,
+          duration: props['4-2'] || 0,
+          area: props['4-3'] || 0,
+          status: props['4-1'] || 0,
+          completed: props['4-13'] === 1,
+        };
+        historyList.push(entry);
+      }
+
+      const statesDef = [
+        { id: 'last-mow-date', name: 'Last Mow Date', type: 'string', role: 'date' },
+        { id: 'last-mow-duration', name: 'Last Mow Duration', type: 'number', role: 'value', unit: 'min' },
+        { id: 'last-mow-area', name: 'Last Mow Area', type: 'number', role: 'value', unit: 'm²' },
+        { id: 'last-mow-completed', name: 'Last Mow Completed', type: 'boolean', role: 'indicator' },
+        { id: 'history-json', name: 'History (JSON)', type: 'string', role: 'json' },
+      ];
+      for (const s of statesDef) {
+        await this.extendObject(`${basePath}.${s.id}`, {
+          type: 'state',
+          common: { name: s.name, type: s.type, role: s.role, unit: s.unit, read: true, write: false },
+          native: {},
+        });
+      }
+
+      if (historyList.length > 0) {
+        const last = historyList[0];
+        this.setState(`${basePath}.last-mow-date`, last.date || '', true);
+        this.setState(`${basePath}.last-mow-duration`, last.duration, true);
+        this.setState(`${basePath}.last-mow-area`, last.area, true);
+        this.setState(`${basePath}.last-mow-completed`, last.completed, true);
+      }
+      this.setState(`${basePath}.history-json`, JSON.stringify(historyList), true);
+      this.log.debug(`Loaded ${historyList.length} history records for ${device.model}`);
+    } catch (error) {
+      this.log.info(`Failed to load mower history: ${error.message}`);
     }
   }
 
@@ -2856,11 +3047,35 @@ class Dreame extends utils.Adapter {
           this.log.info('3D map generation triggered, waiting for MQTT progress updates');
           return;
         }
-        // Plugin CFG SET/ACTION remotes (cfgKey or actionOp in native)
+        // Shortcut start button (native.shortcutId)
+        if (id.includes('.shortcuts.') && id.endsWith('.start')) {
+          const stateObjSc = await this.getObjectAsync(id);
+          if (stateObjSc && stateObjSc.native && stateObjSc.native.shortcutId !== undefined) {
+            const device = this.deviceArray.find((obj) => obj.did === deviceId);
+            if (!device || !this.isMower(device)) return;
+            const scId = String(stateObjSc.native.shortcutId);
+            this.log.info(`Starting shortcut ${scId} for ${device.model}`);
+            await this.sendCommand({
+              did: device.did,
+              method: 'action',
+              params: { did: device.did, siid: 4, aiid: 1, in: [{ piid: 1, value: 25 }, { piid: 10, value: scId }] },
+            });
+            return;
+          }
+        }
+        // Plugin CFG SET/ACTION remotes (cfgKey or actionOp or autoSwitchKey in native)
         const stateObjCfg = await this.getObjectAsync(id);
-        if (stateObjCfg && stateObjCfg.native && (stateObjCfg.native.cfgKey || stateObjCfg.native.actionOp !== undefined)) {
+        if (stateObjCfg && stateObjCfg.native && (stateObjCfg.native.cfgKey || stateObjCfg.native.actionOp !== undefined || stateObjCfg.native.autoSwitchKey)) {
           const device = this.deviceArray.find((obj) => obj.did === deviceId);
           if (!device || !this.isMower(device)) return;
+          if (stateObjCfg.native.autoSwitchKey) {
+            // AutoSwitch: set_properties(siid:4, piid:50, value:'{"k":"KEY","v":VAL}')
+            const key = stateObjCfg.native.autoSwitchKey;
+            const payload = JSON.stringify({ k: key, v: Number(state.val) });
+            this.log.info(`Set AutoSwitch ${key}=${state.val}`);
+            await this.sendCommand({ did: device.did, method: 'set_properties', params: [{ did: device.did, siid: 4, piid: 50, value: payload }] });
+            return;
+          }
           if (stateObjCfg.native.actionOp !== undefined) {
             // Action command: {m:'a', p:0, o:actionOp}
             this.log.info(`Mower action o=${stateObjCfg.native.actionOp} for ${device.model}`);
@@ -2875,6 +3090,17 @@ class Dreame extends utils.Adapter {
               await this.sendMowerCommand(device, { m: 's', t: 'CMS', d: { value: cms } });
             } else {
               this.log.warn('Could not read current CMS values for reset');
+            }
+          } else if (stateObjCfg.native.preIndex !== undefined) {
+            // PRE read-modify-write: read current PRE array, replace index, send back
+            const cfgResult = await this.sendMowerCommand(device, { m: 'g', t: 'CFG' });
+            if (cfgResult && cfgResult.d && Array.isArray(cfgResult.d.PRE)) {
+              const pre = [...cfgResult.d.PRE];
+              pre[stateObjCfg.native.preIndex] = Number(state.val);
+              this.log.info(`Set PRE[${stateObjCfg.native.preIndex}]=${state.val}: ${JSON.stringify(pre)}`);
+              await this.sendMowerCommand(device, { m: 's', t: 'PRE', d: { value: pre } });
+            } else {
+              this.log.warn('Could not read current PRE values');
             }
           } else {
             // CFG SET command: {m:'s', t:cfgKey, d:{value:X}} or d:parsed JSON

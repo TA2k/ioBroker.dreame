@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.5 (2026-04-19)
+
+- Add AutoSwitch properties (4-50): collision avoidance, fill light, CleanGenius, cleaning route, auto charging, etc.
+- Add PRE mowing preferences: cutting height, obstacle distance, mow mode, edge mowing, edge detection, direction change
+- Add shortcuts support (4-48): parsed names, running state, start buttons
+- Add cleaning history via cloud API (last 20 mow sessions with date, duration, area, completion)
+- Fix battery byte parsing (buf[11] & 0x7F + charging bit 7)
+
 ## 0.3.4 (2026-04-19)
 
 - Add mower settings states from getCFG (rain protection, frost protection, low speed, DND, battery config, volume, headlight, AI obstacle, camera, anti-theft, consumables, etc.)
