@@ -785,8 +785,12 @@ class Dreame extends utils.Adapter {
       { id: 'status', name: 'Mower Status (2-1)', siid: 2, piid: 1, type: 'number', role: 'value', states: DEVICE_STATUS_STATES.mower },
       { id: 'fault', name: 'Error Code (2-2)', siid: 2, piid: 2, type: 'number', role: 'value' },
       { id: 'task-info', name: 'Task Execution Info (2-50)', siid: 2, piid: 50, type: 'string', role: 'json' },
-      { id: 'rain-sensor', name: 'Rain Sensor (2-51)', siid: 2, piid: 51, type: 'string', role: 'json' },
+      { id: 'rain-protection', name: 'Rain Protection (2-51)', siid: 2, piid: 51, type: 'string', role: 'json' },
+      { id: 'mowing-preference', name: 'Mowing Preference Update (2-52)', siid: 2, piid: 52, type: 'string', role: 'json' },
+      { id: 'voice-download', name: 'Voice Download Progress (2-53)', siid: 2, piid: 53, type: 'number', role: 'value', unit: '%' },
+      { id: 'ai-obstacles', name: 'AI Obstacle Detection (2-55)', siid: 2, piid: 55, type: 'string', role: 'json' },
       { id: 'zone-status', name: 'Zone Status (2-56)', siid: 2, piid: 56, type: 'string', role: 'json' },
+      { id: 'self-check', name: 'Self-Check Result (2-58)', siid: 2, piid: 58, type: 'string', role: 'json' },
       { id: 'task-progress-flag', name: 'Task Progress Flag (2-62)', siid: 2, piid: 62, type: 'number', role: 'value' },
       { id: 'task-type', name: 'Task Type (2-65)', siid: 2, piid: 65, type: 'string', role: 'text' },
       { id: 'battery-level', name: 'Battery Level (3-1)', siid: 3, piid: 1, type: 'number', role: 'value.battery', unit: '%' },
@@ -799,6 +803,10 @@ class Dreame extends utils.Adapter {
       { id: 'faults', name: 'Faults (4-18)', siid: 4, piid: 18, type: 'string', role: 'text' },
       { id: 'warn-status', name: 'Warning Status (4-35)', siid: 4, piid: 35, type: 'number', role: 'value' },
       { id: 'mow-cancel', name: 'Mow Cancel (4-30)', siid: 4, piid: 30, type: 'number', role: 'value' },
+      { id: 'map-index', name: 'Map Index (4-42)', siid: 4, piid: 42, type: 'number', role: 'value' },
+      { id: 'map-name', name: 'Map Name (4-43)', siid: 4, piid: 43, type: 'string', role: 'text' },
+      { id: 'cleaning-progress', name: 'Cleaning Progress (4-63)', siid: 4, piid: 63, type: 'number', role: 'value', unit: '%' },
+      { id: 'device-capability', name: 'Device Capability (4-83)', siid: 4, piid: 83, type: 'string', role: 'json' },
       { id: 'rtk-status', name: 'RTK Status (5-100)', siid: 5, piid: 100, type: 'number', role: 'value' },
       { id: 'gps-satellites', name: 'GPS Satellites (5-106)', siid: 5, piid: 106, type: 'number', role: 'value' },
       { id: 'positioning-mode', name: 'Positioning Mode (5-107)', siid: 5, piid: 107, type: 'number', role: 'value' },
@@ -806,6 +814,8 @@ class Dreame extends utils.Adapter {
       { id: 'total-mow-time', name: 'Total Mow Time (12-2)', siid: 12, piid: 2, type: 'number', role: 'value', unit: 'min' },
       { id: 'total-mow-count', name: 'Total Mow Count (12-3)', siid: 12, piid: 3, type: 'number', role: 'value' },
       { id: 'total-mow-area', name: 'Total Mowed Area (12-4)', siid: 12, piid: 4, type: 'number', role: 'value', unit: 'm²' },
+      { id: 'total-runtime', name: 'Total Runtime (12-5)', siid: 12, piid: 5, type: 'number', role: 'value', unit: 'min' },
+      { id: 'total-cruise-time', name: 'Total Cruise Time (12-6)', siid: 12, piid: 6, type: 'number', role: 'value', unit: 'min' },
     ];
 
     const remoteStates = [
