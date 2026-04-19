@@ -1890,6 +1890,7 @@ class Dreame extends utils.Adapter {
         return;
       }
       const userData = response.data.data;
+      this.log.debug('Mower userData keys: ' + JSON.stringify(Object.keys(userData)));
 
       const basePath = device.did + '.map';
       await this.extendObject(basePath, {
@@ -1910,6 +1911,7 @@ class Dreame extends utils.Adapter {
           const mapData = parsedMapData;
           for (let slotIdx = 0; slotIdx < mapData.length; slotIdx++) {
             const entry = typeof mapData[slotIdx] === 'string' ? JSON.parse(mapData[slotIdx]) : mapData[slotIdx];
+            this.log.debug('Mower MAP entry keys: ' + JSON.stringify(Object.keys(entry)));
             const slotPath = basePath + '.slot' + slotIdx;
             await this.extendObject(slotPath, {
               type: 'channel',
@@ -2184,6 +2186,44 @@ class Dreame extends utils.Adapter {
           cy /= zone.path.length;
           ctx.fillText(zone.name, toX(cx), toY(cy));
         }
+      }
+
+      // Robot position = last valid point from M_PATH
+      if (pathData && pathData.length > 0) {
+        let lastPt = null;
+        for (let i = pathData.length - 1; i >= 0; i--) {
+          const pt = pathData[i];
+          if (pt && pt[0] !== 32767 && pt[1] !== -32768) {
+            lastPt = pt;
+            break;
+          }
+        }
+        if (lastPt) {
+          const rx = toX(lastPt[0] * 10);
+          const ry = toY(lastPt[1] * 10);
+          const r = 6;
+          ctx.beginPath();
+          ctx.arc(rx, ry, r, 0, Math.PI * 2);
+          ctx.fillStyle = '#00AAFF';
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.stroke();
+        }
+      }
+
+      // Charge station position
+      if (entry.chargePilePosition) {
+        const cp = entry.chargePilePosition;
+        const cpx = toX(cp.x);
+        const cpy = toY(cp.y);
+        ctx.beginPath();
+        ctx.arc(cpx, cpy, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#00FF00';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.stroke();
       }
 
       const buffer = canvas.toBuffer('image/png');
