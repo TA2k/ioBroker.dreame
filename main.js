@@ -1469,8 +1469,8 @@ class Dreame extends utils.Adapter {
               const buf = Buffer.from(element.value);
               if (buf[0] !== 0xce || buf[19] !== 0xce) continue;
               const errorCode = buf.readUInt32LE(1);
-              const battery = buf[13] & 0x7f;
-              const chargingLive = (buf[13] & 0x80) >> 7;
+              const battery = buf[11] & 0x7f;
+              const chargingLive = (buf[11] & 0x80) >> 7;
               const robotState = buf[14];
               const locationState = robotState & 3;
               const dockingState = (robotState & 28) >> 2;
