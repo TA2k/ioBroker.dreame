@@ -103,7 +103,7 @@ const DEVICE_STATUS_STATES = Object.freeze({
     98: 'Camera Monitoring', 99: 'Camera monitoring paused',
   },
   mower: {
-    1: 'Mowing', 2: 'Standby', 3: 'Mowing', 4: 'Paused', 5: 'Returning to Charge',
+    1: 'Working', 2: 'Standby', 3: 'Working', 4: 'Paused', 5: 'Returning Charge',
     6: 'Charging', 7: 'Error', 8: 'Raining Pause', 9: 'Initializing',
     10: 'Leaving Station', 11: 'Mapping', 12: 'Border Mowing', 13: 'Charging Completed',
     14: 'Upgrading', 15: 'Relocating', 16: 'Task Navigating',
@@ -782,52 +782,52 @@ class Dreame extends utils.Adapter {
     this.log.info(`Creating mower-specific states for ${device.model}`);
 
     const statusStates = [
-      { id: 'status', name: 'Mower Status', siid: 2, piid: 1, type: 'number', role: 'value' },
-      { id: 'fault', name: 'Error Code', siid: 2, piid: 2, type: 'number', role: 'value' },
-      { id: 'task-info', name: 'Task Execution Info', siid: 2, piid: 50, type: 'string', role: 'json' },
-      { id: 'device-time', name: 'Device Time', siid: 2, piid: 51, type: 'string', role: 'json' },
-      { id: 'zone-status', name: 'Zone Status', siid: 2, piid: 56, type: 'string', role: 'json' },
-      { id: 'task-progress-flag', name: 'Task Progress Flag', siid: 2, piid: 62, type: 'number', role: 'value' },
-      { id: 'task-type', name: 'Task Type', siid: 2, piid: 65, type: 'string', role: 'text' },
-      { id: 'battery-level', name: 'Battery Level', siid: 3, piid: 1, type: 'number', role: 'value.battery', unit: '%' },
-      { id: 'charging-state', name: 'Charging State', siid: 3, piid: 2, type: 'number', role: 'value' },
-      { id: 'work-mode', name: 'Work Mode', siid: 4, piid: 1, type: 'number', role: 'value' },
-      { id: 'mowing-time', name: 'Mowing Time', siid: 4, piid: 2, type: 'number', role: 'value', unit: 'min' },
-      { id: 'mowing-area', name: 'Mowed Area', siid: 4, piid: 3, type: 'number', role: 'value', unit: 'm²' },
-      { id: 'task-status', name: 'Task Status', siid: 4, piid: 7, type: 'number', role: 'value' },
-      { id: 'serial-number', name: 'Serial Number', siid: 4, piid: 14, type: 'string', role: 'text' },
-      { id: 'faults', name: 'Faults', siid: 4, piid: 18, type: 'string', role: 'text' },
-      { id: 'warn-status', name: 'Warning Status', siid: 4, piid: 35, type: 'number', role: 'value' },
-      { id: 'mow-cancel', name: 'Mow Cancel', siid: 4, piid: 30, type: 'number', role: 'value' },
-      { id: 'rtk-status', name: 'RTK Status', siid: 5, piid: 100, type: 'number', role: 'value' },
-      { id: 'gps-satellites', name: 'GPS Satellites', siid: 5, piid: 106, type: 'number', role: 'value' },
-      { id: 'positioning-mode', name: 'Positioning Mode', siid: 5, piid: 107, type: 'number', role: 'value' },
-      { id: 'first-mow-time', name: 'First Mow Time', siid: 12, piid: 1, type: 'number', role: 'value' },
-      { id: 'total-mow-time', name: 'Total Mow Time', siid: 12, piid: 2, type: 'number', role: 'value', unit: 'min' },
-      { id: 'total-mow-count', name: 'Total Mow Count', siid: 12, piid: 3, type: 'number', role: 'value' },
-      { id: 'total-mow-area', name: 'Total Mowed Area', siid: 12, piid: 4, type: 'number', role: 'value', unit: 'm²' },
+      { id: 'status', name: 'Mower Status (2-1)', siid: 2, piid: 1, type: 'number', role: 'value', states: DEVICE_STATUS_STATES.mower },
+      { id: 'fault', name: 'Error Code (2-2)', siid: 2, piid: 2, type: 'number', role: 'value' },
+      { id: 'task-info', name: 'Task Execution Info (2-50)', siid: 2, piid: 50, type: 'string', role: 'json' },
+      { id: 'device-time', name: 'Device Time (2-51)', siid: 2, piid: 51, type: 'string', role: 'json' },
+      { id: 'zone-status', name: 'Zone Status (2-56)', siid: 2, piid: 56, type: 'string', role: 'json' },
+      { id: 'task-progress-flag', name: 'Task Progress Flag (2-62)', siid: 2, piid: 62, type: 'number', role: 'value' },
+      { id: 'task-type', name: 'Task Type (2-65)', siid: 2, piid: 65, type: 'string', role: 'text' },
+      { id: 'battery-level', name: 'Battery Level (3-1)', siid: 3, piid: 1, type: 'number', role: 'value.battery', unit: '%' },
+      { id: 'charging-state', name: 'Charging State (3-2)', siid: 3, piid: 2, type: 'number', role: 'value' },
+      { id: 'work-mode', name: 'Work Mode (4-1)', siid: 4, piid: 1, type: 'number', role: 'value' },
+      { id: 'mowing-time', name: 'Mowing Time (4-2)', siid: 4, piid: 2, type: 'number', role: 'value', unit: 'min' },
+      { id: 'mowing-area', name: 'Mowed Area (4-3)', siid: 4, piid: 3, type: 'number', role: 'value', unit: 'm²' },
+      { id: 'task-status', name: 'Task Status (4-7)', siid: 4, piid: 7, type: 'number', role: 'value' },
+      { id: 'serial-number', name: 'Serial Number (4-14)', siid: 4, piid: 14, type: 'string', role: 'text' },
+      { id: 'faults', name: 'Faults (4-18)', siid: 4, piid: 18, type: 'string', role: 'text' },
+      { id: 'warn-status', name: 'Warning Status (4-35)', siid: 4, piid: 35, type: 'number', role: 'value' },
+      { id: 'mow-cancel', name: 'Mow Cancel (4-30)', siid: 4, piid: 30, type: 'number', role: 'value' },
+      { id: 'rtk-status', name: 'RTK Status (5-100)', siid: 5, piid: 100, type: 'number', role: 'value' },
+      { id: 'gps-satellites', name: 'GPS Satellites (5-106)', siid: 5, piid: 106, type: 'number', role: 'value' },
+      { id: 'positioning-mode', name: 'Positioning Mode (5-107)', siid: 5, piid: 107, type: 'number', role: 'value' },
+      { id: 'first-mow-time', name: 'First Mow Time (12-1)', siid: 12, piid: 1, type: 'number', role: 'value' },
+      { id: 'total-mow-time', name: 'Total Mow Time (12-2)', siid: 12, piid: 2, type: 'number', role: 'value', unit: 'min' },
+      { id: 'total-mow-count', name: 'Total Mow Count (12-3)', siid: 12, piid: 3, type: 'number', role: 'value' },
+      { id: 'total-mow-area', name: 'Total Mowed Area (12-4)', siid: 12, piid: 4, type: 'number', role: 'value', unit: 'm²' },
     ];
 
     const remoteStates = [
-      { id: 'obstacle-avoidance', name: 'Obstacle Avoidance', siid: 4, piid: 21, type: 'number', role: 'switch' },
-      { id: 'ai-detection', name: 'AI Detection', siid: 4, piid: 22, type: 'number', role: 'switch' },
-      { id: 'mow-setting', name: 'Mow Setting', siid: 4, piid: 23, type: 'number', role: 'value' },
-      { id: 'custom-mowing', name: 'Custom Mowing', siid: 4, piid: 26, type: 'number', role: 'switch' },
-      { id: 'child-lock', name: 'Child Lock', siid: 4, piid: 27, type: 'number', role: 'switch' },
-      { id: 'dnd-enable', name: 'Do Not Disturb', siid: 5, piid: 1, type: 'boolean', role: 'switch' },
-      { id: 'dnd-start', name: 'DND Start Time', siid: 5, piid: 2, type: 'string', role: 'text' },
-      { id: 'dnd-end', name: 'DND End Time', siid: 5, piid: 3, type: 'string', role: 'text' },
-      { id: 'timezone', name: 'Timezone', siid: 8, piid: 1, type: 'string', role: 'text' },
-      { id: 'schedule', name: 'Mow Schedule', siid: 8, piid: 2, type: 'string', role: 'text' },
+      { id: 'obstacle-avoidance', name: 'Obstacle Avoidance (4-21)', siid: 4, piid: 21, type: 'number', role: 'switch' },
+      { id: 'ai-detection', name: 'AI Detection (4-22)', siid: 4, piid: 22, type: 'number', role: 'switch' },
+      { id: 'mow-setting', name: 'Mow Setting (4-23)', siid: 4, piid: 23, type: 'number', role: 'value' },
+      { id: 'custom-mowing', name: 'Custom Mowing (4-26)', siid: 4, piid: 26, type: 'number', role: 'switch' },
+      { id: 'child-lock', name: 'Child Lock (4-27)', siid: 4, piid: 27, type: 'number', role: 'switch' },
+      { id: 'dnd-enable', name: 'Do Not Disturb (5-1)', siid: 5, piid: 1, type: 'boolean', role: 'switch' },
+      { id: 'dnd-start', name: 'DND Start Time (5-2)', siid: 5, piid: 2, type: 'string', role: 'text' },
+      { id: 'dnd-end', name: 'DND End Time (5-3)', siid: 5, piid: 3, type: 'string', role: 'text' },
+      { id: 'timezone', name: 'Timezone (8-1)', siid: 8, piid: 1, type: 'string', role: 'text' },
+      { id: 'schedule', name: 'Mow Schedule (8-2)', siid: 8, piid: 2, type: 'string', role: 'text' },
     ];
 
     const actionStates = [
-      { id: 'start-mow', name: 'Start Mowing', siid: 2, aiid: 1, in: [] },
-      { id: 'stop-mow', name: 'Stop Mowing', siid: 2, aiid: 2, in: [] },
-      { id: 'start-zone-mow', name: 'Start Zone Mowing', siid: 2, aiid: 3, in: [4] },
-      { id: 'start-charge', name: 'Return to Dock', siid: 3, aiid: 1, in: [] },
-      { id: 'start-mow-ext', name: 'Start Mow Extended', siid: 4, aiid: 1, in: [10, 1] },
-      { id: 'stop-mow-ext', name: 'Stop Mow Extended', siid: 4, aiid: 2, in: [] },
+      { id: 'start-mow', name: 'Start Mowing (2-1)', siid: 2, aiid: 1, in: [] },
+      { id: 'stop-mow', name: 'Stop Mowing (2-2)', siid: 2, aiid: 2, in: [] },
+      { id: 'start-zone-mow', name: 'Start Zone Mowing (2-3)', siid: 2, aiid: 3, in: [4] },
+      { id: 'start-charge', name: 'Return to Dock (3-1)', siid: 3, aiid: 1, in: [] },
+      { id: 'start-mow-ext', name: 'Start Mow Extended (4-1)', siid: 4, aiid: 1, in: [10, 1] },
+      { id: 'stop-mow-ext', name: 'Stop Mow Extended (4-2)', siid: 4, aiid: 2, in: [] },
     ];
 
     await this.extendObject(did + '.status', { type: 'channel', common: { name: 'Mower Status' }, native: {} });
@@ -837,7 +837,7 @@ class Dreame extends utils.Adapter {
       const path = `${did}.status.${s.id}`;
       await this.extendObject(path, {
         type: 'state',
-        common: { name: s.name, type: s.type, role: s.role, read: true, write: false, unit: s.unit || '' },
+        common: /** @type {any} */ ({ name: s.name, type: s.type, role: s.role, read: true, write: false, unit: s.unit || '', ...(s.states ? { states: s.states } : {}) }),
         native: { siid: s.siid, piid: s.piid, did: did },
       });
       this.specPropsToIdDict[did][`${s.siid}-${s.piid}`] = path;
@@ -886,7 +886,7 @@ class Dreame extends utils.Adapter {
     });
     await this.extendObject(`${did}.status.3dmap-progress`, {
       type: 'state',
-      common: { name: '3D Map Generation Progress', type: 'number', role: 'value', read: true, write: false, unit: '%', def: 0 },
+      common: { name: '3D Map Generation Progress (2-54)', type: 'number', role: 'value', read: true, write: false, unit: '%', def: 0 },
       native: {},
     });
     this.specPropsToIdDict[did]['2-54'] = `${did}.status.3dmap-progress`;
