@@ -1333,6 +1333,23 @@ class Dreame extends utils.Adapter {
             }
           }
           const device = this.deviceArray.find((d) => String(d.did) === did);
+          if (this.isMower(device) && element.siid === 1 && element.piid === 4) {
+            if (Array.isArray(element.value) && element.value.length >= 5) {
+              const buf = Buffer.from(element.value);
+              const posX = buf.readInt16LE(1);
+              const posY = buf.readInt16LE(3);
+              this.mowerRobotPos = this.mowerRobotPos || {};
+              this.mowerRobotPos[did] = { x: posX, y: posY };
+              const posPath = `${did}.status.robot-position`;
+              await this.extendObject(posPath, {
+                type: 'state',
+                common: { name: 'Robot Position', type: 'string', role: 'state', read: true, write: false },
+                native: {},
+              });
+              this.setState(posPath, JSON.stringify({ x: posX, y: posY }), true);
+            }
+            continue;
+          }
           if (this.isMower(device) && element.siid === 1) {
             continue;
           }
@@ -2033,7 +2050,8 @@ class Dreame extends utils.Adapter {
 
       // Canvas rendering
       if (parsedMapData) {
-        await this.renderMowerMap(device, parsedMapData, parsedPathData);
+        const robotPos = this.mowerRobotPos && this.mowerRobotPos[String(device.did)];
+        await this.renderMowerMap(device, parsedMapData, parsedPathData, robotPos);
       }
 
       this.log.debug('Mower map data updated for ' + device.did);
@@ -2052,7 +2070,7 @@ class Dreame extends utils.Adapter {
     await this.setState(id, value, true);
   }
 
-  async renderMowerMap(device, mapData, pathData) {
+  async renderMowerMap(device, mapData, pathData, robotPos) {
     if (!createCanvas) {
       this.log.debug('Canvas not available, cannot render mower map');
       return;
@@ -2188,8 +2206,21 @@ class Dreame extends utils.Adapter {
         }
       }
 
-      // Robot position = last valid point from M_PATH
-      if (pathData && pathData.length > 0) {
+      // Robot position from MQTT (siid:1 piid:4) or fallback to last M_PATH point
+      let robotDrawn = false;
+      if (robotPos && robotPos.x != null && robotPos.y != null) {
+        const rx = toX(robotPos.x * 10);
+        const ry = toY(robotPos.y * 10);
+        ctx.beginPath();
+        ctx.arc(rx, ry, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#00AAFF';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.stroke();
+        robotDrawn = true;
+      }
+      if (!robotDrawn && pathData && pathData.length > 0) {
         let lastPt = null;
         for (let i = pathData.length - 1; i >= 0; i--) {
           const pt = pathData[i];
@@ -2201,9 +2232,8 @@ class Dreame extends utils.Adapter {
         if (lastPt) {
           const rx = toX(lastPt[0] * 10);
           const ry = toY(lastPt[1] * 10);
-          const r = 6;
           ctx.beginPath();
-          ctx.arc(rx, ry, r, 0, Math.PI * 2);
+          ctx.arc(rx, ry, 6, 0, Math.PI * 2);
           ctx.fillStyle = '#00AAFF';
           ctx.fill();
           ctx.lineWidth = 2;
