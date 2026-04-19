@@ -17,9 +17,9 @@ Alle siid:1-Nachrichten verwenden ein 0xCE-geframtes Binärprotokoll.
 ```
 Byte  0:      0xCE (Frame Start)
 Bytes 1-10:   Error Code (10 Bytes)
-Byte  11:     (unbekannt, schwankt stark)
+Byte  11:     Battery Level (code & 0x7F = %, Bit 7 = Charging)
 Byte  12:     Sequence + Main State (encoded)
-Byte  13:     Battery Level (%)
+Byte  13:     (unbekannt, 0xFF häufig)
 Byte  14:     Robot State Bitfield (siehe unten)
 Byte  15:     Working State / Build Flags
 Byte  16:     BLE RSSI
