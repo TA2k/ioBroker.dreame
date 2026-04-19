@@ -806,7 +806,6 @@ class Dreame extends utils.Adapter {
       { id: 'mow-cancel', name: 'Mow Cancel (4-30)', siid: 4, piid: 30, type: 'number', role: 'value' },
       { id: 'map-index', name: 'Map Index (4-42)', siid: 4, piid: 42, type: 'number', role: 'value' },
       { id: 'map-name', name: 'Map Name (4-43)', siid: 4, piid: 43, type: 'string', role: 'text' },
-      { id: 'cleaning-progress', name: 'Cleaning Progress (4-63)', siid: 4, piid: 63, type: 'number', role: 'value', unit: '%' },
       { id: 'device-capability', name: 'Device Capability (4-83)', siid: 4, piid: 83, type: 'string', role: 'json' },
       { id: 'rtk-status', name: 'RTK Status (5-100)', siid: 5, piid: 100, type: 'number', role: 'value' },
       { id: 'gps-satellites', name: 'GPS Satellites (5-106)', siid: 5, piid: 106, type: 'number', role: 'value' },
@@ -833,7 +832,12 @@ class Dreame extends utils.Adapter {
       { id: 'path-display', name: 'Path Display (PATH)', type: 'number', role: 'value', desc: '0=off, 1=on' },
       { id: 'weather-ref', name: 'Weather Forecast Ref (WRF)', type: 'number', role: 'value', desc: '0=off, 1=on' },
       { id: 'grass-protection', name: 'Grass Protection (PROT)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'consumables', name: 'Consumables (CMS)', type: 'string', role: 'json', desc: '[blade_min, brush_min, robot_min]' },
+      { id: 'blade-hours', name: 'Blade Hours (CMS)', type: 'number', role: 'value', unit: 'h', desc: 'Klingen-Betriebsstunden (max 100h)' },
+      { id: 'blade-health', name: 'Blade Health (CMS)', type: 'number', role: 'value', unit: '%', desc: 'Klingen-Zustand 0-100%' },
+      { id: 'brush-hours', name: 'Brush Hours (CMS)', type: 'number', role: 'value', unit: 'h', desc: 'Bürsten-Betriebsstunden (max 500h)' },
+      { id: 'brush-health', name: 'Brush Health (CMS)', type: 'number', role: 'value', unit: '%', desc: 'Bürsten-Zustand 0-100%' },
+      { id: 'robot-maintenance-hours', name: 'Robot Maintenance Hours (CMS)', type: 'number', role: 'value', unit: 'h', desc: 'Roboter-Wartungsstunden (max 60h)' },
+      { id: 'robot-maintenance-health', name: 'Robot Maintenance Health (CMS)', type: 'number', role: 'value', unit: '%', desc: 'Roboter-Wartungs-Zustand 0-100%' },
     ];
 
     const remoteStates = [
@@ -864,6 +868,9 @@ class Dreame extends utils.Adapter {
       { id: 'set-path-display', name: 'Set Path Display (PATH)', cfgKey: 'PATH', type: 'number', role: 'switch', desc: '0=off, 1=on' },
       { id: 'set-grass-protection', name: 'Set Grass Protection (PROT)', cfgKey: 'PROT', type: 'number', role: 'switch', desc: '0=off, 1=on' },
       { id: 'reset-consumables', name: 'Reset Consumables (CMS)', cfgKey: 'CMS', type: 'string', role: 'json', desc: '{"value":[0,brush,robot]} — auf 0 gesetzte Werte werden zurückgesetzt' },
+      { id: 'reset-blade', name: 'Reset Blade Hours', cfgKey: 'CMS', resetIndex: 0, type: 'boolean', role: 'button', desc: 'Klingen-Betriebsstunden zurücksetzen (max 6000 min / 100h)' },
+      { id: 'reset-brush', name: 'Reset Brush Hours', cfgKey: 'CMS', resetIndex: 1, type: 'boolean', role: 'button', desc: 'Bürsten-Betriebsstunden zurücksetzen (max 30000 min / 500h)' },
+      { id: 'reset-robot-maintenance', name: 'Reset Robot Maintenance', cfgKey: 'CMS', resetIndex: 2, type: 'boolean', role: 'button', desc: 'Roboter-Wartungsstunden zurücksetzen (max 3600 min / 60h)' },
       { id: 'find-robot', name: 'Find Robot', cfgKey: null, actionOp: 9, type: 'boolean', role: 'button', desc: 'Roboter suchen (Ton abspielen)' },
       { id: 'lock-robot', name: 'Lock Robot', cfgKey: null, actionOp: 12, type: 'boolean', role: 'button', desc: 'Roboter sperren' },
     ];
@@ -908,7 +915,7 @@ class Dreame extends utils.Adapter {
       await this.extendObject(path, {
         type: 'state',
         common: /** @type {any} */ ({ name: c.name, type: c.type, role: c.role, read: true, write: true, ...(c.desc ? { desc: c.desc } : {}) }),
-        native: { cfgKey: c.cfgKey, actionOp: c.actionOp, did: did },
+        native: { cfgKey: c.cfgKey, actionOp: c.actionOp, resetIndex: c.resetIndex, did: did },
       });
     }
 
@@ -2593,12 +2600,23 @@ class Dreame extends utils.Adapter {
         VOL: 'volume', LIT: 'headlight', AOP: 'ai-obstacle-cfg',
         REC: 'camera-config', STUN: 'anti-theft', ATA: 'auto-task-adj',
         PATH: 'path-display', WRF: 'weather-ref', PROT: 'grass-protection',
-        CMS: 'consumables',
       };
       for (const [key, stateId] of Object.entries(mapping)) {
         if (cfg[key] !== undefined) {
           const val = typeof cfg[key] === 'object' ? JSON.stringify(cfg[key]) : cfg[key];
           this.setState(`${did}.status.${stateId}`, val, true);
+        }
+      }
+      // CMS: [blade_min, brush_min, robot_min] → individual states with hours + health %
+      if (Array.isArray(cfg.CMS)) {
+        const maxMinutes = [6000, 30000, 3600];
+        const ids = ['blade', 'brush', 'robot-maintenance'];
+        for (let i = 0; i < ids.length && i < cfg.CMS.length; i++) {
+          const minutes = cfg.CMS[i];
+          const hours = Math.round((minutes / 60) * 10) / 10;
+          const health = Math.max(0, Math.round((1 - minutes / maxMinutes[i]) * 100));
+          this.setState(`${did}.status.${ids[i]}-hours`, hours, true);
+          this.setState(`${did}.status.${ids[i]}-health`, health, true);
         }
       }
       this.log.debug(`Loaded ${Object.keys(mapping).filter((k) => cfg[k] !== undefined).length} settings for ${device.model}`);
@@ -2838,6 +2856,17 @@ class Dreame extends utils.Adapter {
             // Action command: {m:'a', p:0, o:actionOp}
             this.log.info(`Mower action o=${stateObjCfg.native.actionOp} for ${device.model}`);
             await this.sendMowerCommand(device, { m: 'a', p: 0, o: stateObjCfg.native.actionOp });
+          } else if (stateObjCfg.native.resetIndex !== undefined) {
+            // Reset single consumable: read current CMS, set target index to 0, write back
+            const cfgResult = await this.sendMowerCommand(device, { m: 'g', t: 'CFG' });
+            if (cfgResult && cfgResult.d && Array.isArray(cfgResult.d.CMS)) {
+              const cms = [...cfgResult.d.CMS];
+              cms[stateObjCfg.native.resetIndex] = 0;
+              this.log.info(`Reset consumable index ${stateObjCfg.native.resetIndex}: ${JSON.stringify(cms)}`);
+              await this.sendMowerCommand(device, { m: 's', t: 'CMS', d: { value: cms } });
+            } else {
+              this.log.warn('Could not read current CMS values for reset');
+            }
           } else {
             // CFG SET command: {m:'s', t:cfgKey, d:{value:X}} or d:parsed JSON
             const cfgKey = stateObjCfg.native.cfgKey;

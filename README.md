@@ -128,26 +128,57 @@ The adapter supports Dreame robotic mowers with dedicated states and map renderi
 | total-mow-time   | Total mowing time (min)                                                                                    |
 | total-mow-count  | Total mow count                                                                                            |
 | total-mow-area   | Total mowed area (m²)                                                                                      |
+| rain-protection  | Rain protection settings (WRP): `[enabled, wait_hours, sensitivity]`                                       |
+| frost-protection | Frost protection (FDP): 0=off, 1=on                                                                        |
+| low-speed        | Low speed night mode (LOW): `[enabled, start_min, end_min]`                                                |
+| dnd-settings     | Do not disturb settings (DND): `[enabled, start_min, end_min]`                                             |
+| battery-config   | Battery config (BAT): `[return%, max%, charge_en, ?, start, end]`                                          |
+| volume           | Volume (VOL): 0-100                                                                                        |
+| child-lock-cfg   | Child lock (CLS): 0=off, 1=on                                                                              |
+| ai-obstacle-cfg  | AI obstacle avoidance (AOP): 0=off, 1=on                                                                   |
+| anti-theft       | Anti-theft (STUN): 0=off, 1=on                                                                             |
+| headlight        | Headlight settings (LIT): `[enabled, start, end, l1, l2, l3, l4]`                                          |
+| grass-protection | Grass protection (PROT): 0=off, 1=on                                                                       |
+| blade-hours      | Blade operating hours (max 100h)                                                                           |
+| blade-health     | Blade health 0-100%                                                                                        |
+| brush-hours      | Brush operating hours (max 500h)                                                                           |
+| brush-health     | Brush health 0-100%                                                                                        |
+| robot-maintenance-hours | Robot maintenance hours (max 60h)                                                                   |
+| robot-maintenance-health | Robot maintenance health 0-100%                                                                    |
 
 ### Mower Remote
 
-| State               | Description                         |
-| ------------------- | ----------------------------------- |
-| start-mow           | Start mowing                        |
-| stop-mow            | Stop mowing                         |
-| start-zone-mow      | Start zone mowing (value: zone IDs) |
-| start-charge        | Return to dock                      |
-| start-mow-ext       | Start mowing extended               |
-| stop-mow-ext        | Stop mowing extended                |
-| obstacle-avoidance  | Obstacle avoidance on/off           |
-| ai-detection        | AI detection on/off                 |
-| child-lock          | Child lock on/off                   |
-| dnd-enable          | Do not disturb on/off               |
-| dnd-start / dnd-end | DND time range                      |
-| schedule            | Mow schedule                        |
-| fetchMap            | Fetch map from device (button)      |
-| generate-3dmap      | Generate 3D LIDAR map (button)      |
-| customCommand       | Send custom MIoT command            |
+| State                  | Description                                                            |
+| ---------------------- | ---------------------------------------------------------------------- |
+| start-mow              | Start mowing                                                           |
+| stop-mow               | Stop mowing                                                            |
+| start-zone-mow         | Start zone mowing (value: zone IDs)                                    |
+| start-charge           | Return to dock                                                         |
+| start-mow-ext          | Start mowing extended                                                  |
+| stop-mow-ext           | Stop mowing extended                                                   |
+| obstacle-avoidance     | Obstacle avoidance on/off                                              |
+| ai-detection           | AI detection on/off                                                    |
+| child-lock             | Child lock on/off                                                      |
+| dnd-enable             | Do not disturb on/off                                                  |
+| dnd-start / dnd-end    | DND time range                                                         |
+| schedule               | Mow schedule                                                           |
+| set-rain-protection    | Set rain protection: `{"value":1,"time":8,"sen":0}` or `{"value":0}`   |
+| set-frost-protection   | Set frost protection: 0=off, 1=on                                      |
+| set-low-speed          | Set low speed night: `{"value":1,"time":[1200,480]}` or `{"value":0}`  |
+| set-dnd                | Set do not disturb: `{"value":1,"time":[1200,480]}` or `{"value":0}`   |
+| set-child-lock         | Set child lock: 0=off, 1=on                                            |
+| set-volume             | Set volume: 0-100                                                      |
+| set-ai-obstacle        | Set AI obstacle avoidance: 0=off, 1=on                                 |
+| set-anti-theft         | Set anti-theft: 0=off, 1=on                                            |
+| set-headlight          | Set headlight: `{"value":1,"time":[480,1200],"light":[1,1,1,1]}`       |
+| set-path-display       | Set path display: 0=off, 1=on                                          |
+| set-grass-protection   | Set grass protection: 0=off, 1=on                                      |
+| reset-consumables      | Reset consumables: `{"value":[0,brush,robot]}`                         |
+| find-robot             | Find robot (play sound, button)                                        |
+| lock-robot             | Lock robot (button)                                                    |
+| fetchMap               | Fetch map from device (button)                                         |
+| generate-3dmap         | Generate 3D LIDAR map (button)                                         |
+| customCommand          | Send custom MIoT command                                               |
 
 ### Mower Map
 
@@ -187,44 +218,56 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### 0.3.4 (2026-04-19)
+
+- Add mower settings states from getCFG (rain protection, frost protection, low speed, DND, battery config, volume, headlight, AI obstacle, camera, anti-theft, etc.)
+- Load all settings on startup and auto-reload on prop.2.51 MQTT trigger
+- Add dedicated remote states for setting CFG values (set-rain-protection, set-frost-protection, set-volume, find-robot, lock-robot, etc.)
+- Split consumables into individual states (blade-hours, brush-hours, robot-maintenance-hours + health %)
+- Add individual consumable reset buttons (reset-blade, reset-brush, reset-robot-maintenance)
+- Correct prop.2.51 as generic settings-update trigger (WRP/FDP/LOW)
+- Remove invalid cleaning-progress (4-63) from mower states
+
+### 0.3.3 (2026-04-19)
+
+- Parse all mower MQTT binary state fields (battery, error, location, docking, pin, camera, BLE/WiFi/LTE RSSI)
+- Parse mower live position from MQTT siid:1 piid:4 (12-bit packed format)
+- Parse mower task progress (region, percent, total/finished area)
+- Draw robot position and dock on mower map image
+- Draw robot, charger, virtual walls, no-go zones and zone names on vacuum map image
+- Add siid-piid identifiers to all mower state names
+- Fix mower status labels per common_mower_protocol.json
+- Add named mower properties (task-info, device-time, zone-status, RTK, GPS satellites, positioning-mode)
+- Fetch all siid property values on startup (removed siid<=3 filter)
+- Fix undefined deviceArray entry in connectMqtt
+
 ### 0.3.2 (2026-04-17)
 
-- fix 3D LIDAR map SIID bug (siid:5 → siid:2 for aiid:50)
-- fix MQTT value type coercion (numbers no longer stringified)
-- fix cloudService config field (renamed from reserved keyword "type")
-
-### 0.3.1 (2026-04-17)
-
-- add MOVA brand support (MOVA 600, MOVA 1000)
-- add Cloud Service selector (Dreame/MOVA) in adapter settings
-- centralize API configuration (domain, auth, headers) per brand
-- compute dreame-rlc header dynamically via AES-128-ECB
-- add mower support (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)
-- dedicated mower states (status, remote, map)
-- mower map rendering via iotuserdata API
-- automatic map polling during mowing
-- filter vacuum-only services for mower devices
-- fix SIID+3 action bug for mower
-- add 3D LIDAR map generation and download URL
-- add retry logic for API requests
-- fix JSON parsing errors (downgrade to info)
-- update datapoint names and IDs
+- Add MOVA brand support (MOVA 600, MOVA 1000)
+- Add Cloud Service selector (Dreame/MOVA) in adapter settings
+- Centralize API configuration (domain, auth, headers) per brand
+- Add mower support (A1, A1 Pro, A2, A2 1200, A3 AWD 1000)
+- Dedicated mower states (status, remote, map)
+- Mower map rendering via iotuserdata API
+- Add 3D LIDAR map generation and download URL
+- Add retry logic for API requests
+- Fix JSON parsing errors
 
 ### 0.2.2 (2025-01-24)
 
-- reduce cpu load while cleaning
+- Reduce CPU load while cleaning
 
 ### 0.2.1 (2025-01-15)
 
-- fix for canvas installation
+- Fix for canvas installation
 
 ### 0.2.0 (2024-12-28)
 
-- add simple maps
+- Add simple maps
 
-### 0.1.0 (2024-12-14)
+### 0.1.1 (2024-12-14)
 
-- bugfixes
+- Improve error handling
 
 ### 0.1.0 (2024-12-14)
 
