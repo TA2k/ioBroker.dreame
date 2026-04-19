@@ -235,3 +235,115 @@ function parseRobotState(byte) {
 - WiFi-SSID-Prefixe für Pairing: `dreame_dock_`, `mova_dock_`, `trouver_dock_`
 - Geofence-System ist für Smart-Lock Auto-Unlock (Handy-GPS), nicht für Mower-Dock
 - Protokoll-JSON: `assets/home_device/common_mower_protocol.json` definiert siid/piid-Mappings zur Laufzeit
+- Fast alle Befehle laufen über `action {siid:2, aiid:50, in:[payload]}` mit JSON `{m, t, d}`
+
+## MQTT Property Subscriptions (prop.siid.piid)
+
+### SIID 1 — OTA/Device
+
+| piid | Name | Beschreibung |
+|------|------|--------------|
+| 1 | Heartbeat/State | 20-Byte Binärprotokoll (siehe oben) |
+| 2 | OTA State | 0=UNDEFINED, 1=IDLE, 2=UPGRADING, 3=SUCCESS, 4=FAILED, 5=CANNOT_UPGRADE |
+| 3 | OTA Progress | Fortschritt in % |
+| 4 | Robot Pose | Position (12-bit gepackt, siehe oben) |
+| 50 | (unbekannt) | Leerer Handler |
+| 51 | Dock Position Changed | Löst Dock-Position-Reload aus |
+| 52 | (unbekannt) | Leerer Handler |
+| 53 | BLE Connection Status | BLE-Verbindungsstatus |
+
+### SIID 2 — Mower Service
+
+| piid | Name | Beschreibung |
+|------|------|--------------|
+| 1 | Device Status | Hauptstatus (1=Working, 2=Standby, etc.) |
+| 2 | Error Code | Fehlercode |
+| 50 | Task Execution Info | Task-Callback mit `{d:{o:operation}}` |
+| 51 | Rain Protection / Settings Update | `{value:[enabled, wait_hours]}` — löst Settings-Reload aus |
+| 52 | Mowing Preference Update | Löst Mäh-Einstellungen-Reload aus |
+| 53 | Voice Download Progress | Sprachpaket-Download in % |
+| 54 | 3D Map Progress | 3D-LIDAR-Upload-Fortschritt in % |
+| 55 | AI Obstacle Detection | `{obs:[...]}` KI-erkannte Hindernisse |
+| 56 | Zone Status | `{status:[[id,state],...]}` pro Zone |
+| 57 | Robot Shutdown | Roboter fährt herunter |
+| 58 | Self-Check Result | `{d:{mode,id,result}}` Diagnose |
+| 61 | Map Update | Löst Karten-Reload aus |
+
+### SIID 3 — Battery
+
+| piid | Name | Beschreibung |
+|------|------|--------------|
+| 1 | Battery Level | Batterie in % |
+| 2 | Charging State | Ladezustand |
+
+### SIID 99
+
+| piid | Name | Beschreibung |
+|------|------|--------------|
+| 20 | 3D Map Upload Finish | Upload abgeschlossen |
+
+## Settings (über getCFG / siid:2 aiid:50)
+
+| Key | Default | Beschreibung |
+|-----|---------|--------------|
+| WRP | [1, 8, 0] | Rain Protection: [enabled, wait_hours, sensitivity] |
+| DND | [0, 1200, 480] | Do Not Disturb: [enabled, start_min, end_min] |
+| CLS | 0 | Child Lock (0=off, 1=on) |
+| BAT | [15, 100, 1, 0, 1080, 480] | Battery: [return_threshold, max_charge, ...] |
+| LOW | [0, 1200, 480] | Low Speed Mode: [enabled, start_min, end_min] |
+| VOL | 80 | Lautstärke |
+| LIT | [0, 480, 1200, 1, 1, 1, 1] | Headlight: [enabled, start, end, light1-4] |
+| AOP | 0 | AI Obstacle Avoidance |
+| REC | [0, 1, 0, 0, 0, 0, 0, 0] | Recording/Kamera |
+| STUN | 0 | Anti-Theft |
+| ATA | [0, 0, 0] | Auto Task Adjustment |
+| PATH | 1 | Pfad-Anzeigemodus |
+| WRF | false | Weather Forecast Reference |
+| PROT | 0 | Protection Mode |
+
+## Enums
+
+### MainState
+```
+INIT: -1, IDLE: 0, REMOTE_CTRLING: 2, MAP_BUILDING: 3, MOWING: 4
+```
+
+### TaskStatus
+```
+IDLE: 0, STARTING: 1, WORKING: 2, PAUSED: 3, FINISHED: 4, FAILED: 5, EXIT: 6, DOCK: 7
+```
+
+### WorkingMode
+```
+ALL_AREA: 0, EDGE: 1, AREA: 2, SPOT: 3, CRUISE_POINT: 7, CRUISE_EDGE: 8, CLEAN_POINT: 9, MAP_LEARNING: 10
+```
+
+### LocationState
+```
+IDLE: 0, RELOCATING: 1, FAILURE: 2, SUCCESS: 3
+```
+
+### AreaStatus
+```
+UNFINISHED: -1, CURRENT_MOWING: 0, FAILED: 1, FINISHED: 2, SIDE_MOWING: 3, PAUSING: 4
+```
+
+### MowingState
+```
+PAUSED: 1, FINISHED: 2, IDLE: 3, MOWING: 4, REMOTE_CTRLING: 5
+```
+
+## Actions (über siid:2 aiid:50, m:'a')
+
+| Operation | Funktion | Beschreibung |
+|-----------|----------|--------------|
+| 100 | globalMower | Komplett-Mähen starten |
+| 101 | edgeMower | Kantenmähen starten |
+| 102 | zoneMower | Zonenmähen starten |
+| 103 | spotMower | Punktmähen starten |
+| 104 | planMower | Zeitplan-Mähen starten |
+| 200 | changeMap | Aktive Karte wechseln |
+| 204 | editMap | Kartenbearbeitung starten |
+| 205 | clearMap | Karte löschen |
+| 400 | startBinocular | Binokularkamera starten |
+| 503 | cutterBias | Messer-Kalibrierung |
