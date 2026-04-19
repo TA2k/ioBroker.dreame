@@ -1728,7 +1728,99 @@ class Dreame extends utils.Adapter {
       const imageData = new ImageData(bitmapArray, multiMap.width, multiMap.height);
       ctx.putImageData(imageData, 0, 0);
 
-      // Save the image to a file
+      const toPixelX = (wx) => (wx - multiMap.x) / multiMap.gridWidth;
+      const toPixelY = (wy) => (wy - multiMap.y) / multiMap.gridWidth;
+
+      // Draw virtual walls (vw.line) as red lines
+      if (multiMap.vw) {
+        ctx.strokeStyle = '#FF0000';
+        ctx.lineWidth = 2;
+        for (const key in multiMap.vw) {
+          const items = multiMap.vw[key];
+          if (!Array.isArray(items)) continue;
+          for (const item of items) {
+            if (!Array.isArray(item) || item.length < 4) continue;
+            if (key === 'line' || key === 'cliff') {
+              ctx.beginPath();
+              ctx.moveTo(toPixelX(item[0]), toPixelY(item[1]));
+              ctx.lineTo(toPixelX(item[2]), toPixelY(item[3]));
+              ctx.stroke();
+            } else {
+              const x1 = toPixelX(Math.min(item[0], item[2]));
+              const y1 = toPixelY(Math.min(item[1], item[3]));
+              const x2 = toPixelX(Math.max(item[0], item[2]));
+              const y2 = toPixelY(Math.max(item[1], item[3]));
+              ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            }
+          }
+        }
+      }
+
+      // Draw no-go zones (vws) as red dashed rectangles
+      if (multiMap.vws) {
+        ctx.strokeStyle = '#FF4444';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
+        for (const key in multiMap.vws) {
+          const items = multiMap.vws[key];
+          if (!Array.isArray(items)) continue;
+          for (const item of items) {
+            if (!Array.isArray(item) || item.length < 4) continue;
+            const x1 = toPixelX(Math.min(item[0], item[2]));
+            const y1 = toPixelY(Math.min(item[1], item[3]));
+            const x2 = toPixelX(Math.max(item[0], item[2]));
+            const y2 = toPixelY(Math.max(item[1], item[3]));
+            ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+          }
+        }
+        ctx.setLineDash([]);
+      }
+
+      // Draw zone names
+      if (multiMap.areaInfo) {
+        const fontSize = Math.max(8, Math.min(multiMap.width, multiMap.height) * 0.03);
+        ctx.font = `${fontSize}px sans-serif`;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (const key in multiMap.areaInfo) {
+          const area = multiMap.areaInfo[key];
+          if (!area || area.centerX == null || area.centerY == null) continue;
+          const label = (area.areaName) || ('Zone' + key);
+          const px = toPixelX(area.centerX);
+          const py = toPixelY(area.centerY);
+          ctx.fillText(label, px, py);
+        }
+      }
+
+      // Draw charger position (green)
+      if (multiMap.chargerPos) {
+        const cx = toPixelX(multiMap.chargerPos.x);
+        const cy = toPixelY(multiMap.chargerPos.y);
+        const r = Math.max(3, Math.min(multiMap.width, multiMap.height) * 0.015);
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#00FF00';
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.stroke();
+      }
+
+      // Draw robot position (blue)
+      if (multiMap.robotPos) {
+        const rx = toPixelX(multiMap.robotPos.x);
+        const ry = toPixelY(multiMap.robotPos.y);
+        const r = Math.max(3, Math.min(multiMap.width, multiMap.height) * 0.015);
+        ctx.beginPath();
+        ctx.arc(rx, ry, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#00AAFF';
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.stroke();
+      }
+
       const buffer = canvas.toBuffer('image/png');
       let stateMapId = multiMap.map_id;
       if (!fetchAllMaps) {
