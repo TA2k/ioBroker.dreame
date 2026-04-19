@@ -1469,7 +1469,8 @@ class Dreame extends utils.Adapter {
               const buf = Buffer.from(element.value);
               if (buf[0] !== 0xce || buf[19] !== 0xce) continue;
               const errorCode = buf.readUInt32LE(1);
-              const battery = buf[13];
+              const battery = buf[13] & 0x7f;
+              const chargingLive = (buf[13] & 0x80) >> 7;
               const robotState = buf[14];
               const locationState = robotState & 3;
               const dockingState = (robotState & 28) >> 2;
@@ -1532,7 +1533,15 @@ class Dreame extends utils.Adapter {
                 common: { name: 'Battery Level Live (1-1 B13)', type: 'number', role: 'value.battery', unit: '%', read: true, write: false },
                 native: {},
               });
-              this.setState(basePath + '.battery-level-live', battery, true);
+              if (battery <= 100) {
+                this.setState(basePath + '.battery-level-live', battery, true);
+              }
+              await this.extendObject(basePath + '.charging-live', {
+                type: 'state',
+                common: { name: 'Charging Live (1-1 B13.7)', type: 'number', role: 'value', read: true, write: false, states: { 0: 'Not Charging', 1: 'Charging' } },
+                native: {},
+              });
+              this.setState(basePath + '.charging-live', chargingLive, true);
               await this.extendObject(basePath + '.wifi-rssi', {
                 type: 'state',
                 common: { name: 'WiFi RSSI (1-1 B17)', type: 'number', role: 'value', unit: 'dBm', read: true, write: false },
