@@ -1403,10 +1403,17 @@ class Dreame extends utils.Adapter {
             if (Array.isArray(element.value) && element.value.length >= 20) {
               const buf = Buffer.from(element.value);
               if (buf[0] !== 0xce || buf[19] !== 0xce) continue;
+              const errorCode = buf.readUInt32LE(1);
+              const battery = buf[13];
               const robotState = buf[14];
+              const locationState = robotState & 3;
               const dockingState = (robotState & 28) >> 2;
+              const pinState = (robotState & 32) >> 5;
+              const unDocking = (robotState & 64) >> 6;
+              const cameraState = (robotState & 128) >> 7;
               const wifiRssi = buf[17] > 127 ? buf[17] - 256 : buf[17];
               const lteRssi = buf[18] > 127 ? buf[18] - 256 : buf[18];
+              const bleRssi = buf[16] > 127 ? buf[16] - 256 : buf[16];
               const DockingNames = ['IN_STATION', 'OUT_OF_STATION', 'PAUSE_DOCKING', 'FINISH_DOCKING', 'DOCKING_FAILED', 'DOCKING_IN_BASE'];
               const basePath = `${did}.status`;
               if (dockingState === 0 && this.mowerRobotPos && this.mowerRobotPos[did]) {
@@ -1414,29 +1421,71 @@ class Dreame extends utils.Adapter {
                 this.mowerDockPos[did] = { ...this.mowerRobotPos[did] };
                 await this.extendObject(basePath + '.dock-position', {
                   type: 'state',
-                  common: { name: 'Dock Position', type: 'string', role: 'json', read: true, write: false },
+                  common: { name: 'Dock Position (1-1)', type: 'string', role: 'json', read: true, write: false },
                   native: {},
                 });
                 this.setState(basePath + '.dock-position', JSON.stringify(this.mowerDockPos[did]), true);
               }
               await this.extendObject(basePath + '.docking-state', {
                 type: 'state',
-                common: { name: 'Docking State', type: 'string', role: 'text', read: true, write: false },
+                common: { name: 'Docking State (1-1)', type: 'string', role: 'text', read: true, write: false, states: { 0: 'IN_STATION', 1: 'OUT_OF_STATION', 2: 'PAUSE_DOCKING', 3: 'FINISH_DOCKING', 4: 'DOCKING_FAILED', 5: 'DOCKING_IN_BASE' } },
                 native: {},
               });
               this.setState(basePath + '.docking-state', DockingNames[dockingState] || String(dockingState), true);
+              await this.extendObject(basePath + '.location-state', {
+                type: 'state',
+                common: { name: 'Location State (1-1)', type: 'number', role: 'value', read: true, write: false },
+                native: {},
+              });
+              this.setState(basePath + '.location-state', locationState, true);
+              await this.extendObject(basePath + '.pin-state', {
+                type: 'state',
+                common: { name: 'Pin State (1-1)', type: 'number', role: 'value', read: true, write: false },
+                native: {},
+              });
+              this.setState(basePath + '.pin-state', pinState, true);
+              await this.extendObject(basePath + '.undocking', {
+                type: 'state',
+                common: { name: 'Undocking (1-1)', type: 'number', role: 'value', read: true, write: false },
+                native: {},
+              });
+              this.setState(basePath + '.undocking', unDocking, true);
+              await this.extendObject(basePath + '.camera-state', {
+                type: 'state',
+                common: { name: 'Camera State (1-1)', type: 'number', role: 'value', read: true, write: false },
+                native: {},
+              });
+              this.setState(basePath + '.camera-state', cameraState, true);
+              await this.extendObject(basePath + '.error-code-binary', {
+                type: 'state',
+                common: { name: 'Error Code Binary (1-1)', type: 'number', role: 'value', read: true, write: false },
+                native: {},
+              });
+              this.setState(basePath + '.error-code-binary', errorCode, true);
+              await this.extendObject(basePath + '.battery-level-live', {
+                type: 'state',
+                common: { name: 'Battery Level Live (1-1)', type: 'number', role: 'value.battery', unit: '%', read: true, write: false },
+                native: {},
+              });
+              this.setState(basePath + '.battery-level-live', battery, true);
               await this.extendObject(basePath + '.wifi-rssi', {
                 type: 'state',
-                common: { name: 'WiFi RSSI', type: 'number', role: 'value', unit: 'dBm', read: true, write: false },
+                common: { name: 'WiFi RSSI (1-1)', type: 'number', role: 'value', unit: 'dBm', read: true, write: false },
                 native: {},
               });
               this.setState(basePath + '.wifi-rssi', wifiRssi, true);
               await this.extendObject(basePath + '.lte-rssi', {
                 type: 'state',
-                common: { name: 'LTE RSSI', type: 'number', role: 'value', unit: 'dBm', read: true, write: false },
+                common: { name: 'LTE RSSI (1-1)', type: 'number', role: 'value', unit: 'dBm', read: true, write: false },
                 native: {},
               });
               this.setState(basePath + '.lte-rssi', lteRssi, true);
+              await this.extendObject(basePath + '.ble-rssi', {
+                type: 'state',
+                common: { name: 'BLE RSSI (1-1)', type: 'number', role: 'value', unit: 'dBm', read: true, write: false },
+                native: {},
+              });
+              this.setState(basePath + '.ble-rssi', bleRssi, true);
             }
             continue;
           }
