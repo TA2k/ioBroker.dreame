@@ -785,7 +785,7 @@ class Dreame extends utils.Adapter {
       { id: 'status', name: 'Mower Status (2-1)', siid: 2, piid: 1, type: 'number', role: 'value', states: DEVICE_STATUS_STATES.mower },
       { id: 'fault', name: 'Error Code (2-2)', siid: 2, piid: 2, type: 'number', role: 'value' },
       { id: 'task-info', name: 'Task Execution Info (2-50)', siid: 2, piid: 50, type: 'string', role: 'json' },
-      { id: 'device-time', name: 'Device Time (2-51)', siid: 2, piid: 51, type: 'string', role: 'json' },
+      { id: 'rain-sensor', name: 'Rain Sensor (2-51)', siid: 2, piid: 51, type: 'string', role: 'json' },
       { id: 'zone-status', name: 'Zone Status (2-56)', siid: 2, piid: 56, type: 'string', role: 'json' },
       { id: 'task-progress-flag', name: 'Task Progress Flag (2-62)', siid: 2, piid: 62, type: 'number', role: 'value' },
       { id: 'task-type', name: 'Task Type (2-65)', siid: 2, piid: 65, type: 'string', role: 'text' },
@@ -1256,7 +1256,7 @@ class Dreame extends utils.Adapter {
               for (const element of res.data.data.result) {
                 const path = this.specPropsToIdDict[device.did][element.siid + '-' + element.piid];
                 if (path) {
-                  this.log.debug(`Set ${path} to ${element.value}`);
+                  this.log.debug(`Set ${path} to ${typeof element.value === 'object' ? JSON.stringify(element.value) : element.value}`);
                   if (element.value != null) {
                     this.setState(path, element.value, true);
                   }
@@ -1549,7 +1549,7 @@ class Dreame extends utils.Adapter {
             });
           }
           if (path) {
-            this.log.debug(`Set ${path} to ${element.value}`);
+            this.log.debug(`Set ${path} to ${typeof element.value === 'object' ? JSON.stringify(element.value) : element.value}`);
             if (element.value != null) {
               const val = typeof element.value === 'object' ? JSON.stringify(element.value) : element.value;
               this.setState(path, val, true);
