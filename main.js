@@ -655,6 +655,13 @@ class Dreame extends utils.Adapter {
             });
             if (this.isMower(device)) {
               await this.getMowerMap(device);
+              const dockState = await this.getStateAsync(device.did + '.status.dock-position');
+              if (dockState && dockState.val) {
+                try {
+                  this.mowerDockPos = this.mowerDockPos || {};
+                  this.mowerDockPos[String(device.did)] = JSON.parse(String(dockState.val));
+                } catch (e) { /* ignore */ }
+              }
             } else {
               await this.getMap(device, true);
             }
@@ -1334,19 +1341,94 @@ class Dreame extends utils.Adapter {
           }
           const device = this.deviceArray.find((d) => String(d.did) === did);
           if (this.isMower(device) && element.siid === 1 && element.piid === 4) {
-            if (Array.isArray(element.value) && element.value.length >= 5) {
+            if (Array.isArray(element.value) && element.value.length >= 7) {
               const buf = Buffer.from(element.value);
-              const posX = buf.readInt16LE(1);
-              const posY = buf.readInt16LE(3);
+              if (buf[0] !== 0xce) continue;
+              const x = (buf[3] << 28 | buf[2] << 20 | buf[1] << 12) >> 12;
+              const y = (buf[5] << 24 | buf[4] << 16 | buf[3] << 8) >> 12;
+              const angle = buf.length > 6 ? Number((buf[6] / 255 * 360).toFixed(2)) : 0;
               this.mowerRobotPos = this.mowerRobotPos || {};
-              this.mowerRobotPos[did] = { x: posX, y: posY };
-              const posPath = `${did}.status.robot-position`;
-              await this.extendObject(posPath, {
+              this.mowerRobotPos[did] = { x: x * 10, y: y * 10, angle };
+              const basePath = `${did}.status`;
+              await this.extendObject(basePath + '.robot-position', {
                 type: 'state',
-                common: { name: 'Robot Position', type: 'string', role: 'state', read: true, write: false },
+                common: { name: 'Robot Position', type: 'string', role: 'json', read: true, write: false },
                 native: {},
               });
-              this.setState(posPath, JSON.stringify({ x: posX, y: posY }), true);
+              this.setState(basePath + '.robot-position', JSON.stringify({ x: x * 10, y: y * 10, angle }), true);
+              if (buf.length >= 32) {
+                const task = buf.slice(22, 32);
+                const regionId = task[0];
+                const taskId = task[1];
+                const percent = (task[3] << 8 | task[2]) / 100;
+                const total = (task[6] << 16 | task[5] << 8 | task[4]) / 100;
+                const finish = (task[9] << 16 | task[8] << 8 | task[7]) / 100;
+                await this.extendObject(basePath + '.mowing-progress', {
+                  type: 'state',
+                  common: { name: 'Mowing Progress %', type: 'number', role: 'value', unit: '%', read: true, write: false },
+                  native: {},
+                });
+                this.setState(basePath + '.mowing-progress', percent, true);
+                await this.extendObject(basePath + '.mowed-area', {
+                  type: 'state',
+                  common: { name: 'Mowed Area', type: 'number', role: 'value', unit: 'm²', read: true, write: false },
+                  native: {},
+                });
+                this.setState(basePath + '.mowed-area', finish, true);
+                await this.extendObject(basePath + '.total-mow-area-task', {
+                  type: 'state',
+                  common: { name: 'Total Area to Mow', type: 'number', role: 'value', unit: 'm²', read: true, write: false },
+                  native: {},
+                });
+                this.setState(basePath + '.total-mow-area-task', total, true);
+                await this.extendObject(basePath + '.mowing-task', {
+                  type: 'state',
+                  common: { name: 'Mowing Task Info', type: 'string', role: 'json', read: true, write: false },
+                  native: {},
+                });
+                this.setState(basePath + '.mowing-task', JSON.stringify({ regionId, taskId, percent, total, finish }), true);
+              }
+            }
+            continue;
+          }
+          if (this.isMower(device) && element.siid === 1 && element.piid === 1) {
+            if (Array.isArray(element.value) && element.value.length >= 20) {
+              const buf = Buffer.from(element.value);
+              if (buf[0] !== 0xce || buf[19] !== 0xce) continue;
+              const robotState = buf[14];
+              const dockingState = (robotState & 28) >> 2;
+              const wifiRssi = buf[17] > 127 ? buf[17] - 256 : buf[17];
+              const lteRssi = buf[18] > 127 ? buf[18] - 256 : buf[18];
+              const DockingNames = ['IN_STATION', 'OUT_OF_STATION', 'PAUSE_DOCKING', 'FINISH_DOCKING', 'DOCKING_FAILED', 'DOCKING_IN_BASE'];
+              const basePath = `${did}.status`;
+              if (dockingState === 0 && this.mowerRobotPos && this.mowerRobotPos[did]) {
+                this.mowerDockPos = this.mowerDockPos || {};
+                this.mowerDockPos[did] = { ...this.mowerRobotPos[did] };
+                await this.extendObject(basePath + '.dock-position', {
+                  type: 'state',
+                  common: { name: 'Dock Position', type: 'string', role: 'json', read: true, write: false },
+                  native: {},
+                });
+                this.setState(basePath + '.dock-position', JSON.stringify(this.mowerDockPos[did]), true);
+              }
+              await this.extendObject(basePath + '.docking-state', {
+                type: 'state',
+                common: { name: 'Docking State', type: 'string', role: 'text', read: true, write: false },
+                native: {},
+              });
+              this.setState(basePath + '.docking-state', DockingNames[dockingState] || String(dockingState), true);
+              await this.extendObject(basePath + '.wifi-rssi', {
+                type: 'state',
+                common: { name: 'WiFi RSSI', type: 'number', role: 'value', unit: 'dBm', read: true, write: false },
+                native: {},
+              });
+              this.setState(basePath + '.wifi-rssi', wifiRssi, true);
+              await this.extendObject(basePath + '.lte-rssi', {
+                type: 'state',
+                common: { name: 'LTE RSSI', type: 'number', role: 'value', unit: 'dBm', read: true, write: false },
+                native: {},
+              });
+              this.setState(basePath + '.lte-rssi', lteRssi, true);
             }
             continue;
           }
@@ -1984,6 +2066,21 @@ class Dreame extends utils.Adapter {
             if (entry.obstacles && entry.obstacles.value.length > 0) {
               await this.setObjectAndState(slotPath + '.obstacles', 'Obstacles', 'string', 'json', JSON.stringify(entry.obstacles.value));
             }
+            if (entry.paths) {
+              this.log.debug('Mower paths: ' + JSON.stringify(entry.paths));
+              await this.setObjectAndState(slotPath + '.paths', 'Paths', 'string', 'json', JSON.stringify(entry.paths));
+            }
+            if (entry.cleanPoints) {
+              this.log.debug('Mower cleanPoints: ' + JSON.stringify(entry.cleanPoints));
+              await this.setObjectAndState(slotPath + '.cleanPoints', 'Clean Points', 'string', 'json', JSON.stringify(entry.cleanPoints));
+            }
+            if (entry.cruisePoints) {
+              this.log.debug('Mower cruisePoints: ' + JSON.stringify(entry.cruisePoints));
+              await this.setObjectAndState(slotPath + '.cruisePoints', 'Cruise Points', 'string', 'json', JSON.stringify(entry.cruisePoints));
+            }
+            if (entry.spotAreas) {
+              this.log.debug('Mower spotAreas: ' + JSON.stringify(entry.spotAreas));
+            }
           }
         } catch (e) {
           this.log.warn('Error parsing mower MAP data: ' + e.message);
@@ -2051,7 +2148,8 @@ class Dreame extends utils.Adapter {
       // Canvas rendering
       if (parsedMapData) {
         const robotPos = this.mowerRobotPos && this.mowerRobotPos[String(device.did)];
-        await this.renderMowerMap(device, parsedMapData, parsedPathData, robotPos);
+        const dockPos = this.mowerDockPos && this.mowerDockPos[String(device.did)];
+        await this.renderMowerMap(device, parsedMapData, parsedPathData, robotPos, dockPos);
       }
 
       this.log.debug('Mower map data updated for ' + device.did);
@@ -2070,7 +2168,7 @@ class Dreame extends utils.Adapter {
     await this.setState(id, value, true);
   }
 
-  async renderMowerMap(device, mapData, pathData, robotPos) {
+  async renderMowerMap(device, mapData, pathData, robotPos, dockPos) {
     if (!createCanvas) {
       this.log.debug('Canvas not available, cannot render mower map');
       return;
@@ -2209,8 +2307,8 @@ class Dreame extends utils.Adapter {
       // Robot position from MQTT (siid:1 piid:4) or fallback to last M_PATH point
       let robotDrawn = false;
       if (robotPos && robotPos.x != null && robotPos.y != null) {
-        const rx = toX(robotPos.x * 10);
-        const ry = toY(robotPos.y * 10);
+        const rx = toX(robotPos.x);
+        const ry = toY(robotPos.y);
         ctx.beginPath();
         ctx.arc(rx, ry, 6, 0, Math.PI * 2);
         ctx.fillStyle = '#00AAFF';
@@ -2242,11 +2340,10 @@ class Dreame extends utils.Adapter {
         }
       }
 
-      // Charge station position
-      if (entry.chargePilePosition) {
-        const cp = entry.chargePilePosition;
-        const cpx = toX(cp.x);
-        const cpy = toY(cp.y);
+      // Charge station / dock position (green)
+      if (dockPos && dockPos.x != null && dockPos.y != null) {
+        const cpx = toX(dockPos.x);
+        const cpy = toY(dockPos.y);
         ctx.beginPath();
         ctx.arc(cpx, cpy, 6, 0, Math.PI * 2);
         ctx.fillStyle = '#00FF00';
