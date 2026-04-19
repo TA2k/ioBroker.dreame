@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.4 (2026-04-19)
+
+- Add mower settings states from getCFG (rain protection, frost protection, low speed, DND, battery config, volume, headlight, AI obstacle, camera, anti-theft, consumables, etc.)
+- Load all settings on startup and auto-reload on prop.2.51 MQTT trigger
+- Add dedicated remote states for setting CFG values (set-rain-protection, set-frost-protection, set-volume, find-robot, lock-robot, etc.)
+- Document remote control (joystick/BLE), consumables, frost protection protocol in apk.md
+- Correct prop.2.51 as generic settings-update trigger (WRP/FDP/LOW)
+- Split consumables into individual states (blade-hours, brush-hours, robot-maintenance-hours + health %)
+- Add individual consumable reset buttons (reset-blade, reset-brush, reset-robot-maintenance)
+- Remove invalid cleaning-progress (4-63) from mower states
+
 ## 0.3.3 (2026-04-19)
 - Parse all mower MQTT binary state fields (battery, error, location, docking, pin, camera, BLE/WiFi/LTE RSSI)
 - Parse mower live position from MQTT siid:1 piid:4 (12-bit packed format)
