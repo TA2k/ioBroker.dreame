@@ -39,33 +39,173 @@ Adapter for Dreame and MOVA robot vacuums and robot mowers.
 
 ## Vacuum (L10, L20, X40, ...)
 
-### deviceId.status
+The adapter creates a dedicated state tree for vacuum robots with named states, writable settings, and action buttons.
 
-Current status of the device (battery, charging, cleaning mode, etc.)
+### Vacuum Status
 
-### deviceId.remote
+| State | Description |
+| ----- | ----------- |
+| state | Robot state (1=Cleaning, 2=Standby, 3=Paused, 5=Returning, 6=Charging, 7=Mopping, 8=Drying, 9=Washing, ...) |
+| error | Error code |
+| battery-level | Battery percentage |
+| charging-status | 1=Charging, 2=Not charging, 3=Completed, 5=Return to charge |
+| status | Cleaning status (0=Idle, 1=Paused, 2=Cleaning, 3=Back home, 6=Charging, 18=Segment, 19=Zone, 20=Spot, 21=Mapping) |
+| cleaning-time | Current cleaning time (min) |
+| cleaned-area | Current cleaned area (m²) |
+| cleaning-progress | Cleaning progress (%) |
+| drying-progress | Drying progress (%) |
+| task-status | Task (0=Completed, 1=Auto, 2=Zone, 3=Segment, 4=Spot, 5=Mapping) |
+| task-type | Task type |
+| serial-number | Serial number |
+| faults | Fault details |
+| warn-status | Warning status |
+| water-tank | 0=Not installed, 1=Installed, 10=Mop installed |
+| self-wash-base-status | Self-wash base status |
+| mop-in-station | Mop in station |
+| mop-pad-installed | Mop pad installed |
+| drainage-status | Drainage status |
+| device-capability | Device capability flags |
 
-Remote control of the device.
+#### Consumables
 
-Start: `dreame.0.XXXXX.remote.start-sweep`
-Stop: `dreame.0.XXXXX.remote.start-charge`
+| State | Description |
+| ----- | ----------- |
+| main-brush-left | Main brush life (%) |
+| main-brush-time-left | Main brush time left (h) |
+| side-brush-left | Side brush life (%) |
+| side-brush-time-left | Side brush time left (h) |
+| filter-left | Filter life (%) |
+| filter-time-left | Filter time left (h) |
+| sensor-dirty-left | Sensor life (%) |
+| sensor-dirty-time-left | Sensor time left (h) |
+| wheel-dirty-left | Wheel life (%) |
 
-#### Start Shortcut
+#### Station Status
 
-`dreame.0.XXXXXXXX.remote.start-clean`
+| State | Description |
+| ----- | ----------- |
+| clean-water-tank-status | 0=Installed, 1=Not installed, 2=Low water |
+| dirty-water-tank-status | 0=Installed, 1=Not installed or full |
+| dust-bag-status | 0=Installed, 1=Not installed, 2=Check |
+| detergent-status | Detergent status |
+| hot-water-status | Hot water status |
 
-```json
-[
-  { "piid": 1, "value": 25 },
-  { "piid": 10, "value": "32" }
-]
-```
+#### Statistics
 
-`"value": "32"` = Shortcut ID (see `dreame.0.XXXXX.status.4-48`, names are base64 encoded)
+| State | Description |
+| ----- | ----------- |
+| first-cleaning-date | First cleaning date (unix timestamp) |
+| total-cleaning-time | Total cleaning time (min) |
+| cleaning-count | Total cleaning count |
+| total-cleaned-area | Total cleaned area (m²) |
+
+#### AutoSwitch Parsed Values
+
+These are parsed from the `auto-switch-settings` JSON and available as individual states:
+
+| State | Description |
+| ----- | ----------- |
+| auto-drying | Auto drying: 0=off, 1=on |
+| collision-avoidance | Collision avoidance: 0=off, 1=on |
+| fill-light | Fill light in dark: 0=off, 1=on |
+| stain-avoidance | Stain avoidance: 0=off, 1=on |
+| mopping-type | 0=Daily, 1=Accurate, 2=Deep |
+| clean-genius | CleanGenius: 0=Off, 1=Routine, 2=Deep |
+| cleaning-route | 1=Standard, 2=Intensive, 3=Deep, 4=Quick |
+| wider-corner | Corner coverage: 0=Off, 1=HighFreq, -7=LowFreq |
+| floor-direction | Floor direction cleaning: 0=off, 1=on |
+| pet-focused | Pet focused cleaning: 0=off, 1=on |
+| max-suction | Max suction power: 0=off, 1=on |
+| hot-washing | Hot washing: 0=off, 1=on |
+| uv-sterilization | UV sterilization: 0=off, 1=on |
+| ultra-clean-mode | Ultra clean mode: 0=off, 1=on |
+| mop-extend | Mop extend: 0=off, 1=on |
+| smart-charging | Smart charging: 0=off, 1=on |
+
+### Vacuum Remote
+
+| State | Description |
+| ----- | ----------- |
+| suction-level | 0=Quiet, 1=Standard, 2=Strong, 3=Turbo |
+| water-volume | 1=Low, 2=Medium, 3=High |
+| cleaning-mode | 0=Sweeping, 1=Mopping, 2=Sweep+Mop, 3=Mop after sweep |
+| carpet-boost | Carpet boost on/off |
+| obstacle-avoidance | Obstacle avoidance on/off |
+| ai-detection | AI detection bitfield |
+| child-lock | Child lock on/off |
+| carpet-sensitivity | 1=Low, 2=Medium, 3=High |
+| carpet-recognition | Carpet recognition on/off |
+| carpet-cleaning | 0=Avoid, 1=Adapt, 2=Ignore |
+| self-clean | Self clean on/off |
+| drying-time | 2=2h, 3=3h, 4=4h |
+| auto-mount-mop | Auto mount mop on/off |
+| mop-wash-level | Mop wash level |
+| auto-water-refilling | Auto water refilling on/off |
+| auto-add-detergent | Auto add detergent on/off |
+| dnd-enable | Do not disturb on/off |
+| dnd-start / dnd-end | DND time range |
+| volume | Volume level |
+| auto-dust-collecting | Auto dust collecting on/off |
+| auto-empty-frequency | Auto empty frequency |
+| wetness-level | Wetness level |
+| cleangenius-mode | 0=Off, 1=Routine, 2=Deep |
+| water-temperature | 0=Cold, 1=Warm, 2=Hot, 3=Boiling |
+| silent-drying | Silent drying on/off |
+| hair-compression | Hair compression on/off |
+| mopping-with-detergent | Mopping with detergent on/off |
+
+#### AutoSwitch Set Commands
+
+These write directly to the device's AutoSwitch settings (property 4-50):
+
+| State | Description |
+| ----- | ----------- |
+| set-auto-drying | Set auto drying: 0=off, 1=on |
+| set-collision-avoidance | Set collision avoidance: 0=off, 1=on |
+| set-fill-light | Set fill light: 0=off, 1=on |
+| set-stain-avoidance | Set stain avoidance: 0=off, 1=on |
+| set-mopping-type | Set mopping type: 0=Daily, 1=Accurate, 2=Deep |
+| set-clean-genius | Set CleanGenius: 0=Off, 1=Routine, 2=Deep |
+| set-cleaning-route | Set cleaning route: 1=Standard, 2=Intensive, 3=Deep, 4=Quick |
+| set-wider-corner | Set wider corner: 0=Off, 1=HighFreq, -7=LowFreq |
+| set-floor-direction | Set floor direction: 0=off, 1=on |
+| set-pet-focused | Set pet focused: 0=off, 1=on |
+| set-smart-charging | Set smart charging: 0=off, 1=on |
+| set-hot-washing | Set hot washing: 0=off, 1=on |
+| set-uv-sterilization | Set UV sterilization: 0=off, 1=on |
+| set-max-suction | Set max suction: 0=off, 1=on |
+| set-ultra-clean | Set ultra clean: 0=off, 1=on |
+| set-mop-extend | Set mop extend: 0=off, 1=on |
+| set-smart-drying | Set smart drying: 0=off, 1=on |
+| set-self-clean-frequency | 0=Per room, 1=Standard, 2=High |
+| set-intensive-carpet | Set intensive carpet: 0=off, 1=on |
+| set-gap-cleaning | Set gap cleaning extension: 0=off, 1=on |
+| set-mopping-under-furniture | Set mopping under furniture: 0=off, 1=on |
+| set-custom-mopping | Set custom mopping mode: 0=off, 1=on |
+
+#### Actions
+
+| State | Description |
+| ----- | ----------- |
+| start-clean | Start cleaning (button) |
+| pause | Pause cleaning (button) |
+| stop | Stop cleaning (button) |
+| return-to-dock | Return to dock (button) |
+| start-custom-clean | Start custom clean (value: JSON with piid/value pairs) |
+| start-washing | Start mop washing (button) |
+| start-auto-empty | Start auto empty (button) |
+| locate | Locate robot / play sound (button) |
+| clear-warning | Clear warning (button) |
+| reset-main-brush | Reset main brush consumable (button) |
+| reset-side-brush | Reset side brush consumable (button) |
+| reset-filter | Reset filter consumable (button) |
+| reset-sensor | Reset sensor consumable (button) |
+| fetchMap | Fetch map from device (button) |
+| customCommand | Send custom MIoT command (JSON) |
 
 #### Room Cleaning
 
-`dreame.0.XXXX.remote.start-clean`
+`dreame.0.XXXX.remote.start-custom-clean`
 
 ```json
 [
@@ -78,28 +218,13 @@ X = Room ID. Multiple rooms: `{\"selects\":[[X,1,3,2,1],[Y,1,3,2,1]]}`
 
 #### Switch Map
 
-`dreame.0.XXXXXXX.remote.update-map`
+`dreame.0.XXXXXXX.remote.customCommand`:
 
 ```json
-[{ "piid": 4, "value": "{\"sm\":{},\"mapid\":X}" }]
+{ "siid": 6, "aiid": 2, "in": [{ "piid": 4, "value": "{\"sm\":{},\"mapid\":X}" }] }
 ```
 
-X = mapId (see `dreame.0.XXXX.status.6-99` or `dreame.0.XXXX.map.curid`)
-
-#### Control Clean Modes
-
-Via `dreame.0.XXXXXX.remote.customCommand`:
-
-| Action           | siid | piid | value                                   |
-| ---------------- | ---- | ---- | --------------------------------------- |
-| CleanGenius On   | 4    | 50   | `{"k":"SmartHost","v":1}`               |
-| CleanGenius Off  | 4    | 50   | `{"k":"SmartHost","v":0}`               |
-| CleanGenius Deep | 4    | 50   | `{"k":"SmartHost","v":2}`               |
-| Cleaning Mode    | 4    | 23   | 5120, 5121, 5122...                     |
-| Vacuum Mode      | 4    | 4    | 0=Quiet, 1=Standard, 2=Medium, 3=Strong |
-| Mop Intensity    | 28   | 1    | 28                                      |
-| Route            | 4    | 50   | `{"k":"CleanRoute","v":1}`              |
-| CleanGenius Mode | 28   | 5    | 2 or 3                                  |
+X = mapId (see `dreame.0.XXXX.status.map-list`)
 
 ---
 
@@ -264,6 +389,19 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### 0.3.6 (2026-04-21)
+
+- Add dedicated vacuum state tree (createVacuumRemotes) with ~85 status, ~32 remote, ~22 AutoSwitch, ~13 action states
+- Add vacuum consumable reset buttons (main brush, side brush, filter, sensor)
+- Add vacuum AutoSwitch parsing (25 features: auto-drying, collision-avoidance, fill-light, clean-genius, cleaning-route, etc.)
+- Add vacuum action buttons (start, pause, stop, return-to-dock, locate, start-washing, start-auto-empty, clear-warning)
+- Add vacuum station status (clean/dirty water tank, dust bag, detergent, hot water)
+- Add vacuum extended settings (wetness, CleanGenius mode, water temperature, silent drying, hair compression)
+- Add 20 new vacuum status enums (draining, dust bag drying, floor maintaining, finding pet, etc.)
+- Fix mower return-to-dock command (was siid:3 aiid:1, now correct siid:5 aiid:3)
+- Fix set_properties method for writable states (was incorrectly sending as action)
+- Fix boolean action commands now send in:[] parameter
+
 ### 0.3.5 (2026-04-19)
 
 - Add AutoSwitch properties (4-50): collision avoidance, fill light, CleanGenius, cleaning route, auto charging, etc.
