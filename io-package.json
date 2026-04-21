@@ -1,20 +1,20 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.3.5",
+    "version": "0.3.6",
     "news": {
-      "0.3.5": {
-        "en": "add AutoSwitch properties (4-50): collision avoidance, fill light, CleanGenius, cleaning route, auto charging, etc.\nadd PRE mowing preferences: cutting height, obstacle distance, mow mode, edge mowing, edge detection, direction change\nadd shortcuts support (4-48): parsed names, running state, start buttons\nadd cleaning history via cloud API (last 20 mow sessions with date, duration, area, completion)\nfix battery byte parsing (buf[11] & 0x7F + charging bit 7)",
-        "de": "AutoSwitch-Eigenschaften (4-50) hinzugefügt: Kollisionsvermeidung, Fülllicht, CleanGenius, Reinigungsroute, automatisches Laden usw.\nPRE-Mähpräferenzen hinzugefügt: Schnitthöhe, Hindernisabstand, Mähmodus, Kantenmähen, Kantenerkennung, Richtungswechsel\nShortcuts-Unterstützung (4-48) hinzugefügt: geparste Namen, Laufstatus, Start-Buttons\nMähverlauf über Cloud-API hinzugefügt (letzte 20 Sitzungen mit Datum, Dauer, Fläche, Abschluss)\nBatterie-Byte-Parsing korrigiert (buf[11] & 0x7F + Ladebit 7)",
-        "ru": "добавлены свойства AutoSwitch (4-50): избегание столкновений, подсветка, CleanGenius, маршрут уборки, автозарядка и др.\nдобавлены параметры кошения PRE: высота стрижки, расстояние до препятствий, режим кошения, кошение краёв, обнаружение краёв, смена направления\nдобавлена поддержка ярлыков (4-48): распознанные имена, статус выполнения, кнопки запуска\nдобавлена история уборки через облачный API (последние 20 сеансов с датой, длительностью, площадью, завершением)\nисправлен парсинг байта батареи (buf[11] & 0x7F + бит зарядки 7)",
-        "pt": "adicionar propriedades AutoSwitch (4-50): evitar colisão, luz de preenchimento, CleanGenius, rota de limpeza, carregamento automático, etc.\nadicionar preferências de corte PRE: altura de corte, distância de obstáculo, modo de corte, corte de bordas, detecção de bordas, mudança de direção\nadicionar suporte a atalhos (4-48): nomes analisados, estado de execução, botões de início\nadicionar histórico de limpeza via API cloud (últimas 20 sessões com data, duração, área, conclusão)\ncorrigir parsing do byte da bateria (buf[11] & 0x7F + bit de carga 7)",
-        "nl": "AutoSwitch-eigenschappen (4-50) toegevoegd: botsingsvermijding, opvullicht, CleanGenius, reinigingsroute, automatisch laden, enz.\nPRE-maaiervoorkeuren toegevoegd: maaihoogte, obstakelafstand, maaimodus, randmaaien, randdetectie, richtingswisseling\nsnelkoppelingen (4-48) toegevoegd: geparseerde namen, actieve status, startknoppen\nmaaigeschiedenis via cloud-API toegevoegd (laatste 20 sessies met datum, duur, oppervlak, voltooiing)\nbatterij-byte parsing gecorrigeerd (buf[11] & 0x7F + oplaadbit 7)",
-        "fr": "ajout des propriétés AutoSwitch (4-50) : évitement de collision, lumière d'appoint, CleanGenius, itinéraire de nettoyage, charge automatique, etc.\najout des préférences de tonte PRE : hauteur de coupe, distance d'obstacle, mode de tonte, tonte des bords, détection des bords, changement de direction\najout du support des raccourcis (4-48) : noms analysés, état d'exécution, boutons de démarrage\najout de l'historique de nettoyage via API cloud (20 dernières sessions avec date, durée, surface, achèvement)\ncorrection du parsing de l'octet batterie (buf[11] & 0x7F + bit de charge 7)",
-        "it": "aggiunte proprietà AutoSwitch (4-50): evitamento collisioni, luce di riempimento, CleanGenius, percorso pulizia, ricarica automatica, ecc.\naggiunte preferenze di taglio PRE: altezza taglio, distanza ostacoli, modalità taglio, taglio bordi, rilevamento bordi, cambio direzione\naggiunto supporto scorciatoie (4-48): nomi analizzati, stato esecuzione, pulsanti avvio\naggiunto storico pulizia via API cloud (ultime 20 sessioni con data, durata, area, completamento)\ncorretto parsing byte batteria (buf[11] & 0x7F + bit di carica 7)",
-        "es": "añadidas propiedades AutoSwitch (4-50): evitación de colisiones, luz de relleno, CleanGenius, ruta de limpieza, carga automática, etc.\nañadidas preferencias de corte PRE: altura de corte, distancia de obstáculo, modo de corte, corte de bordes, detección de bordes, cambio de dirección\nañadido soporte de atajos (4-48): nombres analizados, estado de ejecución, botones de inicio\nañadido historial de limpieza vía API cloud (últimas 20 sesiones con fecha, duración, área, finalización)\ncorregido parsing del byte de batería (buf[11] & 0x7F + bit de carga 7)",
-        "pl": "dodano właściwości AutoSwitch (4-50): unikanie kolizji, światło wypełniające, CleanGenius, trasa czyszczenia, automatyczne ładowanie, itp.\ndodano preferencje koszenia PRE: wysokość cięcia, odległość od przeszkód, tryb koszenia, koszenie krawędzi, wykrywanie krawędzi, zmiana kierunku\ndodano wsparcie skrótów (4-48): sparsowane nazwy, stan działania, przyciski uruchamiania\ndodano historię czyszczenia przez API chmury (ostatnie 20 sesji z datą, czasem, powierzchnią, ukończeniem)\npoprawiono parsowanie bajtu baterii (buf[11] & 0x7F + bit ładowania 7)",
-        "uk": "додано властивості AutoSwitch (4-50): уникнення зіткнень, заповнювальне світло, CleanGenius, маршрут прибирання, автозарядка тощо\nдодано налаштування кошіння PRE: висота стрижки, відстань до перешкод, режим кошіння, кошіння країв, виявлення країв, зміна напрямку\nдодано підтримку ярликів (4-48): розпізнані імена, стан виконання, кнопки запуску\nдодано історію прибирання через хмарний API (останні 20 сеансів з датою, тривалістю, площею, завершенням)\nвиправлено парсинг байта батареї (buf[11] & 0x7F + біт заряджання 7)",
-        "zh-cn": "添加AutoSwitch属性(4-50)：碰撞避免、补光灯、CleanGenius、清洁路线、自动充电等\n添加PRE割草偏好：割草高度、障碍物距离、割草模式、边缘割草、边缘检测、方向变化\n添加快捷方式支持(4-48)：解析名称、运行状态、启动按钮\n通过云API添加清洁历史（最近20次会话，含日期、时长、面积、完成状态）\n修复电池字节解析（buf[11] & 0x7F + 充电位7）"
+      "0.3.6": {
+        "en": "add dedicated vacuum state tree with ~85 status, ~32 remote, ~22 AutoSwitch, ~13 action states\nadd vacuum consumable reset buttons, AutoSwitch parsing (25 features), station status, extended settings\nfix mower actions: remove dangerous start-zone-mow (was sending DOCK), add pause-mow and clear-warning\nfix mower return-to-dock, set_properties method, boolean action in:[] parameter",
+        "de": "Dedizierter Vacuum-Zustandsbaum mit ~85 Status-, ~32 Remote-, ~22 AutoSwitch-, ~13 Aktions-States\nVacuum-Verschleißteil-Reset, AutoSwitch-Parsing (25 Features), Stationsstatus, erweiterte Einstellungen\nMäher-Aktionen korrigiert: gefährliches start-zone-mow entfernt (sendete DOCK), pause-mow und clear-warning hinzugefügt\nMäher Return-to-Dock, set_properties-Methode und boolean action in:[]-Parameter korrigiert",
+        "ru": "добавлено выделенное дерево состояний пылесоса с ~85 статус, ~32 remote, ~22 AutoSwitch, ~13 action состояниями\nсброс расходников пылесоса, парсинг AutoSwitch (25 функций), статус станции, расширенные настройки\nисправлены действия газонокосилки: удалён опасный start-zone-mow (отправлял DOCK), добавлены pause-mow и clear-warning\nисправлены return-to-dock, метод set_properties и параметр in:[] для действий",
+        "pt": "árvore de estados dedicada para aspirador com ~85 status, ~32 remote, ~22 AutoSwitch, ~13 action\nreset de consumíveis, parsing AutoSwitch (25 recursos), status da estação, configurações estendidas\ncorreção de ações do cortador: removido start-zone-mow perigoso (enviava DOCK), adicionados pause-mow e clear-warning\ncorrigidos return-to-dock, método set_properties e parâmetro in:[] para ações",
+        "nl": "dedicated vacuum state tree met ~85 status, ~32 remote, ~22 AutoSwitch, ~13 actie-states\nvacuum verbruiksartikelen reset, AutoSwitch parsing (25 functies), stationstatus, uitgebreide instellingen\nmaaier acties gecorrigeerd: gevaarlijke start-zone-mow verwijderd (stuurde DOCK), pause-mow en clear-warning toegevoegd\nreturn-to-dock, set_properties methode en boolean action in:[] parameter gecorrigeerd",
+        "fr": "arbre d'états dédié aspirateur avec ~85 status, ~32 remote, ~22 AutoSwitch, ~13 actions\nréinitialisation consommables aspirateur, parsing AutoSwitch (25 fonctions), statut station, paramètres étendus\ncorrection actions tondeuse: suppression start-zone-mow dangereux (envoyait DOCK), ajout pause-mow et clear-warning\ncorrection return-to-dock, méthode set_properties et paramètre in:[] pour actions",
+        "it": "albero stati dedicato aspirapolvere con ~85 status, ~32 remote, ~22 AutoSwitch, ~13 azioni\nreset consumabili aspirapolvere, parsing AutoSwitch (25 funzioni), stato stazione, impostazioni estese\ncorrette azioni tosaerba: rimosso start-zone-mow pericoloso (inviava DOCK), aggiunti pause-mow e clear-warning\ncorretti return-to-dock, metodo set_properties e parametro in:[] per azioni",
+        "es": "árbol de estados dedicado aspiradora con ~85 status, ~32 remote, ~22 AutoSwitch, ~13 acciones\nreset consumibles aspiradora, parsing AutoSwitch (25 funciones), estado estación, configuraciones extendidas\ncorrección acciones cortacésped: eliminado start-zone-mow peligroso (enviaba DOCK), añadidos pause-mow y clear-warning\ncorregidos return-to-dock, método set_properties y parámetro in:[] para acciones",
+        "pl": "dedykowane drzewo stanów odkurzacza z ~85 status, ~32 remote, ~22 AutoSwitch, ~13 akcji\nreset materiałów eksploatacyjnych odkurzacza, parsing AutoSwitch (25 funkcji), status stacji, rozszerzone ustawienia\npoprawiono akcje kosiarki: usunięto niebezpieczne start-zone-mow (wysyłało DOCK), dodano pause-mow i clear-warning\npoprawiono return-to-dock, metodę set_properties i parametr in:[] dla akcji",
+        "uk": "виділене дерево станів пилососа з ~85 статус, ~32 remote, ~22 AutoSwitch, ~13 action станами\nскидання витратних матеріалів пилососа, парсинг AutoSwitch (25 функцій), статус станції, розширені налаштування\nвиправлено дії газонокосарки: видалено небезпечний start-zone-mow (відправляв DOCK), додано pause-mow і clear-warning\nвиправлено return-to-dock, метод set_properties та параметр in:[] для дій",
+        "zh-cn": "添加专用吸尘器状态树，含~85状态、~32远程、~22自动切换、~13操作状态\n吸尘器耗材重置、AutoSwitch解析(25功能)、基站状态、扩展设置\n修复割草机操作：移除危险的start-zone-mow(发送了DOCK)，添加pause-mow和clear-warning\n修复return-to-dock、set_properties方法和布尔操作in:[]参数"
       },
       "0.3.4": {
         "en": "add mower settings states from getCFG (rain/frost protection, low speed, DND, battery, volume, headlight, AI obstacle, camera, anti-theft, consumables)\nload all settings on startup and auto-reload on settings change\nadd dedicated remote states for CFG settings (set-rain-protection, set-frost-protection, set-volume, find-robot, lock-robot, etc.)\ndocument remote control (joystick/BLE), consumables, frost protection protocol\ncorrect prop.2.51 as generic settings-update trigger\nremove invalid cleaning-progress from mower states",
@@ -147,8 +147,13 @@
       "uk": "Адаптер для домашніх пристроїв Dreame",
       "zh-cn": "Dreame 家用设备适配器"
     },
-    "authors": ["TA2k <tombox2020@gmail.com>"],
-    "keywords": ["dreame", "dreamehome"],
+    "authors": [
+      "TA2k <tombox2020@gmail.com>"
+    ],
+    "keywords": [
+      "dreame",
+      "dreamehome"
+    ],
     "licenseInformation": {
       "type": "free",
       "license": "MIT"
@@ -184,8 +189,12 @@
       }
     }
   },
-  "encryptedNative": ["password"],
-  "protectedNative": ["password"],
+  "encryptedNative": [
+    "password"
+  ],
+  "protectedNative": [
+    "password"
+  ],
   "native": {
     "cloudService": "dreame",
     "username": "",
