@@ -916,12 +916,12 @@ class Dreame extends utils.Adapter {
     ];
 
     const actionStates = [
-      { id: 'start-mow', name: 'Start Mowing (2-1)', siid: 2, aiid: 1, in: [] },
-      { id: 'stop-mow', name: 'Stop Mowing (2-2)', siid: 2, aiid: 2, in: [] },
-      { id: 'start-zone-mow', name: 'Start Zone Mowing (2-3)', siid: 2, aiid: 3, in: [4] },
+      { id: 'start-mow', name: 'Start Mowing (5-1)', siid: 2, aiid: 1, in: [] },
+      { id: 'stop-mow', name: 'Stop Mowing (5-2)', siid: 2, aiid: 2, in: [] },
+      { id: 'pause-mow', name: 'Pause Mowing (5-4)', siid: 2, aiid: 4, in: [] },
       { id: 'start-charge', name: 'Return to Dock (5-3)', siid: 5, aiid: 3, in: [] },
-      { id: 'start-mow-ext', name: 'Start Mow Extended (4-1)', siid: 4, aiid: 1, in: [10, 1] },
-      { id: 'stop-mow-ext', name: 'Stop Mow Extended (4-2)', siid: 4, aiid: 2, in: [] },
+      { id: 'start-mow-ext', name: 'Start Custom Mow (4-1)', siid: 4, aiid: 1, in: [10, 1] },
+      { id: 'clear-warning', name: 'Clear Warning (4-3)', siid: 4, aiid: 3, in: [] },
     ];
 
     await this.extendObject(did + '.status', { type: 'channel', common: { name: 'Mower Status' }, native: {} });

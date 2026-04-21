@@ -291,10 +291,10 @@ The adapter supports Dreame robotic mowers with dedicated states and map renderi
 | ---------------------- | ---------------------------------------------------------------------- |
 | start-mow              | Start mowing                                                           |
 | stop-mow               | Stop mowing                                                            |
-| start-zone-mow         | Start zone mowing (value: zone IDs)                                    |
+| pause-mow              | Pause mowing                                                           |
 | start-charge           | Return to dock                                                         |
-| start-mow-ext          | Start mowing extended                                                  |
-| stop-mow-ext           | Stop mowing extended                                                   |
+| start-mow-ext          | Start custom mow (zone/segment cleaning with params)                   |
+| clear-warning          | Clear warning/error state                                              |
 | obstacle-avoidance     | Obstacle avoidance on/off                                              |
 | ai-detection           | AI detection on/off                                                    |
 | child-lock             | Child lock on/off                                                      |
@@ -399,6 +399,10 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
 - Add vacuum extended settings (wetness, CleanGenius mode, water temperature, silent drying, hair compression)
 - Add 20 new vacuum status enums (draining, dust bag drying, floor maintaining, finding pet, etc.)
 - Fix mower return-to-dock command (was siid:3 aiid:1, now correct siid:5 aiid:3)
+- Fix mower start-zone-mow was sending DOCK command (siid:2 aiid:3 remapped to siid:5 aiid:3) — removed, use start-mow-ext with params instead
+- Fix mower missing pause-mow action — added (siid:5 aiid:4)
+- Fix mower missing clear-warning action — added (siid:4 aiid:3)
+- Remove mower stop-mow-ext (siid:4 aiid:2, no HA equivalent)
 - Fix set_properties method for writable states (was incorrectly sending as action)
 - Fix boolean action commands now send in:[] parameter
 
