@@ -2578,17 +2578,18 @@ class Dreame extends utils.Adapter {
         }
       }
 
-      // SETTINGS data
-      if (userData['SETTINGS.0']) {
+      // SETTINGS data (chunked like MAP/M_PATH)
+      const settingsRaw = this.reassembleChunks(userData, 'SETTINGS');
+      if (settingsRaw) {
         try {
-          const settings = JSON.parse(userData['SETTINGS.0']);
+          const settings = JSON.parse(settingsRaw);
           const settingsPath = basePath + '.settings';
           await this.extendObject(settingsPath, {
             type: 'channel',
             common: { name: 'Mower Settings' },
             native: {},
           });
-          await this.setObjectAndState(settingsPath + '.raw', 'Raw Settings', 'string', 'json', userData['SETTINGS.0']);
+          await this.setObjectAndState(settingsPath + '.raw', 'Raw Settings', 'string', 'json', settingsRaw);
           if (settings[0] && settings[0].settings) {
             for (const [zoneId, s] of Object.entries(settings[0].settings)) {
               const zPath = settingsPath + '.zone' + zoneId;
@@ -2610,9 +2611,10 @@ class Dreame extends utils.Adapter {
         }
       }
 
-      // SCHEDULE data
-      if (userData['SCHEDULE.0']) {
-        await this.setObjectAndState(basePath + '.schedule', 'Mowing Schedule', 'string', 'json', userData['SCHEDULE.0']);
+      // SCHEDULE data (chunked like MAP/M_PATH)
+      const scheduleRaw = this.reassembleChunks(userData, 'SCHEDULE');
+      if (scheduleRaw) {
+        await this.setObjectAndState(basePath + '.schedule', 'Mowing Schedule', 'string', 'json', scheduleRaw);
       }
 
       // Canvas rendering
