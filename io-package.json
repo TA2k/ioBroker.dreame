@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.3.6",
+    "version": "0.3.7",
     "news": {
+      "0.3.7": {
+        "en": "fix mower SETTINGS/SCHEDULE parsing: reassemble chunked data before JSON.parse\nfix mower actions: remove dangerous start-zone-mow, add pause-mow and clear-warning\nremove stop-mow-ext (no HA equivalent)",
+        "de": "Mäher SETTINGS/SCHEDULE-Parsing korrigiert: Chunked-Daten vor JSON.parse zusammensetzen\nMäher-Aktionen korrigiert: gefährliches start-zone-mow entfernt, pause-mow und clear-warning hinzugefügt\nstop-mow-ext entfernt (kein HA-Äquivalent)",
+        "ru": "исправлен парсинг SETTINGS/SCHEDULE газонокосилки: сборка чанков перед JSON.parse\nисправлены действия газонокосилки: удалён опасный start-zone-mow, добавлены pause-mow и clear-warning\nудалён stop-mow-ext (нет эквивалента в HA)",
+        "pt": "corrigido parsing SETTINGS/SCHEDULE do cortador: remontar dados chunked antes de JSON.parse\ncorrigidas ações do cortador: removido start-zone-mow perigoso, adicionados pause-mow e clear-warning\nremovido stop-mow-ext (sem equivalente HA)",
+        "nl": "maaier SETTINGS/SCHEDULE parsing gecorrigeerd: chunked data samenvoegen voor JSON.parse\nmaaier acties gecorrigeerd: gevaarlijke start-zone-mow verwijderd, pause-mow en clear-warning toegevoegd\nstop-mow-ext verwijderd (geen HA-equivalent)",
+        "fr": "correction parsing SETTINGS/SCHEDULE tondeuse: réassembler les données chunked avant JSON.parse\ncorrection actions tondeuse: suppression start-zone-mow dangereux, ajout pause-mow et clear-warning\nsuppression stop-mow-ext (pas d'équivalent HA)",
+        "it": "corretto parsing SETTINGS/SCHEDULE tosaerba: riassemblare dati chunked prima di JSON.parse\ncorrette azioni tosaerba: rimosso start-zone-mow pericoloso, aggiunti pause-mow e clear-warning\nrimosso stop-mow-ext (nessun equivalente HA)",
+        "es": "corregido parsing SETTINGS/SCHEDULE cortacésped: reensamblar datos chunked antes de JSON.parse\ncorregidas acciones cortacésped: eliminado start-zone-mow peligroso, añadidos pause-mow y clear-warning\neliminado stop-mow-ext (sin equivalente HA)",
+        "pl": "poprawiono parsing SETTINGS/SCHEDULE kosiarki: składanie chunków przed JSON.parse\npoprawiono akcje kosiarki: usunięto niebezpieczne start-zone-mow, dodano pause-mow i clear-warning\nusunięto stop-mow-ext (brak odpowiednika HA)",
+        "uk": "виправлено парсинг SETTINGS/SCHEDULE газонокосарки: збірка чанків перед JSON.parse\nвиправлено дії газонокосарки: видалено небезпечний start-zone-mow, додано pause-mow і clear-warning\nвидалено stop-mow-ext (немає еквіваленту в HA)",
+        "zh-cn": "修复割草机SETTINGS/SCHEDULE解析：JSON.parse前重新组装分块数据\n修复割草机操作：移除危险的start-zone-mow，添加pause-mow和clear-warning\n移除stop-mow-ext（无HA对应项）"
+      },
       "0.3.6": {
         "en": "add dedicated vacuum state tree with ~85 status, ~32 remote, ~22 AutoSwitch, ~13 action states\nadd vacuum consumable reset buttons, AutoSwitch parsing (25 features), station status, extended settings\nfix mower actions: remove dangerous start-zone-mow (was sending DOCK), add pause-mow and clear-warning\nfix mower return-to-dock, set_properties method, boolean action in:[] parameter",
         "de": "Dedizierter Vacuum-Zustandsbaum mit ~85 Status-, ~32 Remote-, ~22 AutoSwitch-, ~13 Aktions-States\nVacuum-Verschleißteil-Reset, AutoSwitch-Parsing (25 Features), Stationsstatus, erweiterte Einstellungen\nMäher-Aktionen korrigiert: gefährliches start-zone-mow entfernt (sendete DOCK), pause-mow und clear-warning hinzugefügt\nMäher Return-to-Dock, set_properties-Methode und boolean action in:[]-Parameter korrigiert",

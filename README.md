@@ -389,6 +389,12 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+### 0.3.7 (2026-04-28)
+
+- Fix mower SETTINGS/SCHEDULE parsing: reassemble chunked data before JSON.parse (fixes warning every 30s)
+- Fix mower actions: remove dangerous start-zone-mow (was sending DOCK), add pause-mow and clear-warning
+- Remove mower stop-mow-ext (no HA equivalent)
+
 ### 0.3.6 (2026-04-21)
 
 - Add dedicated vacuum state tree (createVacuumRemotes) with ~85 status, ~32 remote, ~22 AutoSwitch, ~13 action states
