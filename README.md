@@ -386,10 +386,10 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
 ## Changelog
 
 ### 0.3.11 (2026-06-17)
-- Release 0.3.11
+- Fix: crashes, typos, update dependencies, drop Node.js 20 EOL, add Dependabot
 
 ### 0.3.10 (2026-06-17)
-- Release 0.3.10
+- Fix: fetchSpecs crash, fix typos, add GitHub Release and npm publish automation
 
 ### 0.3.9 (2026-06-17)
 - chore: add GitHub Release automation, fix test suite
