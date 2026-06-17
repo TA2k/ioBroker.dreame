@@ -385,6 +385,9 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
 
 ## Changelog
 
+### 0.3.10 (2026-06-17)
+- Release 0.3.10
+
 ### 0.3.9 (2026-06-17)
 - chore: add GitHub Release automation, fix test suite
 
