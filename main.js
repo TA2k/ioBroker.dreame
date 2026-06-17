@@ -18,7 +18,7 @@ let ImageData;
 try {
   ({ createCanvas, ImageData } = require('canvas'));
 } catch (e) {
-  console.log('Canvas not available. No Map will be available');
+  // canvas is optional — logged in onReady via this.log
 }
 
 const { decodeMultiMapData } = require('./lib/dreame');
@@ -79,7 +79,7 @@ const DreameRepeat = Object.freeze({
   3: '3',
 });
 const DreameRoute = Object.freeze({
-  1: 'Standart',
+  1: 'Standard',
   2: 'Intensive',
   3: 'Deep',
   546: 'Intelligent',
@@ -90,44 +90,114 @@ const DreameRoomClean = Object.freeze({
 });
 const DEVICE_STATUS_STATES = Object.freeze({
   vacuum: {
-    1: 'Cleaning', 2: 'Standby', 3: 'Paused', 4: 'Paused', 5: 'Returning to charge',
-    6: 'Charging', 7: 'Mopping', 8: 'Mop Drying', 9: 'Mop Washing', 10: 'Returning to wash',
-    11: 'Mapping', 12: 'Cleaning', 13: 'Charging Completed', 14: 'Upgrading',
-    15: 'Summon to clean', 16: 'Self-Repairing', 17: 'Returning to install the mop pad',
-    18: 'Returning to remove the mop pad', 19: 'Automatic water supply and drainage self testing',
-    20: 'Cleaning Mop Pad and Adding Water', 21: 'Cleaning paused', 22: 'Auto-Emptying',
-    23: 'Remote Controlled Cleaning', 24: 'Smart Charging', 25: 'Second cleaning underway',
-    26: 'Following', 27: 'Spot cleaning', 28: 'Returning for dust collection',
-    29: 'Waiting for tasks', 30: 'Cleaning the washboard base',
-    31: 'Returning to drain', 32: 'Draining', 33: 'Water Supply and Drainage Emptying',
-    34: 'Emptying', 35: 'Dust bag drying', 36: 'Dust bag drying paused',
-    37: 'Heading to extra cleaning', 38: 'Extra cleaning',
-    95: 'Finding pet paused', 96: 'Finding pet', 97: 'Shortcut running',
-    98: 'Camera Monitoring', 99: 'Camera monitoring paused',
-    101: 'Initial deep cleaning', 102: 'Initial deep cleaning paused',
-    103: 'Sanitizing', 104: 'Sanitizing with dry',
-    105: 'Changing mop', 106: 'Changing mop paused',
-    107: 'Floor maintaining', 108: 'Floor maintaining paused',
+    1: 'Cleaning',
+    2: 'Standby',
+    3: 'Paused',
+    4: 'Paused',
+    5: 'Returning to charge',
+    6: 'Charging',
+    7: 'Mopping',
+    8: 'Mop Drying',
+    9: 'Mop Washing',
+    10: 'Returning to wash',
+    11: 'Mapping',
+    12: 'Cleaning',
+    13: 'Charging Completed',
+    14: 'Upgrading',
+    15: 'Summon to clean',
+    16: 'Self-Repairing',
+    17: 'Returning to install the mop pad',
+    18: 'Returning to remove the mop pad',
+    19: 'Automatic water supply and drainage self testing',
+    20: 'Cleaning Mop Pad and Adding Water',
+    21: 'Cleaning paused',
+    22: 'Auto-Emptying',
+    23: 'Remote Controlled Cleaning',
+    24: 'Smart Charging',
+    25: 'Second cleaning underway',
+    26: 'Following',
+    27: 'Spot cleaning',
+    28: 'Returning for dust collection',
+    29: 'Waiting for tasks',
+    30: 'Cleaning the washboard base',
+    31: 'Returning to drain',
+    32: 'Draining',
+    33: 'Water Supply and Drainage Emptying',
+    34: 'Emptying',
+    35: 'Dust bag drying',
+    36: 'Dust bag drying paused',
+    37: 'Heading to extra cleaning',
+    38: 'Extra cleaning',
+    95: 'Finding pet paused',
+    96: 'Finding pet',
+    97: 'Shortcut running',
+    98: 'Camera Monitoring',
+    99: 'Camera monitoring paused',
+    101: 'Initial deep cleaning',
+    102: 'Initial deep cleaning paused',
+    103: 'Sanitizing',
+    104: 'Sanitizing with dry',
+    105: 'Changing mop',
+    106: 'Changing mop paused',
+    107: 'Floor maintaining',
+    108: 'Floor maintaining paused',
   },
   mower: {
-    1: 'Working', 2: 'Standby', 3: 'Working', 4: 'Paused', 5: 'Returning Charge',
-    6: 'Charging', 7: 'Error', 8: 'Raining Pause', 9: 'Initializing',
-    10: 'Leaving Station', 11: 'Mapping', 12: 'Border Mowing', 13: 'Charging Completed',
-    14: 'Upgrading', 15: 'Relocating', 16: 'Task Navigating',
+    1: 'Working',
+    2: 'Standby',
+    3: 'Working',
+    4: 'Paused',
+    5: 'Returning Charge',
+    6: 'Charging',
+    7: 'Error',
+    8: 'Raining Pause',
+    9: 'Initializing',
+    10: 'Leaving Station',
+    11: 'Mapping',
+    12: 'Border Mowing',
+    13: 'Charging Completed',
+    14: 'Upgrading',
+    15: 'Relocating',
+    16: 'Task Navigating',
   },
   swbot: {
-    0: 'Online', 1: 'Charging', 2: 'Charging complete', 3: 'Updating',
+    0: 'Online',
+    1: 'Charging',
+    2: 'Charging complete',
+    3: 'Updating',
   },
   airp: {
-    1: 'Working', 2: 'Standby',
+    1: 'Working',
+    2: 'Standby',
   },
   hold: {
-    1: 'Mopping', 2: 'Offline', 3: 'Standby', 4: 'Charging', 5: 'Self-Cleaning',
-    6: 'Drying', 7: 'Sleeping Mode', 8: 'Vacuuming', 9: 'Adding clean water',
-    10: 'Pausing', 11: 'Pausing', 12: 'Pausing', 13: 'OTA Upgrading',
-    14: 'Voice Package Upgrading', 15: 'Charging Completed', 16: 'Mopping', 17: 'Mopping',
-    18: 'Mopping', 19: 'Mopping', 20: 'Mopping', 21: 'Mopping', 22: 'Mopping',
-    23: 'Drying', 24: 'Drying', 25: 'Drying', 26: 'Self-Cleaning', 27: 'Self-Cleaning',
+    1: 'Mopping',
+    2: 'Offline',
+    3: 'Standby',
+    4: 'Charging',
+    5: 'Self-Cleaning',
+    6: 'Drying',
+    7: 'Sleeping Mode',
+    8: 'Vacuuming',
+    9: 'Adding clean water',
+    10: 'Pausing',
+    11: 'Pausing',
+    12: 'Pausing',
+    13: 'OTA Upgrading',
+    14: 'Voice Package Upgrading',
+    15: 'Charging Completed',
+    16: 'Mopping',
+    17: 'Mopping',
+    18: 'Mopping',
+    19: 'Mopping',
+    20: 'Mopping',
+    21: 'Mopping',
+    22: 'Mopping',
+    23: 'Drying',
+    24: 'Drying',
+    25: 'Drying',
+    26: 'Self-Cleaning',
+    27: 'Self-Cleaning',
     28: 'Self-Cleaning',
   },
 });
@@ -331,7 +401,7 @@ class Dreame extends utils.Adapter {
     this.remoteCommands = {};
     this.specStatusDict = {};
     this.specPropsToIdDict = {};
-    this.specActiosnToIdDict = {};
+    this.specActionsToIdDict = {};
   }
   /**
    * Is called when databases are connected and adapter received configuration.
@@ -675,7 +745,9 @@ class Dreame extends utils.Adapter {
                 try {
                   this.mowerDockPos = this.mowerDockPos || {};
                   this.mowerDockPos[String(device.did)] = JSON.parse(String(dockState.val));
-                } catch (e) { /* ignore */ }
+                } catch (e) {
+                  /* ignore */
+                }
               }
             } else {
               await this.getMap(device, true);
@@ -701,6 +773,14 @@ class Dreame extends utils.Adapter {
       this.log.error(error);
       error.response && this.log.error(JSON.stringify(error.response.data));
     });
+
+    if (!allDevices || !allDevices.data || !allDevices.data.instances) {
+      this.log.warn('Could not fetch device specs from miot-spec.org — using fallback spec for all devices');
+      for (const device of this.deviceArray) {
+        device.spec_type = 'urn:miot-spec-v2:device:vacuum:0000A006:dreame-r2320:1';
+      }
+      return;
+    }
 
     const specs = [];
     for (const device of this.deviceArray) {
@@ -795,18 +875,57 @@ class Dreame extends utils.Adapter {
     this.log.info(`Creating mower-specific states for ${device.model}`);
 
     const statusStates = [
-      { id: 'status', name: 'Mower Status (2-1)', siid: 2, piid: 1, type: 'number', role: 'value', states: DEVICE_STATUS_STATES.mower },
+      {
+        id: 'status',
+        name: 'Mower Status (2-1)',
+        siid: 2,
+        piid: 1,
+        type: 'number',
+        role: 'value',
+        states: DEVICE_STATUS_STATES.mower,
+      },
       { id: 'fault', name: 'Error Code (2-2)', siid: 2, piid: 2, type: 'number', role: 'value' },
       { id: 'task-info', name: 'Task Execution Info (2-50)', siid: 2, piid: 50, type: 'string', role: 'json' },
-      { id: 'settings-update', name: 'Settings Update (2-51)', siid: 2, piid: 51, type: 'string', role: 'json', desc: 'Generischer Settings-Trigger via MQTT. 2 Werte = Rain Protection (WRP), 1 Wert = Frost Protection (FDP), 3 Werte = Low Speed Nachts (LOW)' },
-      { id: 'mowing-preference', name: 'Mowing Preference Update (2-52)', siid: 2, piid: 52, type: 'string', role: 'json' },
-      { id: 'voice-download', name: 'Voice Download Progress (2-53)', siid: 2, piid: 53, type: 'number', role: 'value', unit: '%' },
+      {
+        id: 'settings-update',
+        name: 'Settings Update (2-51)',
+        siid: 2,
+        piid: 51,
+        type: 'string',
+        role: 'json',
+        desc: 'Generischer Settings-Trigger via MQTT. 2 Werte = Rain Protection (WRP), 1 Wert = Frost Protection (FDP), 3 Werte = Low Speed Nachts (LOW)',
+      },
+      {
+        id: 'mowing-preference',
+        name: 'Mowing Preference Update (2-52)',
+        siid: 2,
+        piid: 52,
+        type: 'string',
+        role: 'json',
+      },
+      {
+        id: 'voice-download',
+        name: 'Voice Download Progress (2-53)',
+        siid: 2,
+        piid: 53,
+        type: 'number',
+        role: 'value',
+        unit: '%',
+      },
       { id: 'ai-obstacles', name: 'AI Obstacle Detection (2-55)', siid: 2, piid: 55, type: 'string', role: 'json' },
       { id: 'zone-status', name: 'Zone Status (2-56)', siid: 2, piid: 56, type: 'string', role: 'json' },
       { id: 'self-check', name: 'Self-Check Result (2-58)', siid: 2, piid: 58, type: 'string', role: 'json' },
       { id: 'task-progress-flag', name: 'Task Progress Flag (2-62)', siid: 2, piid: 62, type: 'number', role: 'value' },
       { id: 'task-type', name: 'Task Type (2-65)', siid: 2, piid: 65, type: 'string', role: 'text' },
-      { id: 'battery-level', name: 'Battery Level (3-1)', siid: 3, piid: 1, type: 'number', role: 'value.battery', unit: '%' },
+      {
+        id: 'battery-level',
+        name: 'Battery Level (3-1)',
+        siid: 3,
+        piid: 1,
+        type: 'number',
+        role: 'value.battery',
+        unit: '%',
+      },
       { id: 'charging-state', name: 'Charging State (3-2)', siid: 3, piid: 2, type: 'number', role: 'value' },
       { id: 'work-mode', name: 'Work Mode (4-1)', siid: 4, piid: 1, type: 'number', role: 'value' },
       { id: 'mowing-time', name: 'Mowing Time (4-2)', siid: 4, piid: 2, type: 'number', role: 'value', unit: 'min' },
@@ -823,45 +942,211 @@ class Dreame extends utils.Adapter {
       { id: 'gps-satellites', name: 'GPS Satellites (5-106)', siid: 5, piid: 106, type: 'number', role: 'value' },
       { id: 'positioning-mode', name: 'Positioning Mode (5-107)', siid: 5, piid: 107, type: 'number', role: 'value' },
       { id: 'first-mow-time', name: 'First Mow Time (12-1)', siid: 12, piid: 1, type: 'number', role: 'value' },
-      { id: 'total-mow-time', name: 'Total Mow Time (12-2)', siid: 12, piid: 2, type: 'number', role: 'value', unit: 'min' },
+      {
+        id: 'total-mow-time',
+        name: 'Total Mow Time (12-2)',
+        siid: 12,
+        piid: 2,
+        type: 'number',
+        role: 'value',
+        unit: 'min',
+      },
       { id: 'total-mow-count', name: 'Total Mow Count (12-3)', siid: 12, piid: 3, type: 'number', role: 'value' },
-      { id: 'total-mow-area', name: 'Total Mowed Area (12-4)', siid: 12, piid: 4, type: 'number', role: 'value', unit: 'm²' },
-      { id: 'total-runtime', name: 'Total Runtime (12-5)', siid: 12, piid: 5, type: 'number', role: 'value', unit: 'min' },
-      { id: 'total-cruise-time', name: 'Total Cruise Time (12-6)', siid: 12, piid: 6, type: 'number', role: 'value', unit: 'min' },
+      {
+        id: 'total-mow-area',
+        name: 'Total Mowed Area (12-4)',
+        siid: 12,
+        piid: 4,
+        type: 'number',
+        role: 'value',
+        unit: 'm²',
+      },
+      {
+        id: 'total-runtime',
+        name: 'Total Runtime (12-5)',
+        siid: 12,
+        piid: 5,
+        type: 'number',
+        role: 'value',
+        unit: 'min',
+      },
+      {
+        id: 'total-cruise-time',
+        name: 'Total Cruise Time (12-6)',
+        siid: 12,
+        piid: 6,
+        type: 'number',
+        role: 'value',
+        unit: 'min',
+      },
       // getCFG Settings (kein siid/piid, befüllt via loadMowerSettings)
-      { id: 'rain-protection', name: 'Rain Protection (WRP)', type: 'string', role: 'json', desc: '[enabled, wait_hours, sensitivity]' },
+      {
+        id: 'rain-protection',
+        name: 'Rain Protection (WRP)',
+        type: 'string',
+        role: 'json',
+        desc: '[enabled, wait_hours, sensitivity]',
+      },
       { id: 'frost-protection', name: 'Frost Protection (FDP)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'low-speed', name: 'Low Speed Night (LOW)', type: 'string', role: 'json', desc: '[enabled, start_min, end_min]' },
-      { id: 'dnd-settings', name: 'Do Not Disturb (DND)', type: 'string', role: 'json', desc: '[enabled, start_min, end_min]' },
+      {
+        id: 'low-speed',
+        name: 'Low Speed Night (LOW)',
+        type: 'string',
+        role: 'json',
+        desc: '[enabled, start_min, end_min]',
+      },
+      {
+        id: 'dnd-settings',
+        name: 'Do Not Disturb (DND)',
+        type: 'string',
+        role: 'json',
+        desc: '[enabled, start_min, end_min]',
+      },
       { id: 'child-lock-cfg', name: 'Child Lock (CLS)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'battery-config', name: 'Battery Config (BAT)', type: 'string', role: 'json', desc: '[return%, max%, charge_enabled, ?, start_min, end_min]' },
+      {
+        id: 'battery-config',
+        name: 'Battery Config (BAT)',
+        type: 'string',
+        role: 'json',
+        desc: '[return%, max%, charge_enabled, ?, start_min, end_min]',
+      },
       { id: 'volume', name: 'Volume (VOL)', type: 'number', role: 'value', unit: '%' },
-      { id: 'headlight', name: 'Headlight (LIT)', type: 'string', role: 'json', desc: '[enabled, start_min, end_min, l1, l2, l3, l4]' },
-      { id: 'ai-obstacle-cfg', name: 'AI Obstacle Avoidance (AOP)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'camera-config', name: 'Camera/Recording (REC)', type: 'string', role: 'json', desc: '[enabled, sensitivity, mode, report, ...]' },
+      {
+        id: 'headlight',
+        name: 'Headlight (LIT)',
+        type: 'string',
+        role: 'json',
+        desc: '[enabled, start_min, end_min, l1, l2, l3, l4]',
+      },
+      {
+        id: 'ai-obstacle-cfg',
+        name: 'AI Obstacle Avoidance (AOP)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'camera-config',
+        name: 'Camera/Recording (REC)',
+        type: 'string',
+        role: 'json',
+        desc: '[enabled, sensitivity, mode, report, ...]',
+      },
       { id: 'anti-theft', name: 'Anti-Theft (STUN)', type: 'number', role: 'value', desc: '0=off, 1=on' },
       { id: 'auto-task-adj', name: 'Auto Task Adjustment (ATA)', type: 'string', role: 'json', desc: '[0, 0, 0]' },
       { id: 'path-display', name: 'Path Display (PATH)', type: 'number', role: 'value', desc: '0=off, 1=on' },
       { id: 'weather-ref', name: 'Weather Forecast Ref (WRF)', type: 'number', role: 'value', desc: '0=off, 1=on' },
       { id: 'grass-protection', name: 'Grass Protection (PROT)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'blade-hours', name: 'Blade Hours (CMS)', type: 'number', role: 'value', unit: 'h', desc: 'Klingen-Betriebsstunden (max 100h)' },
-      { id: 'blade-health', name: 'Blade Health (CMS)', type: 'number', role: 'value', unit: '%', desc: 'Klingen-Zustand 0-100%' },
-      { id: 'brush-hours', name: 'Brush Hours (CMS)', type: 'number', role: 'value', unit: 'h', desc: 'Bürsten-Betriebsstunden (max 500h)' },
-      { id: 'brush-health', name: 'Brush Health (CMS)', type: 'number', role: 'value', unit: '%', desc: 'Bürsten-Zustand 0-100%' },
-      { id: 'robot-maintenance-hours', name: 'Robot Maintenance Hours (CMS)', type: 'number', role: 'value', unit: 'h', desc: 'Roboter-Wartungsstunden (max 60h)' },
-      { id: 'robot-maintenance-health', name: 'Robot Maintenance Health (CMS)', type: 'number', role: 'value', unit: '%', desc: 'Roboter-Wartungs-Zustand 0-100%' },
+      {
+        id: 'blade-hours',
+        name: 'Blade Hours (CMS)',
+        type: 'number',
+        role: 'value',
+        unit: 'h',
+        desc: 'Klingen-Betriebsstunden (max 100h)',
+      },
+      {
+        id: 'blade-health',
+        name: 'Blade Health (CMS)',
+        type: 'number',
+        role: 'value',
+        unit: '%',
+        desc: 'Klingen-Zustand 0-100%',
+      },
+      {
+        id: 'brush-hours',
+        name: 'Brush Hours (CMS)',
+        type: 'number',
+        role: 'value',
+        unit: 'h',
+        desc: 'Bürsten-Betriebsstunden (max 500h)',
+      },
+      {
+        id: 'brush-health',
+        name: 'Brush Health (CMS)',
+        type: 'number',
+        role: 'value',
+        unit: '%',
+        desc: 'Bürsten-Zustand 0-100%',
+      },
+      {
+        id: 'robot-maintenance-hours',
+        name: 'Robot Maintenance Hours (CMS)',
+        type: 'number',
+        role: 'value',
+        unit: 'h',
+        desc: 'Roboter-Wartungsstunden (max 60h)',
+      },
+      {
+        id: 'robot-maintenance-health',
+        name: 'Robot Maintenance Health (CMS)',
+        type: 'number',
+        role: 'value',
+        unit: '%',
+        desc: 'Roboter-Wartungs-Zustand 0-100%',
+      },
       // AutoSwitch (4-50 JSON parsed, kein siid/piid)
-      { id: 'collision-avoidance', name: 'Collision Avoidance (LessColl)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      {
+        id: 'collision-avoidance',
+        name: 'Collision Avoidance (LessColl)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
       { id: 'fill-light', name: 'Fill Light (FillinLight)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'clean-genius', name: 'CleanGenius (SmartHost)', type: 'number', role: 'value', desc: '0=Off, 1=Routine, 2=Deep' },
-      { id: 'cleaning-route', name: 'Cleaning Route (CleanRoute)', type: 'number', role: 'value', desc: '1=Standard, 2=Intensiv, 3=Deep, 4=Quick' },
-      { id: 'wider-corner', name: 'Wider Corner Coverage (MeticulousTwist)', type: 'number', role: 'value', desc: '0=Off, 1=HighFreq, 7=LowFreq' },
-      { id: 'floor-direction', name: 'Floor Direction Cleaning (MaterialDirectionClean)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'pet-focused', name: 'Pet Focused Cleaning (PetPartClean)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      {
+        id: 'clean-genius',
+        name: 'CleanGenius (SmartHost)',
+        type: 'number',
+        role: 'value',
+        desc: '0=Off, 1=Routine, 2=Deep',
+      },
+      {
+        id: 'cleaning-route',
+        name: 'Cleaning Route (CleanRoute)',
+        type: 'number',
+        role: 'value',
+        desc: '1=Standard, 2=Intensiv, 3=Deep, 4=Quick',
+      },
+      {
+        id: 'wider-corner',
+        name: 'Wider Corner Coverage (MeticulousTwist)',
+        type: 'number',
+        role: 'value',
+        desc: '0=Off, 1=HighFreq, 7=LowFreq',
+      },
+      {
+        id: 'floor-direction',
+        name: 'Floor Direction Cleaning (MaterialDirectionClean)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'pet-focused',
+        name: 'Pet Focused Cleaning (PetPartClean)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
       { id: 'auto-charging', name: 'Auto Charging (SmartCharge)', type: 'number', role: 'value', desc: '0=off, 1=on' },
       // PRE Mähpräferenzen (getCFG, kein siid/piid)
-      { id: 'cutting-height', name: 'Cutting Height (PRE)', type: 'number', role: 'value', unit: 'mm', desc: 'Schnitthöhe' },
-      { id: 'obstacle-distance-cfg', name: 'Obstacle Distance (PRE)', type: 'number', role: 'value', unit: 'mm', desc: 'Hindernisabstand' },
+      {
+        id: 'cutting-height',
+        name: 'Cutting Height (PRE)',
+        type: 'number',
+        role: 'value',
+        unit: 'mm',
+        desc: 'Schnitthöhe',
+      },
+      {
+        id: 'obstacle-distance-cfg',
+        name: 'Obstacle Distance (PRE)',
+        type: 'number',
+        role: 'value',
+        unit: 'mm',
+        desc: 'Hindernisabstand',
+      },
       { id: 'mow-mode', name: 'Mow Mode (PRE)', type: 'number', role: 'value', desc: '0=Standard, 1=Effizient' },
       { id: 'direction-change', name: 'Direction Change (PRE)', type: 'number', role: 'value', desc: '0=auto, 1=aus' },
       { id: 'edge-mowing', name: 'Edge Mowing (PRE)', type: 'number', role: 'value', desc: '0=aus, 1=an' },
@@ -869,7 +1154,14 @@ class Dreame extends utils.Adapter {
     ];
 
     const remoteStates = [
-      { id: 'obstacle-avoidance', name: 'Obstacle Avoidance (4-21)', siid: 4, piid: 21, type: 'number', role: 'switch' },
+      {
+        id: 'obstacle-avoidance',
+        name: 'Obstacle Avoidance (4-21)',
+        siid: 4,
+        piid: 21,
+        type: 'number',
+        role: 'switch',
+      },
       { id: 'ai-detection', name: 'AI Detection (4-22)', siid: 4, piid: 22, type: 'number', role: 'switch' },
       { id: 'mow-setting', name: 'Mow Setting (4-23)', siid: 4, piid: 23, type: 'number', role: 'value' },
       { id: 'custom-mowing', name: 'Custom Mowing (4-26)', siid: 4, piid: 26, type: 'number', role: 'switch' },
@@ -884,35 +1176,234 @@ class Dreame extends utils.Adapter {
     // Plugin SET commands via action channel (siid:2 aiid:50, m:'s')
     // Format: {m:'s', t:cfgKey, d:{value:X}} or d:{value:X, time:Y, ...}
     const cfgRemotes = [
-      { id: 'set-rain-protection', name: 'Set Rain Protection (WRP)', cfgKey: 'WRP', type: 'string', role: 'json', desc: '{"value":1,"time":8,"sen":0} oder {"value":0}' },
-      { id: 'set-frost-protection', name: 'Set Frost Protection (FDP)', cfgKey: 'FDP', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-low-speed', name: 'Set Low Speed Night (LOW)', cfgKey: 'LOW', type: 'string', role: 'json', desc: '{"value":1,"time":[1200,480]} oder {"value":0}' },
-      { id: 'set-dnd', name: 'Set Do Not Disturb (DND)', cfgKey: 'DND', type: 'string', role: 'json', desc: '{"value":1,"time":[1200,480]} oder {"value":0}' },
-      { id: 'set-child-lock', name: 'Set Child Lock (CLS)', cfgKey: 'CLS', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-volume', name: 'Set Volume (VOL)', cfgKey: 'VOL', type: 'number', role: 'level.volume', desc: '0-100' },
-      { id: 'set-ai-obstacle', name: 'Set AI Obstacle (AOP)', cfgKey: 'AOP', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-anti-theft', name: 'Set Anti-Theft (STUN)', cfgKey: 'STUN', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-headlight', name: 'Set Headlight (LIT)', cfgKey: 'LIT', type: 'string', role: 'json', desc: '{"value":1,"time":[480,1200],"light":[1,1,1,1],"fill":0}' },
-      { id: 'set-path-display', name: 'Set Path Display (PATH)', cfgKey: 'PATH', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-grass-protection', name: 'Set Grass Protection (PROT)', cfgKey: 'PROT', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'reset-consumables', name: 'Reset Consumables (CMS)', cfgKey: 'CMS', type: 'string', role: 'json', desc: '{"value":[0,brush,robot]} — auf 0 gesetzte Werte werden zurückgesetzt' },
-      { id: 'reset-blade', name: 'Reset Blade Hours', cfgKey: 'CMS', resetIndex: 0, type: 'boolean', role: 'button', desc: 'Klingen-Betriebsstunden zurücksetzen (max 6000 min / 100h)' },
-      { id: 'reset-brush', name: 'Reset Brush Hours', cfgKey: 'CMS', resetIndex: 1, type: 'boolean', role: 'button', desc: 'Bürsten-Betriebsstunden zurücksetzen (max 30000 min / 500h)' },
-      { id: 'reset-robot-maintenance', name: 'Reset Robot Maintenance', cfgKey: 'CMS', resetIndex: 2, type: 'boolean', role: 'button', desc: 'Roboter-Wartungsstunden zurücksetzen (max 3600 min / 60h)' },
-      { id: 'find-robot', name: 'Find Robot', cfgKey: null, actionOp: 9, type: 'boolean', role: 'button', desc: 'Roboter suchen (Ton abspielen)' },
-      { id: 'lock-robot', name: 'Lock Robot', cfgKey: null, actionOp: 12, type: 'boolean', role: 'button', desc: 'Roboter sperren' },
+      {
+        id: 'set-rain-protection',
+        name: 'Set Rain Protection (WRP)',
+        cfgKey: 'WRP',
+        type: 'string',
+        role: 'json',
+        desc: '{"value":1,"time":8,"sen":0} oder {"value":0}',
+      },
+      {
+        id: 'set-frost-protection',
+        name: 'Set Frost Protection (FDP)',
+        cfgKey: 'FDP',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-low-speed',
+        name: 'Set Low Speed Night (LOW)',
+        cfgKey: 'LOW',
+        type: 'string',
+        role: 'json',
+        desc: '{"value":1,"time":[1200,480]} oder {"value":0}',
+      },
+      {
+        id: 'set-dnd',
+        name: 'Set Do Not Disturb (DND)',
+        cfgKey: 'DND',
+        type: 'string',
+        role: 'json',
+        desc: '{"value":1,"time":[1200,480]} oder {"value":0}',
+      },
+      {
+        id: 'set-child-lock',
+        name: 'Set Child Lock (CLS)',
+        cfgKey: 'CLS',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-volume',
+        name: 'Set Volume (VOL)',
+        cfgKey: 'VOL',
+        type: 'number',
+        role: 'level.volume',
+        desc: '0-100',
+      },
+      {
+        id: 'set-ai-obstacle',
+        name: 'Set AI Obstacle (AOP)',
+        cfgKey: 'AOP',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-anti-theft',
+        name: 'Set Anti-Theft (STUN)',
+        cfgKey: 'STUN',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-headlight',
+        name: 'Set Headlight (LIT)',
+        cfgKey: 'LIT',
+        type: 'string',
+        role: 'json',
+        desc: '{"value":1,"time":[480,1200],"light":[1,1,1,1],"fill":0}',
+      },
+      {
+        id: 'set-path-display',
+        name: 'Set Path Display (PATH)',
+        cfgKey: 'PATH',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-grass-protection',
+        name: 'Set Grass Protection (PROT)',
+        cfgKey: 'PROT',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'reset-consumables',
+        name: 'Reset Consumables (CMS)',
+        cfgKey: 'CMS',
+        type: 'string',
+        role: 'json',
+        desc: '{"value":[0,brush,robot]} — auf 0 gesetzte Werte werden zurückgesetzt',
+      },
+      {
+        id: 'reset-blade',
+        name: 'Reset Blade Hours',
+        cfgKey: 'CMS',
+        resetIndex: 0,
+        type: 'boolean',
+        role: 'button',
+        desc: 'Klingen-Betriebsstunden zurücksetzen (max 6000 min / 100h)',
+      },
+      {
+        id: 'reset-brush',
+        name: 'Reset Brush Hours',
+        cfgKey: 'CMS',
+        resetIndex: 1,
+        type: 'boolean',
+        role: 'button',
+        desc: 'Bürsten-Betriebsstunden zurücksetzen (max 30000 min / 500h)',
+      },
+      {
+        id: 'reset-robot-maintenance',
+        name: 'Reset Robot Maintenance',
+        cfgKey: 'CMS',
+        resetIndex: 2,
+        type: 'boolean',
+        role: 'button',
+        desc: 'Roboter-Wartungsstunden zurücksetzen (max 3600 min / 60h)',
+      },
+      {
+        id: 'find-robot',
+        name: 'Find Robot',
+        cfgKey: null,
+        actionOp: 9,
+        type: 'boolean',
+        role: 'button',
+        desc: 'Roboter suchen (Ton abspielen)',
+      },
+      {
+        id: 'lock-robot',
+        name: 'Lock Robot',
+        cfgKey: null,
+        actionOp: 12,
+        type: 'boolean',
+        role: 'button',
+        desc: 'Roboter sperren',
+      },
       // AutoSwitch (set_properties siid:4 piid:50)
-      { id: 'set-collision-avoidance', name: 'Set Collision Avoidance', autoSwitchKey: 'LessColl', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-fill-light', name: 'Set Fill Light', autoSwitchKey: 'FillinLight', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-clean-genius', name: 'Set CleanGenius', autoSwitchKey: 'SmartHost', type: 'number', role: 'value', desc: '0=Off, 1=Routine, 2=Deep' },
-      { id: 'set-cleaning-route', name: 'Set Cleaning Route', autoSwitchKey: 'CleanRoute', type: 'number', role: 'value', desc: '1=Standard, 2=Intensiv, 3=Deep, 4=Quick' },
-      { id: 'set-auto-charging', name: 'Set Auto Charging', autoSwitchKey: 'SmartCharge', type: 'number', role: 'switch', desc: '0=off, 1=on' },
+      {
+        id: 'set-collision-avoidance',
+        name: 'Set Collision Avoidance',
+        autoSwitchKey: 'LessColl',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-fill-light',
+        name: 'Set Fill Light',
+        autoSwitchKey: 'FillinLight',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-clean-genius',
+        name: 'Set CleanGenius',
+        autoSwitchKey: 'SmartHost',
+        type: 'number',
+        role: 'value',
+        desc: '0=Off, 1=Routine, 2=Deep',
+      },
+      {
+        id: 'set-cleaning-route',
+        name: 'Set Cleaning Route',
+        autoSwitchKey: 'CleanRoute',
+        type: 'number',
+        role: 'value',
+        desc: '1=Standard, 2=Intensiv, 3=Deep, 4=Quick',
+      },
+      {
+        id: 'set-auto-charging',
+        name: 'Set Auto Charging',
+        autoSwitchKey: 'SmartCharge',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
       // PRE (read-modify-write via getCFG)
-      { id: 'set-cutting-height', name: 'Set Cutting Height (mm)', cfgKey: 'PRE', preIndex: 2, type: 'number', role: 'value', desc: 'Schnitthöhe in mm' },
-      { id: 'set-mow-mode', name: 'Set Mow Mode', cfgKey: 'PRE', preIndex: 1, type: 'number', role: 'value', desc: '0=Standard, 1=Effizient' },
-      { id: 'set-edge-mowing', name: 'Set Edge Mowing', cfgKey: 'PRE', preIndex: 9, type: 'number', role: 'switch', desc: '0=aus, 1=an' },
-      { id: 'set-edge-detection', name: 'Set Edge Detection', cfgKey: 'PRE', preIndex: 8, type: 'number', role: 'switch', desc: '0=aus, 1=an' },
-      { id: 'set-direction-change', name: 'Set Direction Change', cfgKey: 'PRE', preIndex: 5, type: 'number', role: 'switch', desc: '0=auto, 1=aus' },
+      {
+        id: 'set-cutting-height',
+        name: 'Set Cutting Height (mm)',
+        cfgKey: 'PRE',
+        preIndex: 2,
+        type: 'number',
+        role: 'value',
+        desc: 'Schnitthöhe in mm',
+      },
+      {
+        id: 'set-mow-mode',
+        name: 'Set Mow Mode',
+        cfgKey: 'PRE',
+        preIndex: 1,
+        type: 'number',
+        role: 'value',
+        desc: '0=Standard, 1=Effizient',
+      },
+      {
+        id: 'set-edge-mowing',
+        name: 'Set Edge Mowing',
+        cfgKey: 'PRE',
+        preIndex: 9,
+        type: 'number',
+        role: 'switch',
+        desc: '0=aus, 1=an',
+      },
+      {
+        id: 'set-edge-detection',
+        name: 'Set Edge Detection',
+        cfgKey: 'PRE',
+        preIndex: 8,
+        type: 'number',
+        role: 'switch',
+        desc: '0=aus, 1=an',
+      },
+      {
+        id: 'set-direction-change',
+        name: 'Set Direction Change',
+        cfgKey: 'PRE',
+        preIndex: 5,
+        type: 'number',
+        role: 'switch',
+        desc: '0=auto, 1=aus',
+      },
     ];
 
     const actionStates = [
@@ -931,7 +1422,16 @@ class Dreame extends utils.Adapter {
       const path = `${did}.status.${s.id}`;
       await this.extendObject(path, {
         type: 'state',
-        common: /** @type {any} */ ({ name: s.name, type: s.type, role: s.role, read: true, write: false, unit: s.unit || '', ...(s.states ? { states: s.states } : {}), ...(s.desc ? { desc: s.desc } : {}) }),
+        common: /** @type {any} */ ({
+          name: s.name,
+          type: s.type,
+          role: s.role,
+          read: true,
+          write: false,
+          unit: s.unit || '',
+          ...(s.states ? { states: s.states } : {}),
+          ...(s.desc ? { desc: s.desc } : {}),
+        }),
         native: { siid: s.siid, piid: s.piid, did: did },
       });
       if (s.siid && s.piid) {
@@ -954,8 +1454,22 @@ class Dreame extends utils.Adapter {
       const path = `${did}.remote.${c.id}`;
       await this.extendObject(path, {
         type: 'state',
-        common: /** @type {any} */ ({ name: c.name, type: c.type, role: c.role, read: true, write: true, ...(c.desc ? { desc: c.desc } : {}) }),
-        native: { cfgKey: c.cfgKey, actionOp: c.actionOp, resetIndex: c.resetIndex, preIndex: c.preIndex, autoSwitchKey: c.autoSwitchKey, did: did },
+        common: /** @type {any} */ ({
+          name: c.name,
+          type: c.type,
+          role: c.role,
+          read: true,
+          write: true,
+          ...(c.desc ? { desc: c.desc } : {}),
+        }),
+        native: {
+          cfgKey: c.cfgKey,
+          actionOp: c.actionOp,
+          resetIndex: c.resetIndex,
+          preIndex: c.preIndex,
+          autoSwitchKey: c.autoSwitchKey,
+          did: did,
+        },
       });
     }
 
@@ -966,7 +1480,7 @@ class Dreame extends utils.Adapter {
         common: { name: a.name, type: 'string', role: 'text', read: true, write: true, def: JSON.stringify(a.in) },
         native: { siid: a.siid, aiid: a.aiid, did: did },
       });
-      this.specActiosnToIdDict[did][`${a.siid}-${a.aiid}`] = path;
+      this.specActionsToIdDict[did][`${a.siid}-${a.aiid}`] = path;
     }
 
     await this.extendObject(`${did}.remote.fetchMap`, {
@@ -991,7 +1505,15 @@ class Dreame extends utils.Adapter {
     });
     await this.extendObject(`${did}.status.3dmap-progress`, {
       type: 'state',
-      common: { name: '3D Map Generation Progress (2-54)', type: 'number', role: 'value', read: true, write: false, unit: '%', def: 0 },
+      common: {
+        name: '3D Map Generation Progress (2-54)',
+        type: 'number',
+        role: 'value',
+        read: true,
+        write: false,
+        unit: '%',
+        def: 0,
+      },
       native: {},
     });
     this.specPropsToIdDict[did]['2-54'] = `${did}.status.3dmap-progress`;
@@ -1007,7 +1529,9 @@ class Dreame extends utils.Adapter {
       native: {},
     });
 
-    this.log.info(`Mower states created: ${statusStates.length} status, ${remoteStates.length} remote, ${actionStates.length} actions`);
+    this.log.info(
+      `Mower states created: ${statusStates.length} status, ${remoteStates.length} remote, ${actionStates.length} actions`,
+    );
   }
   async createVacuumRemotes(device) {
     const did = device.did;
@@ -1015,38 +1539,172 @@ class Dreame extends utils.Adapter {
 
     const statusStates = [
       // SIID 2 - Robot Cleaner
-      { id: 'state', name: 'Robot State (2-1)', siid: 2, piid: 1, type: 'number', role: 'value', states: DEVICE_STATUS_STATES.vacuum },
+      {
+        id: 'state',
+        name: 'Robot State (2-1)',
+        siid: 2,
+        piid: 1,
+        type: 'number',
+        role: 'value',
+        states: DEVICE_STATUS_STATES.vacuum,
+      },
       { id: 'error', name: 'Error Code (2-2)', siid: 2, piid: 2, type: 'number', role: 'value' },
       // SIID 3 - Battery
-      { id: 'battery-level', name: 'Battery Level (3-1)', siid: 3, piid: 1, type: 'number', role: 'value.battery', unit: '%' },
-      { id: 'charging-status', name: 'Charging Status (3-2)', siid: 3, piid: 2, type: 'number', role: 'value', states: { 1: 'Charging', 2: 'Not charging', 3: 'Charging completed', 5: 'Return to charge' } },
+      {
+        id: 'battery-level',
+        name: 'Battery Level (3-1)',
+        siid: 3,
+        piid: 1,
+        type: 'number',
+        role: 'value.battery',
+        unit: '%',
+      },
+      {
+        id: 'charging-status',
+        name: 'Charging Status (3-2)',
+        siid: 3,
+        piid: 2,
+        type: 'number',
+        role: 'value',
+        states: { 1: 'Charging', 2: 'Not charging', 3: 'Charging completed', 5: 'Return to charge' },
+      },
       { id: 'off-peak-charging', name: 'Off-Peak Charging (3-3)', siid: 3, piid: 3, type: 'string', role: 'json' },
       // SIID 4 - Vacuum Extend (core)
-      { id: 'status', name: 'Cleaning Status (4-1)', siid: 4, piid: 1, type: 'number', role: 'value', states: { 0: 'Idle', 1: 'Paused', 2: 'Cleaning', 3: 'Back home', 4: 'Part cleaning', 5: 'Follow wall', 6: 'Charging', 7: 'OTA', 10: 'Power off', 12: 'Error', 13: 'Remote control', 14: 'Sleeping', 17: 'Standby', 18: 'Segment cleaning', 19: 'Zone cleaning', 20: 'Spot cleaning', 21: 'Fast mapping', 22: 'Cruising path', 23: 'Cruising point', 24: 'Summon clean', 25: 'Shortcut', 26: 'Person follow' } },
-      { id: 'cleaning-time', name: 'Cleaning Time (4-2)', siid: 4, piid: 2, type: 'number', role: 'value', unit: 'min' },
+      {
+        id: 'status',
+        name: 'Cleaning Status (4-1)',
+        siid: 4,
+        piid: 1,
+        type: 'number',
+        role: 'value',
+        states: {
+          0: 'Idle',
+          1: 'Paused',
+          2: 'Cleaning',
+          3: 'Back home',
+          4: 'Part cleaning',
+          5: 'Follow wall',
+          6: 'Charging',
+          7: 'OTA',
+          10: 'Power off',
+          12: 'Error',
+          13: 'Remote control',
+          14: 'Sleeping',
+          17: 'Standby',
+          18: 'Segment cleaning',
+          19: 'Zone cleaning',
+          20: 'Spot cleaning',
+          21: 'Fast mapping',
+          22: 'Cruising path',
+          23: 'Cruising point',
+          24: 'Summon clean',
+          25: 'Shortcut',
+          26: 'Person follow',
+        },
+      },
+      {
+        id: 'cleaning-time',
+        name: 'Cleaning Time (4-2)',
+        siid: 4,
+        piid: 2,
+        type: 'number',
+        role: 'value',
+        unit: 'min',
+      },
       { id: 'cleaned-area', name: 'Cleaned Area (4-3)', siid: 4, piid: 3, type: 'number', role: 'value', unit: 'm²' },
-      { id: 'water-tank', name: 'Water Tank (4-6)', siid: 4, piid: 6, type: 'number', role: 'value', states: { 0: 'Not installed', 1: 'Installed', 10: 'Mop installed' } },
-      { id: 'task-status', name: 'Task Status (4-7)', siid: 4, piid: 7, type: 'number', role: 'value', states: { 0: 'Completed', 1: 'Auto cleaning', 2: 'Zone cleaning', 3: 'Segment cleaning', 4: 'Spot cleaning', 5: 'Fast mapping', 6: 'Auto paused', 7: 'Zone paused', 8: 'Segment paused', 9: 'Spot paused' } },
+      {
+        id: 'water-tank',
+        name: 'Water Tank (4-6)',
+        siid: 4,
+        piid: 6,
+        type: 'number',
+        role: 'value',
+        states: { 0: 'Not installed', 1: 'Installed', 10: 'Mop installed' },
+      },
+      {
+        id: 'task-status',
+        name: 'Task Status (4-7)',
+        siid: 4,
+        piid: 7,
+        type: 'number',
+        role: 'value',
+        states: {
+          0: 'Completed',
+          1: 'Auto cleaning',
+          2: 'Zone cleaning',
+          3: 'Segment cleaning',
+          4: 'Spot cleaning',
+          5: 'Fast mapping',
+          6: 'Auto paused',
+          7: 'Zone paused',
+          8: 'Segment paused',
+          9: 'Spot paused',
+        },
+      },
       { id: 'serial-number', name: 'Serial Number (4-14)', siid: 4, piid: 14, type: 'string', role: 'text' },
-      { id: 'mop-cleaning-remainder', name: 'Mop Cleaning Remainder (4-16)', siid: 4, piid: 16, type: 'number', role: 'value' },
+      {
+        id: 'mop-cleaning-remainder',
+        name: 'Mop Cleaning Remainder (4-16)',
+        siid: 4,
+        piid: 16,
+        type: 'number',
+        role: 'value',
+      },
       { id: 'cleaning-paused', name: 'Cleaning Paused (4-17)', siid: 4, piid: 17, type: 'number', role: 'value' },
       { id: 'faults', name: 'Faults (4-18)', siid: 4, piid: 18, type: 'string', role: 'text' },
       { id: 'nation-matched', name: 'Nation Matched (4-19)', siid: 4, piid: 19, type: 'string', role: 'text' },
       { id: 'relocation-status', name: 'Relocation Status (4-20)', siid: 4, piid: 20, type: 'number', role: 'value' },
-      { id: 'self-wash-base-status', name: 'Self-Wash Base Status (4-25)', siid: 4, piid: 25, type: 'number', role: 'value' },
+      {
+        id: 'self-wash-base-status',
+        name: 'Self-Wash Base Status (4-25)',
+        siid: 4,
+        piid: 25,
+        type: 'number',
+        role: 'value',
+      },
       { id: 'upload-map', name: 'Upload Map (4-24)', siid: 4, piid: 24, type: 'number', role: 'value' },
       { id: 'warn-status', name: 'Warning Status (4-35)', siid: 4, piid: 35, type: 'number', role: 'value' },
       { id: 'low-water-warning', name: 'Low Water Warning (4-41)', siid: 4, piid: 41, type: 'number', role: 'value' },
       { id: 'scheduled-clean', name: 'Scheduled Clean (4-47)', siid: 4, piid: 47, type: 'number', role: 'value' },
       { id: 'shortcuts', name: 'Shortcuts (4-48)', siid: 4, piid: 48, type: 'string', role: 'json' },
-      { id: 'intelligent-recognition', name: 'Intelligent Recognition (4-49)', siid: 4, piid: 49, type: 'number', role: 'value' },
-      { id: 'auto-switch-settings', name: 'Auto Switch Settings (4-50)', siid: 4, piid: 50, type: 'string', role: 'json' },
+      {
+        id: 'intelligent-recognition',
+        name: 'Intelligent Recognition (4-49)',
+        siid: 4,
+        piid: 49,
+        type: 'number',
+        role: 'value',
+      },
+      {
+        id: 'auto-switch-settings',
+        name: 'Auto Switch Settings (4-50)',
+        siid: 4,
+        piid: 50,
+        type: 'string',
+        role: 'json',
+      },
       { id: 'mop-in-station', name: 'Mop In Station (4-52)', siid: 4, piid: 52, type: 'number', role: 'value' },
       { id: 'mop-pad-installed', name: 'Mop Pad Installed (4-53)', siid: 4, piid: 53, type: 'number', role: 'value' },
       { id: 'task-type', name: 'Task Type (4-58)', siid: 4, piid: 58, type: 'number', role: 'value' },
       { id: 'drainage-status', name: 'Drainage Status (4-60)', siid: 4, piid: 60, type: 'number', role: 'value' },
-      { id: 'cleaning-progress', name: 'Cleaning Progress (4-63)', siid: 4, piid: 63, type: 'number', role: 'value', unit: '%' },
-      { id: 'drying-progress', name: 'Drying Progress (4-64)', siid: 4, piid: 64, type: 'number', role: 'value', unit: '%' },
+      {
+        id: 'cleaning-progress',
+        name: 'Cleaning Progress (4-63)',
+        siid: 4,
+        piid: 63,
+        type: 'number',
+        role: 'value',
+        unit: '%',
+      },
+      {
+        id: 'drying-progress',
+        name: 'Drying Progress (4-64)',
+        siid: 4,
+        piid: 64,
+        type: 'number',
+        role: 'value',
+        unit: '%',
+      },
       { id: 'device-capability', name: 'Device Capability (4-83)', siid: 4, piid: 83, type: 'number', role: 'value' },
       // SIID 5 - DND
       { id: 'dnd-task', name: 'DND Task Config (5-4)', siid: 5, piid: 4, type: 'string', role: 'json' },
@@ -1054,108 +1712,511 @@ class Dreame extends utils.Adapter {
       { id: 'multi-floor-map', name: 'Multi Floor Map (6-7)', siid: 6, piid: 7, type: 'number', role: 'value' },
       { id: 'map-list', name: 'Map List (6-8)', siid: 6, piid: 8, type: 'string', role: 'json' },
       { id: 'recovery-map-list', name: 'Recovery Map List (6-9)', siid: 6, piid: 9, type: 'string', role: 'json' },
-      { id: 'map-recovery-status', name: 'Map Recovery Status (6-11)', siid: 6, piid: 11, type: 'number', role: 'value' },
+      {
+        id: 'map-recovery-status',
+        name: 'Map Recovery Status (6-11)',
+        siid: 6,
+        piid: 11,
+        type: 'number',
+        role: 'value',
+      },
       { id: 'map-backup-status', name: 'Map Backup Status (6-14)', siid: 6, piid: 14, type: 'number', role: 'value' },
       { id: 'wifi-map', name: 'WiFi Map (6-15)', siid: 6, piid: 15, type: 'string', role: 'text' },
       // SIID 7 - Audio (read-only)
       { id: 'voice-packet-id', name: 'Voice Pack (7-2)', siid: 7, piid: 2, type: 'string', role: 'text' },
       { id: 'voice-assistant', name: 'Voice Assistant (7-5)', siid: 7, piid: 5, type: 'number', role: 'value' },
-      { id: 'voice-assistant-language', name: 'Voice Language (7-10)', siid: 7, piid: 10, type: 'string', role: 'text' },
+      {
+        id: 'voice-assistant-language',
+        name: 'Voice Language (7-10)',
+        siid: 7,
+        piid: 10,
+        type: 'string',
+        role: 'text',
+      },
       // SIID 8 - Schedule
       { id: 'timezone', name: 'Timezone (8-1)', siid: 8, piid: 1, type: 'string', role: 'text' },
       { id: 'schedule', name: 'Schedule (8-2)', siid: 8, piid: 2, type: 'string', role: 'json' },
       { id: 'cruise-schedule', name: 'Cruise Schedule (8-5)', siid: 8, piid: 5, type: 'string', role: 'text' },
       // SIID 9 - Main Brush
-      { id: 'main-brush-time-left', name: 'Main Brush Time Left (9-1)', siid: 9, piid: 1, type: 'number', role: 'value', unit: 'h' },
-      { id: 'main-brush-left', name: 'Main Brush Life Left (9-2)', siid: 9, piid: 2, type: 'number', role: 'value', unit: '%' },
+      {
+        id: 'main-brush-time-left',
+        name: 'Main Brush Time Left (9-1)',
+        siid: 9,
+        piid: 1,
+        type: 'number',
+        role: 'value',
+        unit: 'h',
+      },
+      {
+        id: 'main-brush-left',
+        name: 'Main Brush Life Left (9-2)',
+        siid: 9,
+        piid: 2,
+        type: 'number',
+        role: 'value',
+        unit: '%',
+      },
       // SIID 10 - Side Brush
-      { id: 'side-brush-time-left', name: 'Side Brush Time Left (10-1)', siid: 10, piid: 1, type: 'number', role: 'value', unit: 'h' },
-      { id: 'side-brush-left', name: 'Side Brush Life Left (10-2)', siid: 10, piid: 2, type: 'number', role: 'value', unit: '%' },
+      {
+        id: 'side-brush-time-left',
+        name: 'Side Brush Time Left (10-1)',
+        siid: 10,
+        piid: 1,
+        type: 'number',
+        role: 'value',
+        unit: 'h',
+      },
+      {
+        id: 'side-brush-left',
+        name: 'Side Brush Life Left (10-2)',
+        siid: 10,
+        piid: 2,
+        type: 'number',
+        role: 'value',
+        unit: '%',
+      },
       // SIID 11 - Filter
-      { id: 'filter-left', name: 'Filter Life Left (11-1)', siid: 11, piid: 1, type: 'number', role: 'value', unit: '%' },
-      { id: 'filter-time-left', name: 'Filter Time Left (11-2)', siid: 11, piid: 2, type: 'number', role: 'value', unit: 'h' },
+      {
+        id: 'filter-left',
+        name: 'Filter Life Left (11-1)',
+        siid: 11,
+        piid: 1,
+        type: 'number',
+        role: 'value',
+        unit: '%',
+      },
+      {
+        id: 'filter-time-left',
+        name: 'Filter Time Left (11-2)',
+        siid: 11,
+        piid: 2,
+        type: 'number',
+        role: 'value',
+        unit: 'h',
+      },
       // SIID 12 - Statistics
-      { id: 'first-cleaning-date', name: 'First Cleaning Date (12-1)', siid: 12, piid: 1, type: 'number', role: 'date' },
-      { id: 'total-cleaning-time', name: 'Total Cleaning Time (12-2)', siid: 12, piid: 2, type: 'number', role: 'value', unit: 'min' },
+      {
+        id: 'first-cleaning-date',
+        name: 'First Cleaning Date (12-1)',
+        siid: 12,
+        piid: 1,
+        type: 'number',
+        role: 'date',
+      },
+      {
+        id: 'total-cleaning-time',
+        name: 'Total Cleaning Time (12-2)',
+        siid: 12,
+        piid: 2,
+        type: 'number',
+        role: 'value',
+        unit: 'min',
+      },
       { id: 'cleaning-count', name: 'Cleaning Count (12-3)', siid: 12, piid: 3, type: 'number', role: 'value' },
-      { id: 'total-cleaned-area', name: 'Total Cleaned Area (12-4)', siid: 12, piid: 4, type: 'number', role: 'value', unit: 'm²' },
-      { id: 'total-runtime', name: 'Total Runtime (12-5)', siid: 12, piid: 5, type: 'number', role: 'value', unit: 'min' },
-      { id: 'total-cruise-time', name: 'Total Cruise Time (12-6)', siid: 12, piid: 6, type: 'number', role: 'value', unit: 'min' },
+      {
+        id: 'total-cleaned-area',
+        name: 'Total Cleaned Area (12-4)',
+        siid: 12,
+        piid: 4,
+        type: 'number',
+        role: 'value',
+        unit: 'm²',
+      },
+      {
+        id: 'total-runtime',
+        name: 'Total Runtime (12-5)',
+        siid: 12,
+        piid: 5,
+        type: 'number',
+        role: 'value',
+        unit: 'min',
+      },
+      {
+        id: 'total-cruise-time',
+        name: 'Total Cruise Time (12-6)',
+        siid: 12,
+        piid: 6,
+        type: 'number',
+        role: 'value',
+        unit: 'min',
+      },
       // SIID 15 - Auto Empty
-      { id: 'dust-collection', name: 'Dust Collection Available (15-3)', siid: 15, piid: 3, type: 'number', role: 'value' },
+      {
+        id: 'dust-collection',
+        name: 'Dust Collection Available (15-3)',
+        siid: 15,
+        piid: 3,
+        type: 'number',
+        role: 'value',
+      },
       { id: 'auto-empty-status', name: 'Auto Empty Status (15-5)', siid: 15, piid: 5, type: 'number', role: 'value' },
       // SIID 16 - Sensor
-      { id: 'sensor-dirty-left', name: 'Sensor Life Left (16-1)', siid: 16, piid: 1, type: 'number', role: 'value', unit: '%' },
-      { id: 'sensor-dirty-time-left', name: 'Sensor Time Left (16-2)', siid: 16, piid: 2, type: 'number', role: 'value', unit: 'h' },
+      {
+        id: 'sensor-dirty-left',
+        name: 'Sensor Life Left (16-1)',
+        siid: 16,
+        piid: 1,
+        type: 'number',
+        role: 'value',
+        unit: '%',
+      },
+      {
+        id: 'sensor-dirty-time-left',
+        name: 'Sensor Time Left (16-2)',
+        siid: 16,
+        piid: 2,
+        type: 'number',
+        role: 'value',
+        unit: 'h',
+      },
       // SIID 27 - Station Status
-      { id: 'clean-water-tank-status', name: 'Clean Water Tank (27-1)', siid: 27, piid: 1, type: 'number', role: 'value', states: { 0: 'Installed', 1: 'Not installed', 2: 'Low water', 3: 'Not installed' } },
-      { id: 'dirty-water-tank-status', name: 'Dirty Water Tank (27-2)', siid: 27, piid: 2, type: 'number', role: 'value', states: { 0: 'Installed', 1: 'Not installed or full' } },
-      { id: 'dust-bag-status', name: 'Dust Bag (27-3)', siid: 27, piid: 3, type: 'number', role: 'value', states: { 0: 'Installed', 1: 'Not installed', 2: 'Check' } },
+      {
+        id: 'clean-water-tank-status',
+        name: 'Clean Water Tank (27-1)',
+        siid: 27,
+        piid: 1,
+        type: 'number',
+        role: 'value',
+        states: { 0: 'Installed', 1: 'Not installed', 2: 'Low water', 3: 'Not installed' },
+      },
+      {
+        id: 'dirty-water-tank-status',
+        name: 'Dirty Water Tank (27-2)',
+        siid: 27,
+        piid: 2,
+        type: 'number',
+        role: 'value',
+        states: { 0: 'Installed', 1: 'Not installed or full' },
+      },
+      {
+        id: 'dust-bag-status',
+        name: 'Dust Bag (27-3)',
+        siid: 27,
+        piid: 3,
+        type: 'number',
+        role: 'value',
+        states: { 0: 'Installed', 1: 'Not installed', 2: 'Check' },
+      },
       { id: 'detergent-status', name: 'Detergent Status (27-4)', siid: 27, piid: 4, type: 'number', role: 'value' },
-      { id: 'station-drainage-status', name: 'Station Drainage (27-5)', siid: 27, piid: 5, type: 'number', role: 'value' },
+      {
+        id: 'station-drainage-status',
+        name: 'Station Drainage (27-5)',
+        siid: 27,
+        piid: 5,
+        type: 'number',
+        role: 'value',
+      },
       { id: 'hot-water-status', name: 'Hot Water Status (27-15)', siid: 27, piid: 15, type: 'number', role: 'value' },
       // SIID 28 - Extended Settings (read-only)
       { id: 'lds-state', name: 'LDS State (28-4)', siid: 28, piid: 4, type: 'number', role: 'value' },
-      { id: 'dnd-disable-resume', name: 'DND Disable Resume (28-14)', siid: 28, piid: 14, type: 'number', role: 'value' },
-      { id: 'dnd-disable-auto-empty', name: 'DND Disable Auto Empty (28-15)', siid: 28, piid: 15, type: 'number', role: 'value' },
+      {
+        id: 'dnd-disable-resume',
+        name: 'DND Disable Resume (28-14)',
+        siid: 28,
+        piid: 14,
+        type: 'number',
+        role: 'value',
+      },
+      {
+        id: 'dnd-disable-auto-empty',
+        name: 'DND Disable Auto Empty (28-15)',
+        siid: 28,
+        piid: 15,
+        type: 'number',
+        role: 'value',
+      },
       { id: 'dnd-reduce-volume', name: 'DND Reduce Volume (28-16)', siid: 28, piid: 16, type: 'number', role: 'value' },
-      { id: 'dynamic-obstacle-cleaning', name: 'Dynamic Obstacle Cleaning (28-18)', siid: 28, piid: 18, type: 'number', role: 'value' },
+      {
+        id: 'dynamic-obstacle-cleaning',
+        name: 'Dynamic Obstacle Cleaning (28-18)',
+        siid: 28,
+        piid: 18,
+        type: 'number',
+        role: 'value',
+      },
       { id: 'smart-mop-washing', name: 'Smart Mop Washing (28-22)', siid: 28, piid: 22, type: 'number', role: 'value' },
-      { id: 'side-brush-carpet-rotate', name: 'Side Brush Carpet Rotate (28-29)', siid: 28, piid: 29, type: 'number', role: 'value' },
+      {
+        id: 'side-brush-carpet-rotate',
+        name: 'Side Brush Carpet Rotate (28-29)',
+        siid: 28,
+        piid: 29,
+        type: 'number',
+        role: 'value',
+      },
       // SIID 30 - Wheel
-      { id: 'wheel-dirty-time-left', name: 'Wheel Time Left (30-1)', siid: 30, piid: 1, type: 'number', role: 'value', unit: 'h' },
-      { id: 'wheel-dirty-left', name: 'Wheel Life Left (30-2)', siid: 30, piid: 2, type: 'number', role: 'value', unit: '%' },
+      {
+        id: 'wheel-dirty-time-left',
+        name: 'Wheel Time Left (30-1)',
+        siid: 30,
+        piid: 1,
+        type: 'number',
+        role: 'value',
+        unit: 'h',
+      },
+      {
+        id: 'wheel-dirty-left',
+        name: 'Wheel Life Left (30-2)',
+        siid: 30,
+        piid: 2,
+        type: 'number',
+        role: 'value',
+        unit: '%',
+      },
       // SIID 10001 - Camera
-      { id: 'camera-light-brightness', name: 'Camera Light Brightness (10001-9)', siid: 10001, piid: 9, type: 'string', role: 'text' },
+      {
+        id: 'camera-light-brightness',
+        name: 'Camera Light Brightness (10001-9)',
+        siid: 10001,
+        piid: 9,
+        type: 'string',
+        role: 'text',
+      },
       // AutoSwitch parsed values (no siid/piid, populated via parseVacuumAutoSwitch)
       { id: 'auto-drying', name: 'Auto Drying (AutoDry)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'collision-avoidance', name: 'Collision Avoidance (LessColl)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      {
+        id: 'collision-avoidance',
+        name: 'Collision Avoidance (LessColl)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
       { id: 'fill-light', name: 'Fill Light (FillinLight)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'stain-avoidance', name: 'Stain Avoidance (StainIdentify)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'mopping-type', name: 'Mopping Type (CleanType)', type: 'number', role: 'value', desc: '0=Daily, 1=Accurate, 2=Deep' },
-      { id: 'clean-genius', name: 'CleanGenius (SmartHost)', type: 'number', role: 'value', desc: '0=Off, 1=Routine, 2=Deep' },
-      { id: 'cleaning-route', name: 'Cleaning Route (CleanRoute)', type: 'number', role: 'value', desc: '1=Standard, 2=Intensive, 3=Deep, 4=Quick' },
-      { id: 'wider-corner', name: 'Wider Corner Coverage (MeticulousTwist)', type: 'number', role: 'value', desc: '0=Off, 1=HighFreq, -7=LowFreq' },
-      { id: 'floor-direction', name: 'Floor Direction Cleaning (MaterialDirectionClean)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'pet-focused', name: 'Pet Focused Cleaning (PetPartClean)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'auto-recleaning', name: 'Auto Re-Cleaning (SmartAutoMop)', type: 'number', role: 'value', desc: '-1=disabled, 0=off, 1=on' },
-      { id: 'auto-rewashing', name: 'Auto Re-Washing (SmartAutoWash)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      {
+        id: 'stain-avoidance',
+        name: 'Stain Avoidance (StainIdentify)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'mopping-type',
+        name: 'Mopping Type (CleanType)',
+        type: 'number',
+        role: 'value',
+        desc: '0=Daily, 1=Accurate, 2=Deep',
+      },
+      {
+        id: 'clean-genius',
+        name: 'CleanGenius (SmartHost)',
+        type: 'number',
+        role: 'value',
+        desc: '0=Off, 1=Routine, 2=Deep',
+      },
+      {
+        id: 'cleaning-route',
+        name: 'Cleaning Route (CleanRoute)',
+        type: 'number',
+        role: 'value',
+        desc: '1=Standard, 2=Intensive, 3=Deep, 4=Quick',
+      },
+      {
+        id: 'wider-corner',
+        name: 'Wider Corner Coverage (MeticulousTwist)',
+        type: 'number',
+        role: 'value',
+        desc: '0=Off, 1=HighFreq, -7=LowFreq',
+      },
+      {
+        id: 'floor-direction',
+        name: 'Floor Direction Cleaning (MaterialDirectionClean)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'pet-focused',
+        name: 'Pet Focused Cleaning (PetPartClean)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'auto-recleaning',
+        name: 'Auto Re-Cleaning (SmartAutoMop)',
+        type: 'number',
+        role: 'value',
+        desc: '-1=disabled, 0=off, 1=on',
+      },
+      {
+        id: 'auto-rewashing',
+        name: 'Auto Re-Washing (SmartAutoWash)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
       { id: 'max-suction', name: 'Max Suction Power (SuctionMax)', type: 'number', role: 'value', desc: '0=off, 1=on' },
       { id: 'smart-drying', name: 'Smart Drying (SmartDrying)', type: 'number', role: 'value', desc: '0=off, 1=on' },
       { id: 'hot-washing', name: 'Hot Washing (HotWash)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'uv-sterilization', name: 'UV Sterilization (UVLight)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'custom-mopping-mode', name: 'Custom Mopping Mode (MopEffectSwitch)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'self-clean-frequency', name: 'Self-Clean Frequency (BackWashType)', type: 'number', role: 'value', desc: '0=Per room, 1=Standard, 2=High' },
-      { id: 'intensive-carpet', name: 'Intensive Carpet Cleaning (CarpetFineClean)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'gap-cleaning-extension', name: 'Gap Cleaning Extension (LacuneMopScalable)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'mopping-under-furniture', name: 'Mopping Under Furniture (MopScalable2)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'ultra-clean-mode', name: 'Ultra Clean Mode (SuperWash)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      {
+        id: 'uv-sterilization',
+        name: 'UV Sterilization (UVLight)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'custom-mopping-mode',
+        name: 'Custom Mopping Mode (MopEffectSwitch)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'self-clean-frequency',
+        name: 'Self-Clean Frequency (BackWashType)',
+        type: 'number',
+        role: 'value',
+        desc: '0=Per room, 1=Standard, 2=High',
+      },
+      {
+        id: 'intensive-carpet',
+        name: 'Intensive Carpet Cleaning (CarpetFineClean)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'gap-cleaning-extension',
+        name: 'Gap Cleaning Extension (LacuneMopScalable)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'mopping-under-furniture',
+        name: 'Mopping Under Furniture (MopScalable2)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'ultra-clean-mode',
+        name: 'Ultra Clean Mode (SuperWash)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
       { id: 'mop-extend', name: 'Mop Extend (MopExtrSwitch)', type: 'number', role: 'value', desc: '0=off, 1=on' },
-      { id: 'mop-extend-frequency', name: 'Mop Extend Frequency (ExtrFreq)', type: 'number', role: 'value', desc: '1=Low, 2=High' },
-      { id: 'smart-charging', name: 'Smart Charging (SmartCharge)', type: 'number', role: 'value', desc: '0=off, 1=on' },
+      {
+        id: 'mop-extend-frequency',
+        name: 'Mop Extend Frequency (ExtrFreq)',
+        type: 'number',
+        role: 'value',
+        desc: '1=Low, 2=High',
+      },
+      {
+        id: 'smart-charging',
+        name: 'Smart Charging (SmartCharge)',
+        type: 'number',
+        role: 'value',
+        desc: '0=off, 1=on',
+      },
     ];
 
     const remoteStates = [
       // SIID 4 - Vacuum settings
-      { id: 'suction-level', name: 'Suction Level (4-4)', siid: 4, piid: 4, type: 'number', role: 'level', states: { 0: 'Quiet', 1: 'Standard', 2: 'Strong', 3: 'Turbo' } },
-      { id: 'water-volume', name: 'Water Volume (4-5)', siid: 4, piid: 5, type: 'number', role: 'level', states: { 1: 'Low', 2: 'Medium', 3: 'High' } },
-      { id: 'cleaning-mode', name: 'Cleaning Mode (4-23)', siid: 4, piid: 23, type: 'number', role: 'level', states: { 0: 'Sweeping', 1: 'Mopping', 2: 'Sweep+Mop', 3: 'Mop after sweep' } },
+      {
+        id: 'suction-level',
+        name: 'Suction Level (4-4)',
+        siid: 4,
+        piid: 4,
+        type: 'number',
+        role: 'level',
+        states: { 0: 'Quiet', 1: 'Standard', 2: 'Strong', 3: 'Turbo' },
+      },
+      {
+        id: 'water-volume',
+        name: 'Water Volume (4-5)',
+        siid: 4,
+        piid: 5,
+        type: 'number',
+        role: 'level',
+        states: { 1: 'Low', 2: 'Medium', 3: 'High' },
+      },
+      {
+        id: 'cleaning-mode',
+        name: 'Cleaning Mode (4-23)',
+        siid: 4,
+        piid: 23,
+        type: 'number',
+        role: 'level',
+        states: { 0: 'Sweeping', 1: 'Mopping', 2: 'Sweep+Mop', 3: 'Mop after sweep' },
+      },
       { id: 'resume-cleaning', name: 'Resume Cleaning (4-11)', siid: 4, piid: 11, type: 'number', role: 'switch' },
       { id: 'carpet-boost', name: 'Carpet Boost (4-12)', siid: 4, piid: 12, type: 'number', role: 'switch' },
-      { id: 'obstacle-avoidance', name: 'Obstacle Avoidance (4-21)', siid: 4, piid: 21, type: 'number', role: 'switch' },
+      {
+        id: 'obstacle-avoidance',
+        name: 'Obstacle Avoidance (4-21)',
+        siid: 4,
+        piid: 21,
+        type: 'number',
+        role: 'switch',
+      },
       { id: 'ai-detection', name: 'AI Detection (4-22)', siid: 4, piid: 22, type: 'number', role: 'value' },
-      { id: 'customized-cleaning', name: 'Customized Cleaning (4-26)', siid: 4, piid: 26, type: 'number', role: 'switch' },
+      {
+        id: 'customized-cleaning',
+        name: 'Customized Cleaning (4-26)',
+        siid: 4,
+        piid: 26,
+        type: 'number',
+        role: 'switch',
+      },
       { id: 'child-lock', name: 'Child Lock (4-27)', siid: 4, piid: 27, type: 'number', role: 'switch' },
-      { id: 'carpet-sensitivity', name: 'Carpet Sensitivity (4-28)', siid: 4, piid: 28, type: 'number', role: 'level', states: { 1: 'Low', 2: 'Medium', 3: 'High' } },
+      {
+        id: 'carpet-sensitivity',
+        name: 'Carpet Sensitivity (4-28)',
+        siid: 4,
+        piid: 28,
+        type: 'number',
+        role: 'level',
+        states: { 1: 'Low', 2: 'Medium', 3: 'High' },
+      },
       { id: 'tight-mopping', name: 'Tight Mopping (4-29)', siid: 4, piid: 29, type: 'number', role: 'switch' },
-      { id: 'carpet-recognition', name: 'Carpet Recognition (4-33)', siid: 4, piid: 33, type: 'number', role: 'switch' },
+      {
+        id: 'carpet-recognition',
+        name: 'Carpet Recognition (4-33)',
+        siid: 4,
+        piid: 33,
+        type: 'number',
+        role: 'switch',
+      },
       { id: 'self-clean', name: 'Self Clean (4-34)', siid: 4, piid: 34, type: 'number', role: 'switch' },
-      { id: 'carpet-cleaning', name: 'Carpet Cleaning Mode (4-36)', siid: 4, piid: 36, type: 'number', role: 'level', states: { 0: 'Avoid', 1: 'Adapt', 2: 'Ignore' } },
-      { id: 'auto-add-detergent', name: 'Auto Add Detergent (4-37)', siid: 4, piid: 37, type: 'number', role: 'switch' },
-      { id: 'drying-time', name: 'Drying Time (4-40)', siid: 4, piid: 40, type: 'number', role: 'level', states: { 2: '2h', 3: '3h', 4: '4h' } },
+      {
+        id: 'carpet-cleaning',
+        name: 'Carpet Cleaning Mode (4-36)',
+        siid: 4,
+        piid: 36,
+        type: 'number',
+        role: 'level',
+        states: { 0: 'Avoid', 1: 'Adapt', 2: 'Ignore' },
+      },
+      {
+        id: 'auto-add-detergent',
+        name: 'Auto Add Detergent (4-37)',
+        siid: 4,
+        piid: 37,
+        type: 'number',
+        role: 'switch',
+      },
+      {
+        id: 'drying-time',
+        name: 'Drying Time (4-40)',
+        siid: 4,
+        piid: 40,
+        type: 'number',
+        role: 'level',
+        states: { 2: '2h', 3: '3h', 4: '4h' },
+      },
       { id: 'auto-mount-mop', name: 'Auto Mount Mop (4-45)', siid: 4, piid: 45, type: 'number', role: 'switch' },
       { id: 'mop-wash-level', name: 'Mop Wash Level (4-46)', siid: 4, piid: 46, type: 'number', role: 'level' },
-      { id: 'auto-water-refilling', name: 'Auto Water Refilling (4-51)', siid: 4, piid: 51, type: 'number', role: 'switch' },
+      {
+        id: 'auto-water-refilling',
+        name: 'Auto Water Refilling (4-51)',
+        siid: 4,
+        piid: 51,
+        type: 'number',
+        role: 'switch',
+      },
       // SIID 5 - DND
       { id: 'dnd-enable', name: 'Do Not Disturb (5-1)', siid: 5, piid: 1, type: 'boolean', role: 'switch' },
       { id: 'dnd-start', name: 'DND Start Time (5-2)', siid: 5, piid: 2, type: 'string', role: 'text' },
@@ -1163,50 +2224,255 @@ class Dreame extends utils.Adapter {
       // SIID 7 - Volume
       { id: 'volume', name: 'Volume (7-1)', siid: 7, piid: 1, type: 'number', role: 'level.volume' },
       // SIID 15 - Auto Empty
-      { id: 'auto-dust-collecting', name: 'Auto Dust Collecting (15-1)', siid: 15, piid: 1, type: 'number', role: 'switch' },
-      { id: 'auto-empty-frequency', name: 'Auto Empty Frequency (15-2)', siid: 15, piid: 2, type: 'number', role: 'level' },
+      {
+        id: 'auto-dust-collecting',
+        name: 'Auto Dust Collecting (15-1)',
+        siid: 15,
+        piid: 1,
+        type: 'number',
+        role: 'switch',
+      },
+      {
+        id: 'auto-empty-frequency',
+        name: 'Auto Empty Frequency (15-2)',
+        siid: 15,
+        piid: 2,
+        type: 'number',
+        role: 'level',
+      },
       // SIID 28 - Extended Settings (writable)
       { id: 'wetness-level', name: 'Wetness Level (28-1)', siid: 28, piid: 1, type: 'number', role: 'level' },
-      { id: 'clean-carpets-first', name: 'Clean Carpets First (28-2)', siid: 28, piid: 2, type: 'number', role: 'switch' },
+      {
+        id: 'clean-carpets-first',
+        name: 'Clean Carpets First (28-2)',
+        siid: 28,
+        piid: 2,
+        type: 'number',
+        role: 'switch',
+      },
       { id: 'auto-lds-coverage', name: 'Auto LDS Coverage (28-3)', siid: 28, piid: 3, type: 'number', role: 'switch' },
-      { id: 'cleangenius-mode', name: 'CleanGenius Mode (28-5)', siid: 28, piid: 5, type: 'number', role: 'level', states: { 0: 'Off', 1: 'Routine', 2: 'Deep' } },
-      { id: 'water-temperature', name: 'Water Temperature (28-8)', siid: 28, piid: 8, type: 'number', role: 'level', states: { 0: 'Cold', 1: 'Warm', 2: 'Hot', 3: 'Boiling' } },
+      {
+        id: 'cleangenius-mode',
+        name: 'CleanGenius Mode (28-5)',
+        siid: 28,
+        piid: 5,
+        type: 'number',
+        role: 'level',
+        states: { 0: 'Off', 1: 'Routine', 2: 'Deep' },
+      },
+      {
+        id: 'water-temperature',
+        name: 'Water Temperature (28-8)',
+        siid: 28,
+        piid: 8,
+        type: 'number',
+        role: 'level',
+        states: { 0: 'Cold', 1: 'Warm', 2: 'Hot', 3: 'Boiling' },
+      },
       { id: 'silent-drying', name: 'Silent Drying (28-27)', siid: 28, piid: 27, type: 'number', role: 'switch' },
       { id: 'hair-compression', name: 'Hair Compression (28-28)', siid: 28, piid: 28, type: 'number', role: 'switch' },
-      { id: 'mopping-with-detergent', name: 'Mopping With Detergent (28-52)', siid: 28, piid: 52, type: 'number', role: 'switch' },
+      {
+        id: 'mopping-with-detergent',
+        name: 'Mopping With Detergent (28-52)',
+        siid: 28,
+        piid: 52,
+        type: 'number',
+        role: 'switch',
+      },
     ];
 
     // AutoSwitch SET commands (set_properties siid:4 piid:50)
     const autoSwitchRemotes = [
-      { id: 'set-auto-drying', name: 'Set Auto Drying', autoSwitchKey: 'AutoDry', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-collision-avoidance', name: 'Set Collision Avoidance', autoSwitchKey: 'LessColl', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-fill-light', name: 'Set Fill Light', autoSwitchKey: 'FillinLight', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-stain-avoidance', name: 'Set Stain Avoidance', autoSwitchKey: 'StainIdentify', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-mopping-type', name: 'Set Mopping Type', autoSwitchKey: 'CleanType', type: 'number', role: 'value', desc: '0=Daily, 1=Accurate, 2=Deep' },
-      { id: 'set-clean-genius', name: 'Set CleanGenius', autoSwitchKey: 'SmartHost', type: 'number', role: 'value', desc: '0=Off, 1=Routine, 2=Deep' },
-      { id: 'set-cleaning-route', name: 'Set Cleaning Route', autoSwitchKey: 'CleanRoute', type: 'number', role: 'value', desc: '1=Standard, 2=Intensive, 3=Deep, 4=Quick' },
-      { id: 'set-wider-corner', name: 'Set Wider Corner Coverage', autoSwitchKey: 'MeticulousTwist', type: 'number', role: 'value', desc: '0=Off, 1=HighFreq, -7=LowFreq' },
-      { id: 'set-floor-direction', name: 'Set Floor Direction Cleaning', autoSwitchKey: 'MaterialDirectionClean', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-pet-focused', name: 'Set Pet Focused Cleaning', autoSwitchKey: 'PetPartClean', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-smart-charging', name: 'Set Smart Charging', autoSwitchKey: 'SmartCharge', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-hot-washing', name: 'Set Hot Washing', autoSwitchKey: 'HotWash', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-uv-sterilization', name: 'Set UV Sterilization', autoSwitchKey: 'UVLight', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-max-suction', name: 'Set Max Suction Power', autoSwitchKey: 'SuctionMax', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-ultra-clean', name: 'Set Ultra Clean Mode', autoSwitchKey: 'SuperWash', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-mop-extend', name: 'Set Mop Extend', autoSwitchKey: 'MopExtrSwitch', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-self-clean-frequency', name: 'Set Self-Clean Frequency', autoSwitchKey: 'BackWashType', type: 'number', role: 'value', desc: '0=Per room, 1=Standard, 2=High' },
-      { id: 'set-intensive-carpet', name: 'Set Intensive Carpet Cleaning', autoSwitchKey: 'CarpetFineClean', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-gap-cleaning', name: 'Set Gap Cleaning Extension', autoSwitchKey: 'LacuneMopScalable', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-mopping-under-furniture', name: 'Set Mopping Under Furniture', autoSwitchKey: 'MopScalable2', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-smart-drying', name: 'Set Smart Drying', autoSwitchKey: 'SmartDrying', type: 'number', role: 'switch', desc: '0=off, 1=on' },
-      { id: 'set-custom-mopping', name: 'Set Custom Mopping Mode', autoSwitchKey: 'MopEffectSwitch', type: 'number', role: 'switch', desc: '0=off, 1=on' },
+      {
+        id: 'set-auto-drying',
+        name: 'Set Auto Drying',
+        autoSwitchKey: 'AutoDry',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-collision-avoidance',
+        name: 'Set Collision Avoidance',
+        autoSwitchKey: 'LessColl',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-fill-light',
+        name: 'Set Fill Light',
+        autoSwitchKey: 'FillinLight',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-stain-avoidance',
+        name: 'Set Stain Avoidance',
+        autoSwitchKey: 'StainIdentify',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-mopping-type',
+        name: 'Set Mopping Type',
+        autoSwitchKey: 'CleanType',
+        type: 'number',
+        role: 'value',
+        desc: '0=Daily, 1=Accurate, 2=Deep',
+      },
+      {
+        id: 'set-clean-genius',
+        name: 'Set CleanGenius',
+        autoSwitchKey: 'SmartHost',
+        type: 'number',
+        role: 'value',
+        desc: '0=Off, 1=Routine, 2=Deep',
+      },
+      {
+        id: 'set-cleaning-route',
+        name: 'Set Cleaning Route',
+        autoSwitchKey: 'CleanRoute',
+        type: 'number',
+        role: 'value',
+        desc: '1=Standard, 2=Intensive, 3=Deep, 4=Quick',
+      },
+      {
+        id: 'set-wider-corner',
+        name: 'Set Wider Corner Coverage',
+        autoSwitchKey: 'MeticulousTwist',
+        type: 'number',
+        role: 'value',
+        desc: '0=Off, 1=HighFreq, -7=LowFreq',
+      },
+      {
+        id: 'set-floor-direction',
+        name: 'Set Floor Direction Cleaning',
+        autoSwitchKey: 'MaterialDirectionClean',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-pet-focused',
+        name: 'Set Pet Focused Cleaning',
+        autoSwitchKey: 'PetPartClean',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-smart-charging',
+        name: 'Set Smart Charging',
+        autoSwitchKey: 'SmartCharge',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-hot-washing',
+        name: 'Set Hot Washing',
+        autoSwitchKey: 'HotWash',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-uv-sterilization',
+        name: 'Set UV Sterilization',
+        autoSwitchKey: 'UVLight',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-max-suction',
+        name: 'Set Max Suction Power',
+        autoSwitchKey: 'SuctionMax',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-ultra-clean',
+        name: 'Set Ultra Clean Mode',
+        autoSwitchKey: 'SuperWash',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-mop-extend',
+        name: 'Set Mop Extend',
+        autoSwitchKey: 'MopExtrSwitch',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-self-clean-frequency',
+        name: 'Set Self-Clean Frequency',
+        autoSwitchKey: 'BackWashType',
+        type: 'number',
+        role: 'value',
+        desc: '0=Per room, 1=Standard, 2=High',
+      },
+      {
+        id: 'set-intensive-carpet',
+        name: 'Set Intensive Carpet Cleaning',
+        autoSwitchKey: 'CarpetFineClean',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-gap-cleaning',
+        name: 'Set Gap Cleaning Extension',
+        autoSwitchKey: 'LacuneMopScalable',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-mopping-under-furniture',
+        name: 'Set Mopping Under Furniture',
+        autoSwitchKey: 'MopScalable2',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-smart-drying',
+        name: 'Set Smart Drying',
+        autoSwitchKey: 'SmartDrying',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
+      {
+        id: 'set-custom-mopping',
+        name: 'Set Custom Mopping Mode',
+        autoSwitchKey: 'MopEffectSwitch',
+        type: 'number',
+        role: 'switch',
+        desc: '0=off, 1=on',
+      },
     ];
 
     const actionStates = [
       { id: 'start-clean', name: 'Start Cleaning (2-1)', siid: 2, aiid: 1, in: [] },
       { id: 'pause', name: 'Pause Cleaning (2-2)', siid: 2, aiid: 2, in: [] },
       { id: 'return-to-dock', name: 'Return to Dock (3-1)', siid: 3, aiid: 1, in: [] },
-      { id: 'start-custom-clean', name: 'Start Custom Clean (4-1)', siid: 4, aiid: 1, in: [{ piid: 1, value: 18 }], desc: 'Default: segment clean. Override "in" for zone/spot cleaning' },
+      {
+        id: 'start-custom-clean',
+        name: 'Start Custom Clean (4-1)',
+        siid: 4,
+        aiid: 1,
+        in: [{ piid: 1, value: 18 }],
+        desc: 'Default: segment clean. Override "in" for zone/spot cleaning',
+      },
       { id: 'stop', name: 'Stop Cleaning (4-2)', siid: 4, aiid: 2, in: [] },
       { id: 'clear-warning', name: 'Clear Warning (4-3)', siid: 4, aiid: 3, in: [] },
       { id: 'start-washing', name: 'Start Mop Washing (4-4)', siid: 4, aiid: 4, in: [] },
@@ -1226,7 +2492,16 @@ class Dreame extends utils.Adapter {
       const path = `${did}.status.${s.id}`;
       await this.extendObject(path, {
         type: 'state',
-        common: /** @type {any} */ ({ name: s.name, type: s.type, role: s.role, read: true, write: false, unit: s.unit || '', ...(s.states ? { states: s.states } : {}), ...(s.desc ? { desc: s.desc } : {}) }),
+        common: /** @type {any} */ ({
+          name: s.name,
+          type: s.type,
+          role: s.role,
+          read: true,
+          write: false,
+          unit: s.unit || '',
+          ...(s.states ? { states: s.states } : {}),
+          ...(s.desc ? { desc: s.desc } : {}),
+        }),
         native: { siid: s.siid, piid: s.piid, did: did },
       });
       if (s.siid && s.piid) {
@@ -1239,7 +2514,14 @@ class Dreame extends utils.Adapter {
       const path = `${did}.remote.${r.id}`;
       await this.extendObject(path, {
         type: 'state',
-        common: /** @type {any} */ ({ name: r.name, type: r.type, role: r.role, read: true, write: true, ...(r.states ? { states: r.states } : {}) }),
+        common: /** @type {any} */ ({
+          name: r.name,
+          type: r.type,
+          role: r.role,
+          read: true,
+          write: true,
+          ...(r.states ? { states: r.states } : {}),
+        }),
         native: { siid: r.siid, piid: r.piid, did: did },
       });
       this.specPropsToIdDict[did][`${r.siid}-${r.piid}`] = path;
@@ -1249,7 +2531,14 @@ class Dreame extends utils.Adapter {
       const path = `${did}.remote.${c.id}`;
       await this.extendObject(path, {
         type: 'state',
-        common: /** @type {any} */ ({ name: c.name, type: c.type, role: c.role, read: true, write: true, ...(c.desc ? { desc: c.desc } : {}) }),
+        common: /** @type {any} */ ({
+          name: c.name,
+          type: c.type,
+          role: c.role,
+          read: true,
+          write: true,
+          ...(c.desc ? { desc: c.desc } : {}),
+        }),
         native: { autoSwitchKey: c.autoSwitchKey, did: did },
       });
     }
@@ -1258,10 +2547,18 @@ class Dreame extends utils.Adapter {
       const path = `${did}.remote.${a.id}`;
       await this.extendObject(path, {
         type: 'state',
-        common: /** @type {any} */ ({ name: a.name, type: 'string', role: 'text', read: true, write: true, def: JSON.stringify(a.in), ...(a.desc ? { desc: a.desc } : {}) }),
+        common: /** @type {any} */ ({
+          name: a.name,
+          type: 'string',
+          role: 'text',
+          read: true,
+          write: true,
+          def: JSON.stringify(a.in),
+          ...(a.desc ? { desc: a.desc } : {}),
+        }),
         native: { siid: a.siid, aiid: a.aiid, did: did },
       });
-      this.specActiosnToIdDict[did][`${a.siid}-${a.aiid}`] = path;
+      this.specActionsToIdDict[did][`${a.siid}-${a.aiid}`] = path;
     }
 
     await this.extendObject(`${did}.remote.fetchMap`, {
@@ -1275,7 +2572,9 @@ class Dreame extends utils.Adapter {
       native: {},
     });
 
-    this.log.info(`Vacuum states created: ${statusStates.length} status, ${remoteStates.length} remote, ${autoSwitchRemotes.length} autoSwitch, ${actionStates.length} actions`);
+    this.log.info(
+      `Vacuum states created: ${statusStates.length} status, ${remoteStates.length} remote, ${autoSwitchRemotes.length} autoSwitch, ${actionStates.length} actions`,
+    );
   }
   async extractRemotesFromSpec(device) {
     const spec = this.specs[device.spec_type];
@@ -1286,7 +2585,7 @@ class Dreame extends utils.Adapter {
     );
     let siid = 0;
     this.specStatusDict[device.did] = [];
-    this.specActiosnToIdDict[device.did] = {};
+    this.specActionsToIdDict[device.did] = {};
     this.specPropsToIdDict[device.did] = {};
     if (this.isMower(device)) {
       await this.createMowerRemotes(device);
@@ -1324,12 +2623,35 @@ class Dreame extends utils.Adapter {
           const siidPiid = `${siid}-${piid}`;
           if (this.isMower(device)) {
             const mowerAllowProps = [
-              '2-1', '2-2', '2-3',
-              '3-1', '3-2',
-              '4-1', '4-2', '4-3', '4-7', '4-14', '4-18', '4-21', '4-22', '4-23', '4-26', '4-27', '4-30', '4-35',
-              '5-1', '5-2', '5-3',
-              '8-1', '8-2', '8-3', '8-4',
-              '12-1', '12-2', '12-3', '12-4',
+              '2-1',
+              '2-2',
+              '2-3',
+              '3-1',
+              '3-2',
+              '4-1',
+              '4-2',
+              '4-3',
+              '4-7',
+              '4-14',
+              '4-18',
+              '4-21',
+              '4-22',
+              '4-23',
+              '4-26',
+              '4-27',
+              '4-30',
+              '4-35',
+              '5-1',
+              '5-2',
+              '5-3',
+              '8-1',
+              '8-2',
+              '8-3',
+              '8-4',
+              '12-1',
+              '12-2',
+              '12-3',
+              '12-4',
             ];
             if (!mowerAllowProps.includes(siidPiid)) {
               this.log.debug(`Skipping property ${siidPiid} for mower (not in whitelist)`);
@@ -1341,7 +2663,9 @@ class Dreame extends utils.Adapter {
             piid: piid,
             did: device.did,
             model: device.model,
-            name: propertyNameMap[siidPiid] ? propertyNameMap[siidPiid] + ' ' + siidPiid : service.description + ' - ' + property.description + ' ' + siidPiid,
+            name: propertyNameMap[siidPiid]
+              ? propertyNameMap[siidPiid] + ' ' + siidPiid
+              : service.description + ' - ' + property.description + ' ' + siidPiid,
             type: property.type,
             access: property.access,
           };
@@ -1583,7 +2907,7 @@ class Dreame extends utils.Adapter {
                 access: action.access,
               },
             });
-            this.specActiosnToIdDict[device.did][service.iid + '-' + action.iid] =
+            this.specActionsToIdDict[device.did][service.iid + '-' + action.iid] =
               device.did + '.' + path + '.' + typeName;
           }
         }
@@ -1644,7 +2968,9 @@ class Dreame extends utils.Adapter {
               for (const element of res.data.data.result) {
                 const path = this.specPropsToIdDict[device.did][element.siid + '-' + element.piid];
                 if (path) {
-                  this.log.debug(`Set ${path} to ${typeof element.value === 'object' ? JSON.stringify(element.value) : element.value}`);
+                  this.log.debug(
+                    `Set ${path} to ${typeof element.value === 'object' ? JSON.stringify(element.value) : element.value}`,
+                  );
                   if (element.value != null) {
                     this.setState(path, element.value, true);
                   }
@@ -1740,9 +3066,9 @@ class Dreame extends utils.Adapter {
             if (Array.isArray(element.value) && element.value.length >= 7) {
               const buf = Buffer.from(element.value);
               if (buf[0] !== 0xce) continue;
-              const x = (buf[3] << 28 | buf[2] << 20 | buf[1] << 12) >> 12;
-              const y = (buf[5] << 24 | buf[4] << 16 | buf[3] << 8) >> 12;
-              const angle = buf.length > 6 ? Number((buf[6] / 255 * 360).toFixed(2)) : 0;
+              const x = ((buf[3] << 28) | (buf[2] << 20) | (buf[1] << 12)) >> 12;
+              const y = ((buf[5] << 24) | (buf[4] << 16) | (buf[3] << 8)) >> 12;
+              const angle = buf.length > 6 ? Number(((buf[6] / 255) * 360).toFixed(2)) : 0;
               this.mowerRobotPos = this.mowerRobotPos || {};
               this.mowerRobotPos[did] = { x: x * 10, y: y * 10, angle };
               const basePath = `${did}.status`;
@@ -1756,33 +3082,64 @@ class Dreame extends utils.Adapter {
                 const task = buf.slice(22, 32);
                 const regionId = task[0];
                 const taskId = task[1];
-                const percent = (task[3] << 8 | task[2]) / 100;
-                const total = (task[6] << 16 | task[5] << 8 | task[4]) / 100;
-                const finish = (task[9] << 16 | task[8] << 8 | task[7]) / 100;
+                const percent = ((task[3] << 8) | task[2]) / 100;
+                const total = ((task[6] << 16) | (task[5] << 8) | task[4]) / 100;
+                const finish = ((task[9] << 16) | (task[8] << 8) | task[7]) / 100;
                 await this.extendObject(basePath + '.mowing-progress', {
                   type: 'state',
-                  common: { name: 'Mowing Progress (1-4 B22-31)', type: 'number', role: 'value', unit: '%', read: true, write: false },
+                  common: {
+                    name: 'Mowing Progress (1-4 B22-31)',
+                    type: 'number',
+                    role: 'value',
+                    unit: '%',
+                    read: true,
+                    write: false,
+                  },
                   native: {},
                 });
                 this.setState(basePath + '.mowing-progress', percent, true);
                 await this.extendObject(basePath + '.mowed-area', {
                   type: 'state',
-                  common: { name: 'Mowed Area (1-4 B29-31)', type: 'number', role: 'value', unit: 'm²', read: true, write: false },
+                  common: {
+                    name: 'Mowed Area (1-4 B29-31)',
+                    type: 'number',
+                    role: 'value',
+                    unit: 'm²',
+                    read: true,
+                    write: false,
+                  },
                   native: {},
                 });
                 this.setState(basePath + '.mowed-area', finish, true);
                 await this.extendObject(basePath + '.total-mow-area-task', {
                   type: 'state',
-                  common: { name: 'Total Area to Mow (1-4 B26-28)', type: 'number', role: 'value', unit: 'm²', read: true, write: false },
+                  common: {
+                    name: 'Total Area to Mow (1-4 B26-28)',
+                    type: 'number',
+                    role: 'value',
+                    unit: 'm²',
+                    read: true,
+                    write: false,
+                  },
                   native: {},
                 });
                 this.setState(basePath + '.total-mow-area-task', total, true);
                 await this.extendObject(basePath + '.mowing-task', {
                   type: 'state',
-                  common: { name: 'Mowing Task Info (1-4 B22-31)', type: 'string', role: 'json', read: true, write: false },
+                  common: {
+                    name: 'Mowing Task Info (1-4 B22-31)',
+                    type: 'string',
+                    role: 'json',
+                    read: true,
+                    write: false,
+                  },
                   native: {},
                 });
-                this.setState(basePath + '.mowing-task', JSON.stringify({ regionId, taskId, percent, total, finish }), true);
+                this.setState(
+                  basePath + '.mowing-task',
+                  JSON.stringify({ regionId, taskId, percent, total, finish }),
+                  true,
+                );
               }
             }
             continue;
@@ -1803,27 +3160,60 @@ class Dreame extends utils.Adapter {
               const wifiRssi = buf[17] > 127 ? buf[17] - 256 : buf[17];
               const lteRssi = buf[18] > 127 ? buf[18] - 256 : buf[18];
               const bleRssi = buf[16] > 127 ? buf[16] - 256 : buf[16];
-              const DockingNames = ['IN_STATION', 'OUT_OF_STATION', 'PAUSE_DOCKING', 'FINISH_DOCKING', 'DOCKING_FAILED', 'DOCKING_IN_BASE'];
+              const DockingNames = [
+                'IN_STATION',
+                'OUT_OF_STATION',
+                'PAUSE_DOCKING',
+                'FINISH_DOCKING',
+                'DOCKING_FAILED',
+                'DOCKING_IN_BASE',
+              ];
               const basePath = `${did}.status`;
               if (dockingState === 0 && this.mowerRobotPos && this.mowerRobotPos[did]) {
                 this.mowerDockPos = this.mowerDockPos || {};
                 this.mowerDockPos[did] = { ...this.mowerRobotPos[did] };
                 await this.extendObject(basePath + '.dock-position', {
                   type: 'state',
-                  common: { name: 'Dock Position (1-1 inferred)', type: 'string', role: 'json', read: true, write: false },
+                  common: {
+                    name: 'Dock Position (1-1 inferred)',
+                    type: 'string',
+                    role: 'json',
+                    read: true,
+                    write: false,
+                  },
                   native: {},
                 });
                 this.setState(basePath + '.dock-position', JSON.stringify(this.mowerDockPos[did]), true);
               }
               await this.extendObject(basePath + '.docking-state', {
                 type: 'state',
-                common: { name: 'Docking State (1-1 B14.2-4)', type: 'string', role: 'text', read: true, write: false, states: { 0: 'IN_STATION', 1: 'OUT_OF_STATION', 2: 'PAUSE_DOCKING', 3: 'FINISH_DOCKING', 4: 'DOCKING_FAILED', 5: 'DOCKING_IN_BASE' } },
+                common: {
+                  name: 'Docking State (1-1 B14.2-4)',
+                  type: 'string',
+                  role: 'text',
+                  read: true,
+                  write: false,
+                  states: {
+                    0: 'IN_STATION',
+                    1: 'OUT_OF_STATION',
+                    2: 'PAUSE_DOCKING',
+                    3: 'FINISH_DOCKING',
+                    4: 'DOCKING_FAILED',
+                    5: 'DOCKING_IN_BASE',
+                  },
+                },
                 native: {},
               });
               this.setState(basePath + '.docking-state', DockingNames[dockingState] || String(dockingState), true);
               await this.extendObject(basePath + '.location-state', {
                 type: 'state',
-                common: { name: 'Location State (1-1 B14.0-1)', type: 'number', role: 'value', read: true, write: false },
+                common: {
+                  name: 'Location State (1-1 B14.0-1)',
+                  type: 'number',
+                  role: 'value',
+                  read: true,
+                  write: false,
+                },
                 native: {},
               });
               this.setState(basePath + '.location-state', locationState, true);
@@ -1847,13 +3237,26 @@ class Dreame extends utils.Adapter {
               this.setState(basePath + '.camera-state', cameraState, true);
               await this.extendObject(basePath + '.error-code-binary', {
                 type: 'state',
-                common: { name: 'Error Code Binary (1-1 B1-4)', type: 'number', role: 'value', read: true, write: false },
+                common: {
+                  name: 'Error Code Binary (1-1 B1-4)',
+                  type: 'number',
+                  role: 'value',
+                  read: true,
+                  write: false,
+                },
                 native: {},
               });
               this.setState(basePath + '.error-code-binary', errorCode, true);
               await this.extendObject(basePath + '.battery-level-live', {
                 type: 'state',
-                common: { name: 'Battery Level Live (1-1 B13)', type: 'number', role: 'value.battery', unit: '%', read: true, write: false },
+                common: {
+                  name: 'Battery Level Live (1-1 B13)',
+                  type: 'number',
+                  role: 'value.battery',
+                  unit: '%',
+                  read: true,
+                  write: false,
+                },
                 native: {},
               });
               if (battery <= 100) {
@@ -1861,25 +3264,53 @@ class Dreame extends utils.Adapter {
               }
               await this.extendObject(basePath + '.charging-live', {
                 type: 'state',
-                common: { name: 'Charging Live (1-1 B13.7)', type: 'number', role: 'value', read: true, write: false, states: { 0: 'Not Charging', 1: 'Charging' } },
+                common: {
+                  name: 'Charging Live (1-1 B13.7)',
+                  type: 'number',
+                  role: 'value',
+                  read: true,
+                  write: false,
+                  states: { 0: 'Not Charging', 1: 'Charging' },
+                },
                 native: {},
               });
               this.setState(basePath + '.charging-live', chargingLive, true);
               await this.extendObject(basePath + '.wifi-rssi', {
                 type: 'state',
-                common: { name: 'WiFi RSSI (1-1 B17)', type: 'number', role: 'value', unit: 'dBm', read: true, write: false },
+                common: {
+                  name: 'WiFi RSSI (1-1 B17)',
+                  type: 'number',
+                  role: 'value',
+                  unit: 'dBm',
+                  read: true,
+                  write: false,
+                },
                 native: {},
               });
               this.setState(basePath + '.wifi-rssi', wifiRssi, true);
               await this.extendObject(basePath + '.lte-rssi', {
                 type: 'state',
-                common: { name: 'LTE RSSI (1-1 B18)', type: 'number', role: 'value', unit: 'dBm', read: true, write: false },
+                common: {
+                  name: 'LTE RSSI (1-1 B18)',
+                  type: 'number',
+                  role: 'value',
+                  unit: 'dBm',
+                  read: true,
+                  write: false,
+                },
                 native: {},
               });
               this.setState(basePath + '.lte-rssi', lteRssi, true);
               await this.extendObject(basePath + '.ble-rssi', {
                 type: 'state',
-                common: { name: 'BLE RSSI (1-1 B16)', type: 'number', role: 'value', unit: 'dBm', read: true, write: false },
+                common: {
+                  name: 'BLE RSSI (1-1 B16)',
+                  type: 'number',
+                  role: 'value',
+                  unit: 'dBm',
+                  read: true,
+                  write: false,
+                },
                 native: {},
               });
               this.setState(basePath + '.ble-rssi', bleRssi, true);
@@ -1962,7 +3393,9 @@ class Dreame extends utils.Adapter {
             });
           }
           if (path) {
-            this.log.debug(`Set ${path} to ${typeof element.value === 'object' ? JSON.stringify(element.value) : element.value}`);
+            this.log.debug(
+              `Set ${path} to ${typeof element.value === 'object' ? JSON.stringify(element.value) : element.value}`,
+            );
             if (element.value != null) {
               const val = typeof element.value === 'object' ? JSON.stringify(element.value) : element.value;
               this.setState(path, val, true);
@@ -2355,7 +3788,7 @@ class Dreame extends utils.Adapter {
         for (const key in multiMap.areaInfo) {
           const area = multiMap.areaInfo[key];
           if (!area || area.centerX == null || area.centerY == null) continue;
-          const label = (area.areaName) || ('Zone' + key);
+          const label = area.areaName || 'Zone' + key;
           const px = toPixelX(area.centerX);
           const py = toPixelY(area.centerY);
           ctx.fillText(label, px, py);
@@ -2492,7 +3925,13 @@ class Dreame extends utils.Adapter {
               await this.setObjectAndState(slotPath + '.totalArea', 'Total Area', 'number', 'value', entry.totalArea);
             }
             if (entry.boundary) {
-              await this.setObjectAndState(slotPath + '.boundary', 'Boundary', 'string', 'json', JSON.stringify(entry.boundary));
+              await this.setObjectAndState(
+                slotPath + '.boundary',
+                'Boundary',
+                'string',
+                'json',
+                JSON.stringify(entry.boundary),
+              );
             }
             await this.setObjectAndState(slotPath + '.mapIndex', 'Map Index', 'number', 'value', entry.mapIndex);
             await this.setObjectAndState(slotPath + '.hasBack', 'Has Back', 'number', 'value', entry.hasBack);
@@ -2510,9 +3949,27 @@ class Dreame extends utils.Adapter {
                 });
                 await this.setObjectAndState(zonePath + '.name', 'Zone Name', 'string', 'value', zone.name || '');
                 await this.setObjectAndState(zonePath + '.area', 'Area m²', 'number', 'value', zone.area || 0);
-                await this.setObjectAndState(zonePath + '.time', 'Total Mowing Time', 'number', 'value.interval', zone.time || 0);
-                await this.setObjectAndState(zonePath + '.etime', 'Effective Mowing Time', 'number', 'value.interval', zone.etime || 0);
-                await this.setObjectAndState(zonePath + '.path', 'Zone Boundary Polygon', 'string', 'json', JSON.stringify(zone.path));
+                await this.setObjectAndState(
+                  zonePath + '.time',
+                  'Total Mowing Time',
+                  'number',
+                  'value.interval',
+                  zone.time || 0,
+                );
+                await this.setObjectAndState(
+                  zonePath + '.etime',
+                  'Effective Mowing Time',
+                  'number',
+                  'value.interval',
+                  zone.etime || 0,
+                );
+                await this.setObjectAndState(
+                  zonePath + '.path',
+                  'Zone Boundary Polygon',
+                  'string',
+                  'json',
+                  JSON.stringify(zone.path),
+                );
               }
             }
 
@@ -2526,15 +3983,33 @@ class Dreame extends utils.Adapter {
                   native: {},
                 });
                 await this.setObjectAndState(contourPath + '.type', 'Contour Type', 'number', 'value', contour.type);
-                await this.setObjectAndState(contourPath + '.path', 'Contour Polygon', 'string', 'json', JSON.stringify(contour.path));
+                await this.setObjectAndState(
+                  contourPath + '.path',
+                  'Contour Polygon',
+                  'string',
+                  'json',
+                  JSON.stringify(contour.path),
+                );
               }
             }
 
             if (entry.forbiddenAreas && entry.forbiddenAreas.value.length > 0) {
-              await this.setObjectAndState(slotPath + '.forbiddenAreas', 'Forbidden Areas', 'string', 'json', JSON.stringify(entry.forbiddenAreas.value));
+              await this.setObjectAndState(
+                slotPath + '.forbiddenAreas',
+                'Forbidden Areas',
+                'string',
+                'json',
+                JSON.stringify(entry.forbiddenAreas.value),
+              );
             }
             if (entry.obstacles && entry.obstacles.value.length > 0) {
-              await this.setObjectAndState(slotPath + '.obstacles', 'Obstacles', 'string', 'json', JSON.stringify(entry.obstacles.value));
+              await this.setObjectAndState(
+                slotPath + '.obstacles',
+                'Obstacles',
+                'string',
+                'json',
+                JSON.stringify(entry.obstacles.value),
+              );
             }
             if (entry.paths) {
               this.log.debug('Mower paths: ' + JSON.stringify(entry.paths));
@@ -2542,11 +4017,23 @@ class Dreame extends utils.Adapter {
             }
             if (entry.cleanPoints) {
               this.log.debug('Mower cleanPoints: ' + JSON.stringify(entry.cleanPoints));
-              await this.setObjectAndState(slotPath + '.cleanPoints', 'Clean Points', 'string', 'json', JSON.stringify(entry.cleanPoints));
+              await this.setObjectAndState(
+                slotPath + '.cleanPoints',
+                'Clean Points',
+                'string',
+                'json',
+                JSON.stringify(entry.cleanPoints),
+              );
             }
             if (entry.cruisePoints) {
               this.log.debug('Mower cruisePoints: ' + JSON.stringify(entry.cruisePoints));
-              await this.setObjectAndState(slotPath + '.cruisePoints', 'Cruise Points', 'string', 'json', JSON.stringify(entry.cruisePoints));
+              await this.setObjectAndState(
+                slotPath + '.cruisePoints',
+                'Cruise Points',
+                'string',
+                'json',
+                JSON.stringify(entry.cruisePoints),
+              );
             }
             if (entry.spotAreas) {
               this.log.debug('Mower spotAreas: ' + JSON.stringify(entry.spotAreas));
@@ -2567,7 +4054,10 @@ class Dreame extends utils.Adapter {
           let points = 0;
           for (const entry of pathData) {
             if (entry === null) continue;
-            if (entry[0] === 32767 && entry[1] === -32768) { segments++; continue; }
+            if (entry[0] === 32767 && entry[1] === -32768) {
+              segments++;
+              continue;
+            }
             points++;
           }
           await this.setObjectAndState(basePath + '.mowingPath', 'Mowing Path Coordinates', 'string', 'json', pathRaw);
@@ -2598,12 +4088,48 @@ class Dreame extends utils.Adapter {
                 common: { name: 'Zone ' + zoneId + ' Settings' },
                 native: {},
               });
-              await this.setObjectAndState(zPath + '.mowingHeight', 'Mowing Height', 'number', 'value', s.mowingHeight || 0);
-              await this.setObjectAndState(zPath + '.edgeMowingWalkMode', 'Edge Mowing Walk Mode', 'number', 'value', s.edgeMowingWalkMode || 0);
-              await this.setObjectAndState(zPath + '.edgeMowingAuto', 'Auto Edge Mowing', 'number', 'value', s.edgeMowingAuto || 0);
-              await this.setObjectAndState(zPath + '.cutterPosition', 'Cutter Position', 'number', 'value', s.cutterPosition || 0);
-              await this.setObjectAndState(zPath + '.obstacleAvoidanceEnabled', 'Obstacle Avoidance', 'number', 'value', s.obstacleAvoidanceEnabled || 0);
-              await this.setObjectAndState(zPath + '.mowingDirection', 'Mowing Direction', 'number', 'value', s.mowingDirection || 0);
+              await this.setObjectAndState(
+                zPath + '.mowingHeight',
+                'Mowing Height',
+                'number',
+                'value',
+                s.mowingHeight || 0,
+              );
+              await this.setObjectAndState(
+                zPath + '.edgeMowingWalkMode',
+                'Edge Mowing Walk Mode',
+                'number',
+                'value',
+                s.edgeMowingWalkMode || 0,
+              );
+              await this.setObjectAndState(
+                zPath + '.edgeMowingAuto',
+                'Auto Edge Mowing',
+                'number',
+                'value',
+                s.edgeMowingAuto || 0,
+              );
+              await this.setObjectAndState(
+                zPath + '.cutterPosition',
+                'Cutter Position',
+                'number',
+                'value',
+                s.cutterPosition || 0,
+              );
+              await this.setObjectAndState(
+                zPath + '.obstacleAvoidanceEnabled',
+                'Obstacle Avoidance',
+                'number',
+                'value',
+                s.obstacleAvoidanceEnabled || 0,
+              );
+              await this.setObjectAndState(
+                zPath + '.mowingDirection',
+                'Mowing Direction',
+                'number',
+                'value',
+                s.mowingDirection || 0,
+              );
             }
           }
         } catch (e) {
@@ -2671,7 +4197,12 @@ class Dreame extends utils.Adapter {
 
       // Mowing zones (filled)
       if (entry.mowingAreas && entry.mowingAreas.value) {
-        const zoneColors = ['rgba(76, 175, 80, 0.4)', 'rgba(33, 150, 243, 0.4)', 'rgba(255, 193, 7, 0.4)', 'rgba(156, 39, 176, 0.4)'];
+        const zoneColors = [
+          'rgba(76, 175, 80, 0.4)',
+          'rgba(33, 150, 243, 0.4)',
+          'rgba(255, 193, 7, 0.4)',
+          'rgba(156, 39, 176, 0.4)',
+        ];
         for (let zi = 0; zi < entry.mowingAreas.value.length; zi++) {
           const zone = entry.mowingAreas.value[zi][1];
           if (!zone.path || zone.path.length < 3) continue;
@@ -2729,7 +4260,10 @@ class Dreame extends utils.Adapter {
         ctx.lineWidth = 0.8;
         let penDown = false;
         for (const pt of pathData) {
-          if (pt === null) { penDown = false; continue; }
+          if (pt === null) {
+            penDown = false;
+            continue;
+          }
           const [px, py] = pt;
           if (px === 32767 && py === -32768) {
             if (penDown) ctx.stroke();
@@ -2768,8 +4302,12 @@ class Dreame extends utils.Adapter {
         ctx.textAlign = 'center';
         for (const [, zone] of entry.mowingAreas.value) {
           if (!zone.name || !zone.path || zone.path.length === 0) continue;
-          let cx = 0, cy = 0;
-          for (const p of zone.path) { cx += p.x; cy += p.y; }
+          let cx = 0,
+            cy = 0;
+          for (const p of zone.path) {
+            cx += p.x;
+            cy += p.y;
+          }
           cx /= zone.path.length;
           cy /= zone.path.length;
           ctx.fillText(zone.name, toX(cx), toY(cy));
@@ -2862,7 +4400,15 @@ class Dreame extends utils.Adapter {
 
       const response = await this.requestClient({ method: 'get', url: downloadUrl });
       const wifiData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-      this.log.info('WiFi map data: ' + wifiData.width + 'x' + wifiData.height + ', ' + (wifiData.data ? wifiData.data.length : 0) + ' pixels');
+      this.log.info(
+        'WiFi map data: ' +
+          wifiData.width +
+          'x' +
+          wifiData.height +
+          ', ' +
+          (wifiData.data ? wifiData.data.length : 0) +
+          ' pixels',
+      );
 
       await this.renderWifiHeatmap(device, wifiData);
     } catch (e) {
@@ -3025,11 +4571,21 @@ class Dreame extends utils.Adapter {
         cfg.WRP.push(0);
       }
       const mapping = {
-        WRP: 'rain-protection', FDP: 'frost-protection', LOW: 'low-speed',
-        DND: 'dnd-settings', CLS: 'child-lock-cfg', BAT: 'battery-config',
-        VOL: 'volume', LIT: 'headlight', AOP: 'ai-obstacle-cfg',
-        REC: 'camera-config', STUN: 'anti-theft', ATA: 'auto-task-adj',
-        PATH: 'path-display', WRF: 'weather-ref', PROT: 'grass-protection',
+        WRP: 'rain-protection',
+        FDP: 'frost-protection',
+        LOW: 'low-speed',
+        DND: 'dnd-settings',
+        CLS: 'child-lock-cfg',
+        BAT: 'battery-config',
+        VOL: 'volume',
+        LIT: 'headlight',
+        AOP: 'ai-obstacle-cfg',
+        REC: 'camera-config',
+        STUN: 'anti-theft',
+        ATA: 'auto-task-adj',
+        PATH: 'path-display',
+        WRF: 'weather-ref',
+        PROT: 'grass-protection',
       };
       for (const [key, stateId] of Object.entries(mapping)) {
         if (cfg[key] !== undefined) {
@@ -3058,7 +4614,9 @@ class Dreame extends utils.Adapter {
         this.setState(`${did}.status.edge-mowing`, cfg.PRE[9], true);
         this.setState(`${did}.status.edge-detection`, cfg.PRE[8], true);
       }
-      this.log.debug(`Loaded ${Object.keys(mapping).filter((k) => cfg[k] !== undefined).length} settings for ${device.model}`);
+      this.log.debug(
+        `Loaded ${Object.keys(mapping).filter((k) => cfg[k] !== undefined).length} settings for ${device.model}`,
+      );
     } catch (error) {
       this.log.warn(`Failed to load mower settings: ${error.message}`);
     }
@@ -3215,7 +4773,11 @@ class Dreame extends utils.Adapter {
           }
         }
         const entry = {
-          date: props['4-8'] ? new Date(props['4-8'] * 1000).toISOString() : record.updateTime ? new Date(record.updateTime * 1000).toISOString() : null,
+          date: props['4-8']
+            ? new Date(props['4-8'] * 1000).toISOString()
+            : record.updateTime
+              ? new Date(record.updateTime * 1000).toISOString()
+              : null,
           duration: props['4-2'] || 0,
           area: props['4-3'] || 0,
           status: props['4-1'] || 0,
@@ -3498,21 +5060,37 @@ class Dreame extends utils.Adapter {
             await this.sendCommand({
               did: device.did,
               method: 'action',
-              params: { did: device.did, siid: 4, aiid: 1, in: [{ piid: 1, value: 25 }, { piid: 10, value: scId }] },
+              params: {
+                did: device.did,
+                siid: 4,
+                aiid: 1,
+                in: [
+                  { piid: 1, value: 25 },
+                  { piid: 10, value: scId },
+                ],
+              },
             });
             return;
           }
         }
         // Plugin CFG SET/ACTION remotes (cfgKey or actionOp or autoSwitchKey in native)
         const stateObjCfg = await this.getObjectAsync(id);
-        if (stateObjCfg && stateObjCfg.native && (stateObjCfg.native.cfgKey || stateObjCfg.native.actionOp !== undefined || stateObjCfg.native.autoSwitchKey)) {
+        if (
+          stateObjCfg &&
+          stateObjCfg.native &&
+          (stateObjCfg.native.cfgKey || stateObjCfg.native.actionOp !== undefined || stateObjCfg.native.autoSwitchKey)
+        ) {
           const device = this.deviceArray.find((obj) => obj.did === deviceId);
           if (stateObjCfg.native.autoSwitchKey) {
             if (!device || (!this.isMower(device) && !this.isVacuum(device))) return;
             const key = stateObjCfg.native.autoSwitchKey;
             const payload = JSON.stringify({ k: key, v: Number(state.val) });
             this.log.info(`Set AutoSwitch ${key}=${state.val}`);
-            await this.sendCommand({ did: device.did, method: 'set_properties', params: [{ did: device.did, siid: 4, piid: 50, value: payload }] });
+            await this.sendCommand({
+              did: device.did,
+              method: 'set_properties',
+              params: [{ did: device.did, siid: 4, piid: 50, value: payload }],
+            });
             return;
           }
           if (!device || !this.isMower(device)) return;
@@ -3757,7 +5335,7 @@ class Dreame extends utils.Adapter {
                     Water Volume: [5,2,X,2,2,2] 2: Low, 3: Medium, 4:High
                     Repeats: [5,2,27,X,2,2] 1,2,3
                     Cleaning Mode: [5,2,27,2,X,2] 0: Sweeping, 1: Mopping, 2: Sweeping and Mopping
-					Route: [5,2,27,2,2,X] 1: Standart 2: Intensive 3:Deep
+					Route: [5,2,27,2,2,X] 1: Standard 2: Intensive 3:Deep
                     */
           if (id.split('.')[6] === 'Level') {
             try {
@@ -3879,7 +5457,7 @@ class Dreame extends utils.Adapter {
             }
             const result = res.data.result;
             if (result.out) {
-              const path = this.specActiosnToIdDict[result.did][result.siid + '-' + result.aiid];
+              const path = this.specActionsToIdDict[result.did][result.siid + '-' + result.aiid];
               this.log.debug(path);
               const stateObject = await this.getObjectAsync(path);
               if (stateObject && stateObject.native.out) {
