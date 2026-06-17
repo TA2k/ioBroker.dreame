@@ -884,7 +884,7 @@ class Dreame extends utils.Adapter {
         role: 'value',
         states: DEVICE_STATUS_STATES.mower,
       },
-      { id: 'fault', name: 'Error Code (2-2)', siid: 2, piid: 2, type: 'number', role: 'value', min: 0, max: 9999 },
+      { id: 'fault', name: 'Error Code (2-2)', siid: 2, piid: 2, type: 'number', role: 'value' },
       { id: 'task-info', name: 'Task Execution Info (2-50)', siid: 2, piid: 50, type: 'string', role: 'json' },
       {
         id: 'settings-update',
@@ -1098,7 +1098,7 @@ class Dreame extends utils.Adapter {
         id: 'clean-genius',
         name: 'CleanGenius (SmartHost)',
         type: 'number',
-        role: 'level',
+        role: 'value',
         desc: '0=Off, 1=Routine, 2=Deep',
       },
       {
@@ -1159,13 +1159,13 @@ class Dreame extends utils.Adapter {
         name: 'Obstacle Avoidance (4-21)',
         siid: 4,
         piid: 21,
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
       },
-      { id: 'ai-detection', name: 'AI Detection (4-22)', siid: 4, piid: 22, type: 'boolean', role: 'switch' },
+      { id: 'ai-detection', name: 'AI Detection (4-22)', siid: 4, piid: 22, type: 'number', role: 'switch' },
       { id: 'mow-setting', name: 'Mow Setting (4-23)', siid: 4, piid: 23, type: 'number', role: 'value' },
-      { id: 'custom-mowing', name: 'Custom Mowing (4-26)', siid: 4, piid: 26, type: 'boolean', role: 'switch' },
-      { id: 'child-lock', name: 'Child Lock (4-27)', siid: 4, piid: 27, type: 'boolean', role: 'switch' },
+      { id: 'custom-mowing', name: 'Custom Mowing (4-26)', siid: 4, piid: 26, type: 'number', role: 'switch' },
+      { id: 'child-lock', name: 'Child Lock (4-27)', siid: 4, piid: 27, type: 'number', role: 'switch' },
       { id: 'dnd-enable', name: 'Do Not Disturb (5-1)', siid: 5, piid: 1, type: 'boolean', role: 'switch' },
       { id: 'dnd-start', name: 'DND Start Time (5-2)', siid: 5, piid: 2, type: 'string', role: 'text' },
       { id: 'dnd-end', name: 'DND End Time (5-3)', siid: 5, piid: 3, type: 'string', role: 'text' },
@@ -1188,7 +1188,7 @@ class Dreame extends utils.Adapter {
         id: 'set-frost-protection',
         name: 'Set Frost Protection (FDP)',
         cfgKey: 'FDP',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -1212,7 +1212,7 @@ class Dreame extends utils.Adapter {
         id: 'set-child-lock',
         name: 'Set Child Lock (CLS)',
         cfgKey: 'CLS',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -1228,7 +1228,7 @@ class Dreame extends utils.Adapter {
         id: 'set-ai-obstacle',
         name: 'Set AI Obstacle (AOP)',
         cfgKey: 'AOP',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -1236,7 +1236,7 @@ class Dreame extends utils.Adapter {
         id: 'set-anti-theft',
         name: 'Set Anti-Theft (STUN)',
         cfgKey: 'STUN',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -1252,7 +1252,7 @@ class Dreame extends utils.Adapter {
         id: 'set-path-display',
         name: 'Set Path Display (PATH)',
         cfgKey: 'PATH',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -1260,7 +1260,7 @@ class Dreame extends utils.Adapter {
         id: 'set-grass-protection',
         name: 'Set Grass Protection (PROT)',
         cfgKey: 'PROT',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -1322,7 +1322,7 @@ class Dreame extends utils.Adapter {
         id: 'set-collision-avoidance',
         name: 'Set Collision Avoidance',
         autoSwitchKey: 'LessColl',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -1330,7 +1330,7 @@ class Dreame extends utils.Adapter {
         id: 'set-fill-light',
         name: 'Set Fill Light',
         autoSwitchKey: 'FillinLight',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -1339,7 +1339,7 @@ class Dreame extends utils.Adapter {
         name: 'Set CleanGenius',
         autoSwitchKey: 'SmartHost',
         type: 'number',
-        role: 'level',
+        role: 'value',
         desc: '0=Off, 1=Routine, 2=Deep',
       },
       {
@@ -1354,7 +1354,7 @@ class Dreame extends utils.Adapter {
         id: 'set-auto-charging',
         name: 'Set Auto Charging',
         autoSwitchKey: 'SmartCharge',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -1382,7 +1382,7 @@ class Dreame extends utils.Adapter {
         name: 'Set Edge Mowing',
         cfgKey: 'PRE',
         preIndex: 9,
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=aus, 1=an',
       },
@@ -1391,7 +1391,7 @@ class Dreame extends utils.Adapter {
         name: 'Set Edge Detection',
         cfgKey: 'PRE',
         preIndex: 8,
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=aus, 1=an',
       },
@@ -1400,7 +1400,7 @@ class Dreame extends utils.Adapter {
         name: 'Set Direction Change',
         cfgKey: 'PRE',
         preIndex: 5,
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=auto, 1=aus',
       },
@@ -1992,28 +1992,28 @@ class Dreame extends utils.Adapter {
         id: 'mopping-type',
         name: 'Mopping Type (CleanType)',
         type: 'number',
-        role: 'level',
+        role: 'value',
         desc: '0=Daily, 1=Accurate, 2=Deep',
       },
       {
         id: 'clean-genius',
         name: 'CleanGenius (SmartHost)',
         type: 'number',
-        role: 'level',
+        role: 'value',
         desc: '0=Off, 1=Routine, 2=Deep',
       },
       {
         id: 'cleaning-route',
         name: 'Cleaning Route (CleanRoute)',
         type: 'number',
-        role: 'level',
+        role: 'value',
         desc: '1=Standard, 2=Intensive, 3=Deep, 4=Quick',
       },
       {
         id: 'wider-corner',
         name: 'Wider Corner Coverage (MeticulousTwist)',
         type: 'number',
-        role: 'level',
+        role: 'value',
         desc: '0=Off, 1=HighFreq, -7=LowFreq',
       },
       {
@@ -2065,7 +2065,7 @@ class Dreame extends utils.Adapter {
         id: 'self-clean-frequency',
         name: 'Self-Clean Frequency (BackWashType)',
         type: 'number',
-        role: 'level',
+        role: 'value',
         desc: '0=Per room, 1=Standard, 2=High',
       },
       {
@@ -2142,34 +2142,26 @@ class Dreame extends utils.Adapter {
         role: 'level',
         states: { 0: 'Sweeping', 1: 'Mopping', 2: 'Sweep+Mop', 3: 'Mop after sweep' },
       },
-      { id: 'resume-cleaning', name: 'Resume Cleaning (4-11)', siid: 4, piid: 11, type: 'boolean', role: 'switch' },
-      { id: 'carpet-boost', name: 'Carpet Boost (4-12)', siid: 4, piid: 12, type: 'boolean', role: 'switch' },
+      { id: 'resume-cleaning', name: 'Resume Cleaning (4-11)', siid: 4, piid: 11, type: 'number', role: 'switch' },
+      { id: 'carpet-boost', name: 'Carpet Boost (4-12)', siid: 4, piid: 12, type: 'number', role: 'switch' },
       {
         id: 'obstacle-avoidance',
         name: 'Obstacle Avoidance (4-21)',
         siid: 4,
         piid: 21,
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
       },
-      {
-        id: 'ai-detection',
-        name: 'AI Detection (4-22)',
-        siid: 4,
-        piid: 22,
-        type: 'number',
-        role: 'level',
-        write: false,
-      },
+      { id: 'ai-detection', name: 'AI Detection (4-22)', siid: 4, piid: 22, type: 'number', role: 'value' },
       {
         id: 'customized-cleaning',
         name: 'Customized Cleaning (4-26)',
         siid: 4,
         piid: 26,
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
       },
-      { id: 'child-lock', name: 'Child Lock (4-27)', siid: 4, piid: 27, type: 'boolean', role: 'switch' },
+      { id: 'child-lock', name: 'Child Lock (4-27)', siid: 4, piid: 27, type: 'number', role: 'switch' },
       {
         id: 'carpet-sensitivity',
         name: 'Carpet Sensitivity (4-28)',
@@ -2179,16 +2171,16 @@ class Dreame extends utils.Adapter {
         role: 'level',
         states: { 1: 'Low', 2: 'Medium', 3: 'High' },
       },
-      { id: 'tight-mopping', name: 'Tight Mopping (4-29)', siid: 4, piid: 29, type: 'boolean', role: 'switch' },
+      { id: 'tight-mopping', name: 'Tight Mopping (4-29)', siid: 4, piid: 29, type: 'number', role: 'switch' },
       {
         id: 'carpet-recognition',
         name: 'Carpet Recognition (4-33)',
         siid: 4,
         piid: 33,
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
       },
-      { id: 'self-clean', name: 'Self Clean (4-34)', siid: 4, piid: 34, type: 'boolean', role: 'switch' },
+      { id: 'self-clean', name: 'Self Clean (4-34)', siid: 4, piid: 34, type: 'number', role: 'switch' },
       {
         id: 'carpet-cleaning',
         name: 'Carpet Cleaning Mode (4-36)',
@@ -2203,7 +2195,7 @@ class Dreame extends utils.Adapter {
         name: 'Auto Add Detergent (4-37)',
         siid: 4,
         piid: 37,
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
       },
       {
@@ -2215,14 +2207,14 @@ class Dreame extends utils.Adapter {
         role: 'level',
         states: { 2: '2h', 3: '3h', 4: '4h' },
       },
-      { id: 'auto-mount-mop', name: 'Auto Mount Mop (4-45)', siid: 4, piid: 45, type: 'boolean', role: 'switch' },
+      { id: 'auto-mount-mop', name: 'Auto Mount Mop (4-45)', siid: 4, piid: 45, type: 'number', role: 'switch' },
       { id: 'mop-wash-level', name: 'Mop Wash Level (4-46)', siid: 4, piid: 46, type: 'number', role: 'level' },
       {
         id: 'auto-water-refilling',
         name: 'Auto Water Refilling (4-51)',
         siid: 4,
         piid: 51,
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
       },
       // SIID 5 - DND
@@ -2237,7 +2229,7 @@ class Dreame extends utils.Adapter {
         name: 'Auto Dust Collecting (15-1)',
         siid: 15,
         piid: 1,
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
       },
       {
@@ -2255,10 +2247,10 @@ class Dreame extends utils.Adapter {
         name: 'Clean Carpets First (28-2)',
         siid: 28,
         piid: 2,
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
       },
-      { id: 'auto-lds-coverage', name: 'Auto LDS Coverage (28-3)', siid: 28, piid: 3, type: 'boolean', role: 'switch' },
+      { id: 'auto-lds-coverage', name: 'Auto LDS Coverage (28-3)', siid: 28, piid: 3, type: 'number', role: 'switch' },
       {
         id: 'cleangenius-mode',
         name: 'CleanGenius Mode (28-5)',
@@ -2277,14 +2269,14 @@ class Dreame extends utils.Adapter {
         role: 'level',
         states: { 0: 'Cold', 1: 'Warm', 2: 'Hot', 3: 'Boiling' },
       },
-      { id: 'silent-drying', name: 'Silent Drying (28-27)', siid: 28, piid: 27, type: 'boolean', role: 'switch' },
-      { id: 'hair-compression', name: 'Hair Compression (28-28)', siid: 28, piid: 28, type: 'boolean', role: 'switch' },
+      { id: 'silent-drying', name: 'Silent Drying (28-27)', siid: 28, piid: 27, type: 'number', role: 'switch' },
+      { id: 'hair-compression', name: 'Hair Compression (28-28)', siid: 28, piid: 28, type: 'number', role: 'switch' },
       {
         id: 'mopping-with-detergent',
         name: 'Mopping With Detergent (28-52)',
         siid: 28,
         piid: 52,
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
       },
     ];
@@ -2295,7 +2287,7 @@ class Dreame extends utils.Adapter {
         id: 'set-auto-drying',
         name: 'Set Auto Drying',
         autoSwitchKey: 'AutoDry',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2303,7 +2295,7 @@ class Dreame extends utils.Adapter {
         id: 'set-collision-avoidance',
         name: 'Set Collision Avoidance',
         autoSwitchKey: 'LessColl',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2311,7 +2303,7 @@ class Dreame extends utils.Adapter {
         id: 'set-fill-light',
         name: 'Set Fill Light',
         autoSwitchKey: 'FillinLight',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2319,7 +2311,7 @@ class Dreame extends utils.Adapter {
         id: 'set-stain-avoidance',
         name: 'Set Stain Avoidance',
         autoSwitchKey: 'StainIdentify',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2328,7 +2320,7 @@ class Dreame extends utils.Adapter {
         name: 'Set Mopping Type',
         autoSwitchKey: 'CleanType',
         type: 'number',
-        role: 'level',
+        role: 'value',
         desc: '0=Daily, 1=Accurate, 2=Deep',
       },
       {
@@ -2336,7 +2328,7 @@ class Dreame extends utils.Adapter {
         name: 'Set CleanGenius',
         autoSwitchKey: 'SmartHost',
         type: 'number',
-        role: 'level',
+        role: 'value',
         desc: '0=Off, 1=Routine, 2=Deep',
       },
       {
@@ -2344,7 +2336,7 @@ class Dreame extends utils.Adapter {
         name: 'Set Cleaning Route',
         autoSwitchKey: 'CleanRoute',
         type: 'number',
-        role: 'level',
+        role: 'value',
         desc: '1=Standard, 2=Intensive, 3=Deep, 4=Quick',
       },
       {
@@ -2352,14 +2344,14 @@ class Dreame extends utils.Adapter {
         name: 'Set Wider Corner Coverage',
         autoSwitchKey: 'MeticulousTwist',
         type: 'number',
-        role: 'level',
+        role: 'value',
         desc: '0=Off, 1=HighFreq, -7=LowFreq',
       },
       {
         id: 'set-floor-direction',
         name: 'Set Floor Direction Cleaning',
         autoSwitchKey: 'MaterialDirectionClean',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2367,7 +2359,7 @@ class Dreame extends utils.Adapter {
         id: 'set-pet-focused',
         name: 'Set Pet Focused Cleaning',
         autoSwitchKey: 'PetPartClean',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2375,7 +2367,7 @@ class Dreame extends utils.Adapter {
         id: 'set-smart-charging',
         name: 'Set Smart Charging',
         autoSwitchKey: 'SmartCharge',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2383,7 +2375,7 @@ class Dreame extends utils.Adapter {
         id: 'set-hot-washing',
         name: 'Set Hot Washing',
         autoSwitchKey: 'HotWash',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2391,7 +2383,7 @@ class Dreame extends utils.Adapter {
         id: 'set-uv-sterilization',
         name: 'Set UV Sterilization',
         autoSwitchKey: 'UVLight',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2399,7 +2391,7 @@ class Dreame extends utils.Adapter {
         id: 'set-max-suction',
         name: 'Set Max Suction Power',
         autoSwitchKey: 'SuctionMax',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2407,7 +2399,7 @@ class Dreame extends utils.Adapter {
         id: 'set-ultra-clean',
         name: 'Set Ultra Clean Mode',
         autoSwitchKey: 'SuperWash',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2415,7 +2407,7 @@ class Dreame extends utils.Adapter {
         id: 'set-mop-extend',
         name: 'Set Mop Extend',
         autoSwitchKey: 'MopExtrSwitch',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2424,14 +2416,14 @@ class Dreame extends utils.Adapter {
         name: 'Set Self-Clean Frequency',
         autoSwitchKey: 'BackWashType',
         type: 'number',
-        role: 'level',
+        role: 'value',
         desc: '0=Per room, 1=Standard, 2=High',
       },
       {
         id: 'set-intensive-carpet',
         name: 'Set Intensive Carpet Cleaning',
         autoSwitchKey: 'CarpetFineClean',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2439,7 +2431,7 @@ class Dreame extends utils.Adapter {
         id: 'set-gap-cleaning',
         name: 'Set Gap Cleaning Extension',
         autoSwitchKey: 'LacuneMopScalable',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2447,7 +2439,7 @@ class Dreame extends utils.Adapter {
         id: 'set-mopping-under-furniture',
         name: 'Set Mopping Under Furniture',
         autoSwitchKey: 'MopScalable2',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2455,7 +2447,7 @@ class Dreame extends utils.Adapter {
         id: 'set-smart-drying',
         name: 'Set Smart Drying',
         autoSwitchKey: 'SmartDrying',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -2463,7 +2455,7 @@ class Dreame extends utils.Adapter {
         id: 'set-custom-mopping',
         name: 'Set Custom Mopping Mode',
         autoSwitchKey: 'MopEffectSwitch',
-        type: 'boolean',
+        type: 'number',
         role: 'switch',
         desc: '0=off, 1=on',
       },
@@ -3064,9 +3056,10 @@ class Dreame extends utils.Adapter {
             //this.log.info(' Map data:' + JSON.stringify(element.value));
             if (this.config.getMap || this.firstStart) {
               this.firstStart = false;
-              const encode = JSON.stringify(element.value);
+              // value is normally a base64-url string; only stringify if it isn't
+              const encode = typeof element.value === 'string' ? element.value : JSON.stringify(element.value);
               const mappath = `${did}` + '.map.';
-              this.setMapInfos(encode, mappath);
+              this.setMapInfos(encode, mappath).catch((err) => this.log.warn('setMapInfos failed: ' + err.message));
             }
           }
           const device = this.deviceArray.find((d) => String(d.did) === did);
@@ -3429,18 +3422,29 @@ class Dreame extends utils.Adapter {
     });
   }
   uncompress(In_Compressed) {
-    try {
-      const input_Raw = In_Compressed.replace(/-/g, '+').replace(/_/g, '/');
-      const encodedData = Buffer.from(input_Raw, 'base64');
-      const decode = zlib.inflateSync(encodedData);
-      return decode.toString().match(/[{\\[]{1}([,:{}\\[\\]0-9.\\-+Eaeflnr-u \\n\\r\\t]|".*?")+[}\\]]{1}/gis);
-    } catch (e) {
-      this.log.warn('uncompress error (invalid map data): ' + e.message);
+    if (typeof In_Compressed !== 'string' || !In_Compressed.length) {
       return null;
     }
+    const input_Raw = In_Compressed.replace(/-/g, '+').replace(/_/g, '/');
+    const encodedData = Buffer.from(input_Raw, 'base64');
+    if (!encodedData.length) {
+      return null;
+    }
+    let decode;
+    try {
+      decode = zlib.inflateSync(encodedData);
+    } catch (err) {
+      const preview = In_Compressed.slice(0, 100);
+      this.log.warn('Map payload inflate failed (' + err.message + '), first 100 chars: ' + preview);
+      return null;
+    }
+    return decode.toString().match(/[{\[]{1}([,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]|".*?")+[}\]]{1}/gis);
   }
   async setMapInfos(In_Compressed, In_path) {
     const jsondecode = this.uncompress(In_Compressed);
+    if (!jsondecode) {
+      return;
+    }
     const jsonread = ((_) => {
       try {
         return JSON.parse(jsondecode);
@@ -3851,7 +3855,6 @@ class Dreame extends utils.Adapter {
           type: 'string',
           role: 'state',
           read: true,
-          write: false,
         },
         native: {},
       });
