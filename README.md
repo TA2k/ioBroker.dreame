@@ -385,6 +385,12 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
 
 ## Changelog
 
+### 0.3.9 (2026-06-17)
+- chore: add GitHub Release automation, fix test suite
+
+### 0.3.9 (2026-06-17)
+- chore: add GitHub Release automation, fix test suite
+
 ### 0.3.8 (2026-06-17)
 - Fix: fetchSpecs crash on missing spec, fix typos
 

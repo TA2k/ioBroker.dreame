@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.3.8",
+    "version": "0.3.9",
     "news": {
       "0.3.3": {
         "en": "parse all mower MQTT binary state fields (battery, error, location, docking, pin, camera, BLE/WiFi/LTE RSSI)\nparse mower live position from MQTT siid:1 piid:4 (12-bit packed format)\nparse mower task progress (region, percent, total/finished area)\ndraw robot position and dock on mower map image\ndraw robot, charger, virtual walls, no-go zones and zone names on vacuum map\nadd siid-piid identifiers to all mower state names\nfix mower status labels per protocol definition\nadd named mower properties (task-info, device-time, zone-status, RTK, GPS)\nfetch all siid property values on startup\nfix undefined deviceArray entry in connectMqtt",
@@ -81,18 +81,18 @@
         "uk": "Початкова версія",
         "zh-cn": "首次出版"
       },
-      "0.3.8": {
-        "en": "Fix: fetchSpecs crash on missing spec, fix typos",
-        "de": "Fix: fetchSpecs Absturz bei fehlendem Spec, Tippfehler behoben",
-        "ru": "Fix: fetchSpecs crash on missing spec, fix typos",
-        "pt": "Fix: fetchSpecs crash on missing spec, fix typos",
-        "nl": "Fix: fetchSpecs crash on missing spec, fix typos",
-        "fr": "Fix: fetchSpecs crash on missing spec, fix typos",
-        "it": "Fix: fetchSpecs crash on missing spec, fix typos",
-        "es": "Fix: fetchSpecs crash on missing spec, fix typos",
-        "pl": "Fix: fetchSpecs crash on missing spec, fix typos",
-        "uk": "Fix: fetchSpecs crash on missing spec, fix typos",
-        "zh-cn": "Fix: fetchSpecs crash on missing spec, fix typos"
+      "0.3.9": {
+        "en": "chore: add GitHub Release automation, fix test suite",
+        "de": "chore: GitHub Release Automatisierung, Tests repariert",
+        "ru": "chore: add GitHub Release automation, fix test suite",
+        "pt": "chore: add GitHub Release automation, fix test suite",
+        "nl": "chore: add GitHub Release automation, fix test suite",
+        "fr": "chore: add GitHub Release automation, fix test suite",
+        "it": "chore: add GitHub Release automation, fix test suite",
+        "es": "chore: add GitHub Release automation, fix test suite",
+        "pl": "chore: add GitHub Release automation, fix test suite",
+        "uk": "chore: add GitHub Release automation, fix test suite",
+        "zh-cn": "chore: add GitHub Release automation, fix test suite"
       }
     },
     "titleLang": {
