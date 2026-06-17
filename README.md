@@ -385,6 +385,9 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
 
 ## Changelog
 
+### 0.3.13 (2026-06-17)
+- Fix: catch inflateSync error in uncompress to prevent unhandled promise rejection crash
+
 ### 0.3.12 (2026-06-17)
 - Fix: repository checker errors, update admin dependency, fix copyright year, remove CHANGELOG.md, fix VSCode schema URL
 
