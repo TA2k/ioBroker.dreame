@@ -385,6 +385,9 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
 
 ## Changelog
 
+### 0.3.12 (2026-06-17)
+- Fix: repository checker errors, update admin dependency, fix copyright year, remove CHANGELOG.md, fix VSCode schema URL
+
 ### 0.3.11 (2026-06-17)
 - Fix: crashes, typos, update dependencies, drop Node.js 20 EOL, add Dependabot
 
