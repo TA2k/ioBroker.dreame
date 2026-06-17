@@ -385,6 +385,9 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
 
 ## Changelog
 
+### 0.3.15 (2026-06-17)
+- Fix: repochecker errors resolved, update dependencies for stable repository
+
 ### 0.3.14 (2026-06-17)
 - Fix: allow FaultCodes > 100 for mower, set max: 9999 (fix #21)
 
