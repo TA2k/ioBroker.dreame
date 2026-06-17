@@ -1,21 +1,8 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.3.13",
+    "version": "0.3.14",
     "news": {
-      "0.2.0": {
-        "en": "add simple maps",
-        "de": "einfache karten hinzufügen",
-        "ru": "добавить простые карты",
-        "pt": "adicionar mapas simples",
-        "nl": "eenvoudige kaarten toevoegen",
-        "fr": "ajouter des cartes simples",
-        "it": "aggiungere semplici mappe",
-        "es": "añadir mapas simples",
-        "pl": "dodaj proste mapy",
-        "uk": "додати прості карти",
-        "zh-cn": "添加简单的地图"
-      },
       "0.1.0": {
         "en": "bugfixes",
         "de": "bugfixes",
@@ -93,6 +80,19 @@
         "pl": "Fix: catch inflateSync error in uncompress to prevent unhandled promise rejection crash",
         "uk": "Fix: catch inflateSync error in uncompress to prevent unhandled promise rejection crash",
         "zh-cn": "Fix: catch inflateSync error in uncompress to prevent unhandled promise rejection crash"
+      },
+      "0.3.14": {
+        "en": "Fix: allow FaultCodes > 100 for mower, set max: 9999 (fix #21)",
+        "de": "Fix: FaultCodes > 100 für Mäher erlaubt, max: 9999 gesetzt (fix #21)",
+        "ru": "Fix: allow FaultCodes > 100 for mower, set max: 9999 (fix #21)",
+        "pt": "Fix: allow FaultCodes > 100 for mower, set max: 9999 (fix #21)",
+        "nl": "Fix: allow FaultCodes > 100 for mower, set max: 9999 (fix #21)",
+        "fr": "Fix: allow FaultCodes > 100 for mower, set max: 9999 (fix #21)",
+        "it": "Fix: allow FaultCodes > 100 for mower, set max: 9999 (fix #21)",
+        "es": "Fix: allow FaultCodes > 100 for mower, set max: 9999 (fix #21)",
+        "pl": "Fix: allow FaultCodes > 100 for mower, set max: 9999 (fix #21)",
+        "uk": "Fix: allow FaultCodes > 100 for mower, set max: 9999 (fix #21)",
+        "zh-cn": "Fix: allow FaultCodes > 100 for mower, set max: 9999 (fix #21)"
       }
     },
     "titleLang": {
