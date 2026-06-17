@@ -385,6 +385,9 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
 
 ## Changelog
 
+### 0.3.14 (2026-06-17)
+- Fix: allow FaultCodes > 100 for mower, set max: 9999 (fix #21)
+
 ### 0.3.13 (2026-06-17)
 - Fix: catch inflateSync error in uncompress to prevent unhandled promise rejection crash
 
