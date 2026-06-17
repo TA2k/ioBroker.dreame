@@ -385,6 +385,9 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
 
 ## Changelog
 
+### 0.3.8 (2026-06-17)
+- Fix: fetchSpecs crash on missing spec, fix typos
+
 <!--
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
