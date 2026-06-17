@@ -1,21 +1,8 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.3.11",
+    "version": "0.3.12",
     "news": {
-      "0.2.2": {
-        "en": "reduce cpu load while cleaning",
-        "de": "reduzieren cpu-last bei der reinigung",
-        "ru": "уменьшить нагрузку на кпу при очистке",
-        "pt": "reduzir a carga cpu durante a limpeza",
-        "nl": "verminderen cpu belasting tijdens het reinigen",
-        "fr": "réduire la charge de cpu pendant le nettoyage",
-        "it": "ridurre il carico cpu durante la pulizia",
-        "es": "reducir la carga de cpu durante la limpieza",
-        "pl": "zmniejszyć obciążenie cpu podczas czyszczenia",
-        "uk": "зменшити навантаження cpu при очищенні",
-        "zh-cn": "清理时减少 cpu 负荷"
-      },
       "0.2.1": {
         "en": "fix for canvas installation",
         "de": "befestigung für leinwandinstallation",
@@ -93,6 +80,19 @@
         "pl": "Release 0.3.11",
         "uk": "Release 0.3.11",
         "zh-cn": "Release 0.3.11"
+      },
+      "0.3.12": {
+        "en": "Fix: repository checker errors, update admin dependency, fix copyright year, remove CHANGELOG.md, fix VSCode schema URL",
+        "de": "Fix: Repository-Checker Fehler behoben, Admin-Abhängigkeit aktualisiert, Copyright-Jahr korrigiert, CHANGELOG.md entfernt, VSCode Schema URL korrigiert",
+        "ru": "Fix: repository checker errors, update admin dependency, fix copyright year, remove CHANGELOG.md, fix VSCode schema URL",
+        "pt": "Fix: repository checker errors, update admin dependency, fix copyright year, remove CHANGELOG.md, fix VSCode schema URL",
+        "nl": "Fix: repository checker errors, update admin dependency, fix copyright year, remove CHANGELOG.md, fix VSCode schema URL",
+        "fr": "Fix: repository checker errors, update admin dependency, fix copyright year, remove CHANGELOG.md, fix VSCode schema URL",
+        "it": "Fix: repository checker errors, update admin dependency, fix copyright year, remove CHANGELOG.md, fix VSCode schema URL",
+        "es": "Fix: repository checker errors, update admin dependency, fix copyright year, remove CHANGELOG.md, fix VSCode schema URL",
+        "pl": "Fix: repository checker errors, update admin dependency, fix copyright year, remove CHANGELOG.md, fix VSCode schema URL",
+        "uk": "Fix: repository checker errors, update admin dependency, fix copyright year, remove CHANGELOG.md, fix VSCode schema URL",
+        "zh-cn": "Fix: repository checker errors, update admin dependency, fix copyright year, remove CHANGELOG.md, fix VSCode schema URL"
       }
     },
     "titleLang": {
