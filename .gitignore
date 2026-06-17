@@ -21,3 +21,4 @@ admin/i18n/*/flat.txt
 deploy.sh
 release.sh
 .npmrc
+.commitinfo
