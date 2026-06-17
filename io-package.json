@@ -1,21 +1,8 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.3.12",
+    "version": "0.3.13",
     "news": {
-      "0.2.1": {
-        "en": "fix for canvas installation",
-        "de": "befestigung für leinwandinstallation",
-        "ru": "для монтажа холста",
-        "pt": "correção para instalação de tela",
-        "nl": "fix voor canvas installatie",
-        "fr": "correction pour installation de toile",
-        "it": "fissaggio per installazione di tela",
-        "es": "fijación para instalación de tela",
-        "pl": "urządzenie do montażu płótna",
-        "uk": "фіксація для монтажу полотна",
-        "zh-cn": "画布安装的固定"
-      },
       "0.2.0": {
         "en": "add simple maps",
         "de": "einfache karten hinzufügen",
@@ -93,6 +80,19 @@
         "pl": "Fix: repository checker errors, update admin dependency, fix copyright year, remove CHANGELOG.md, fix VSCode schema URL",
         "uk": "Fix: repository checker errors, update admin dependency, fix copyright year, remove CHANGELOG.md, fix VSCode schema URL",
         "zh-cn": "Fix: repository checker errors, update admin dependency, fix copyright year, remove CHANGELOG.md, fix VSCode schema URL"
+      },
+      "0.3.13": {
+        "en": "Fix: catch inflateSync error in uncompress to prevent unhandled promise rejection crash",
+        "de": "Fix: inflateSync Fehler in uncompress abgefangen um unbehandelten Promise-Absturz zu verhindern",
+        "ru": "Fix: catch inflateSync error in uncompress to prevent unhandled promise rejection crash",
+        "pt": "Fix: catch inflateSync error in uncompress to prevent unhandled promise rejection crash",
+        "nl": "Fix: catch inflateSync error in uncompress to prevent unhandled promise rejection crash",
+        "fr": "Fix: catch inflateSync error in uncompress to prevent unhandled promise rejection crash",
+        "it": "Fix: catch inflateSync error in uncompress to prevent unhandled promise rejection crash",
+        "es": "Fix: catch inflateSync error in uncompress to prevent unhandled promise rejection crash",
+        "pl": "Fix: catch inflateSync error in uncompress to prevent unhandled promise rejection crash",
+        "uk": "Fix: catch inflateSync error in uncompress to prevent unhandled promise rejection crash",
+        "zh-cn": "Fix: catch inflateSync error in uncompress to prevent unhandled promise rejection crash"
       }
     },
     "titleLang": {
