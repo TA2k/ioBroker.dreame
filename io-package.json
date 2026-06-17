@@ -1,21 +1,8 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.3.14",
+    "version": "0.3.15",
     "news": {
-      "0.1.0": {
-        "en": "bugfixes",
-        "de": "bugfixes",
-        "ru": "исправления",
-        "pt": "correções de bugs",
-        "nl": "bugfixes",
-        "fr": "correction des bugs",
-        "it": "bugfix",
-        "es": "bugfixes",
-        "pl": "poprawki błędów",
-        "uk": "бетмен",
-        "zh-cn": "错误修正"
-      },
       "0.0.1": {
         "en": "initial release",
         "de": "Erstveröffentlichung",
@@ -93,6 +80,19 @@
         "pl": "Fix: allow FaultCodes > 100 for mower, set max: 9999 (fix #21)",
         "uk": "Fix: allow FaultCodes > 100 for mower, set max: 9999 (fix #21)",
         "zh-cn": "Fix: allow FaultCodes > 100 for mower, set max: 9999 (fix #21)"
+      },
+      "0.3.15": {
+        "en": "Fix: repochecker errors resolved, update dependencies for stable repository",
+        "de": "Fix: Repochecker-Fehler behoben, Abhängigkeiten für Stable-Repository aktualisiert",
+        "ru": "Fix: repochecker errors resolved, update dependencies for stable repository",
+        "pt": "Fix: repochecker errors resolved, update dependencies for stable repository",
+        "nl": "Fix: repochecker errors resolved, update dependencies for stable repository",
+        "fr": "Fix: repochecker errors resolved, update dependencies for stable repository",
+        "it": "Fix: repochecker errors resolved, update dependencies for stable repository",
+        "es": "Fix: repochecker errors resolved, update dependencies for stable repository",
+        "pl": "Fix: repochecker errors resolved, update dependencies for stable repository",
+        "uk": "Fix: repochecker errors resolved, update dependencies for stable repository",
+        "zh-cn": "Fix: repochecker errors resolved, update dependencies for stable repository"
       }
     },
     "titleLang": {
