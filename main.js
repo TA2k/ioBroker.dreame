@@ -3056,9 +3056,10 @@ class Dreame extends utils.Adapter {
             //this.log.info(' Map data:' + JSON.stringify(element.value));
             if (this.config.getMap || this.firstStart) {
               this.firstStart = false;
-              const encode = JSON.stringify(element.value);
+              // value is normally a base64-url string; only stringify if it isn't
+              const encode = typeof element.value === 'string' ? element.value : JSON.stringify(element.value);
               const mappath = `${did}` + '.map.';
-              this.setMapInfos(encode, mappath);
+              this.setMapInfos(encode, mappath).catch((err) => this.log.warn('setMapInfos failed: ' + err.message));
             }
           }
           const device = this.deviceArray.find((d) => String(d.did) === did);
@@ -3421,27 +3422,29 @@ class Dreame extends utils.Adapter {
     });
   }
   uncompress(In_Compressed) {
+    if (typeof In_Compressed !== 'string' || !In_Compressed.length) {
+      return null;
+    }
     const input_Raw = In_Compressed.replace(/-/g, '+').replace(/_/g, '/');
     const encodedData = Buffer.from(input_Raw, 'base64');
-    const decode = zlib.inflateSync(encodedData);
-    //this.log.info(' Zlib inflate  : ' + decode);
-    /*csvar mapHeader = decode.toString().split("{");
-    let GetHeader = mapHeader[0];
-	this.log.info(' decode Header 1: ' + GetHeader);
-	try {
-		var encodedDataH = Buffer.from(GetHeader, 'base64');
-		this.log.info(' Base64 decode Header : ' + encodedDataH);
-		var decodeHeader = zlib.inflateSync(encodedDataH);
-		} catch (e) {
-        this.log.info(' Error decode Header 2: ' + e);
-        } finally {
-        this.log.info(' decode Header 2: ' + decodeHeader);
-        }
-    */
+    if (!encodedData.length) {
+      return null;
+    }
+    let decode;
+    try {
+      decode = zlib.inflateSync(encodedData);
+    } catch (err) {
+      const preview = In_Compressed.slice(0, 100);
+      this.log.warn('Map payload inflate failed (' + err.message + '), first 100 chars: ' + preview);
+      return null;
+    }
     return decode.toString().match(/[{\[]{1}([,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]|".*?")+[}\]]{1}/gis);
   }
   async setMapInfos(In_Compressed, In_path) {
     const jsondecode = this.uncompress(In_Compressed);
+    if (!jsondecode) {
+      return;
+    }
     const jsonread = ((_) => {
       try {
         return JSON.parse(jsondecode);
