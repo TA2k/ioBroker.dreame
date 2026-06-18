@@ -385,6 +385,10 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
 
 ## Changelog
 
+
+### **WORK IN PROGRESS**
+- (ioBroker-Bot) Adapter requires admin >= 7.8.23 now.
+
 ### 0.3.16 (2026-06-17)
 - Fix: repochecker errors resolved, update dependencies for stable repository
 
