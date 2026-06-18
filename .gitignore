@@ -22,3 +22,4 @@ deploy.sh
 release.sh
 .npmrc
 .commitinfo
+DevScripts/
