@@ -6,6 +6,8 @@
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
+const { I18n } = require('@iobroker/adapter-core');
+const { join } = require('node:path');
 const axios = require('axios').default;
 const axiosRetry = require('axios-retry').default;
 const Json2iob = require('json2iob');
@@ -402,6 +404,8 @@ class Dreame extends utils.Adapter {
     this.specStatusDict = {};
     this.specPropsToIdDict = {};
     this.specActionsToIdDict = {};
+    this.specMetaDict = {};
+    this.createdStates = new Set();
   }
   /**
    * Is called when databases are connected and adapter received configuration.
@@ -454,6 +458,7 @@ class Dreame extends utils.Adapter {
     if (this.session.access_token) {
       await this.getDeviceList();
 
+      await I18n.init(join(__dirname, 'lib'), this);
       await this.fetchSpecs();
       await this.createRemotes();
       await this.updateDevicesViaSpec();
@@ -1537,6 +1542,13 @@ class Dreame extends utils.Adapter {
     const did = device.did;
     this.log.info(`Creating vacuum-specific states for ${device.model}`);
 
+    // Pilot: SIID 2, 3, 4 — aufgebaut via lib/specs, States werden lazy erstellt
+    const { buildVacuumLookup } = require('./lib/specs/index');
+    const lookup = buildVacuumLookup(did);
+    Object.assign(this.specPropsToIdDict[did], lookup.propsToId);
+    this.specMetaDict[did] = lookup.metaMap;
+    this.specStatusDict[did] = lookup.statusList;
+
     const statusStates = [
       // SIID 2 - Robot Cleaner
       {
@@ -2497,6 +2509,10 @@ class Dreame extends utils.Adapter {
     await this.extendObject(did + '.remote', { type: 'channel', common: { name: 'Vacuum Remote' }, native: {} });
 
     for (const s of statusStates) {
+      // Einträge aus lib/specs (SIID 2,3,4) werden lazy erstellt — hier überspringen
+      if (s.siid && s.piid && lookup.propsToId[`${s.siid}-${s.piid}`]) {
+        continue;
+      }
       const path = `${did}.status.${s.id}`;
       await this.extendObject(path, {
         type: 'state',
@@ -2519,6 +2535,10 @@ class Dreame extends utils.Adapter {
     }
 
     for (const r of remoteStates) {
+      // Einträge aus lib/specs (SIID 4) werden lazy erstellt — hier überspringen
+      if (r.siid && r.piid && lookup.propsToId[`${r.siid}-${r.piid}`]) {
+        continue;
+      }
       const path = `${did}.remote.${r.id}`;
       await this.extendObject(path, {
         type: 'state',
@@ -2584,6 +2604,37 @@ class Dreame extends utils.Adapter {
       `Vacuum states created: ${statusStates.length} status, ${remoteStates.length} remote, ${autoSwitchRemotes.length} autoSwitch, ${actionStates.length} actions`,
     );
   }
+  async _lazyCreateState(did, siid, piid, value) {
+    const key = `${siid}-${piid}`;
+    const path = this.specPropsToIdDict[did]?.[key];
+    if (!path) return null;
+
+    if (!this.createdStates.has(path)) {
+      const meta = this.specMetaDict?.[did]?.[key];
+      const name = meta?.nameKey ? I18n.getTranslatedObject(meta.nameKey) : path;
+      await this.extendObject(path, {
+        type: 'state',
+        common: {
+          name,
+          type: meta?.type ?? 'mixed',
+          role: meta?.role ?? 'state',
+          read: true,
+          write: meta?.write ?? false,
+          unit: meta?.unit || '',
+          ...(meta?.states ? { states: meta.states } : {}),
+        },
+        native: { siid, piid },
+      });
+      this.createdStates.add(path);
+    }
+
+    if (value != null) {
+      const val = typeof value === 'object' ? JSON.stringify(value) : value;
+      this.setState(path, val, true);
+    }
+    return path;
+  }
+
   async extractRemotesFromSpec(device) {
     const spec = this.specs[device.spec_type];
     this.log.info(`Extracting remotes from spec for ${device.model} ${spec.description}`);
@@ -2974,14 +3025,13 @@ class Dreame extends utils.Adapter {
               }
               this.log.debug(JSON.stringify(res.data));
               for (const element of res.data.data.result) {
-                const path = this.specPropsToIdDict[device.did][element.siid + '-' + element.piid];
+                const path = await this._lazyCreateState(
+                  device.did, element.siid, element.piid, element.value,
+                );
                 if (path) {
                   this.log.debug(
                     `Set ${path} to ${typeof element.value === 'object' ? JSON.stringify(element.value) : element.value}`,
                   );
-                  if (element.value != null) {
-                    this.setState(path, element.value, true);
-                  }
                 }
               }
             })
@@ -3367,14 +3417,16 @@ class Dreame extends utils.Adapter {
           if (this.isMower(device) && element.siid === 4 && element.piid === 48) {
             this.parseShortcuts(did, element.value);
           }
-          let path = this.specPropsToIdDict[did][element.siid + '-' + element.piid];
-          if (!path) {
+          // Lazy create + setState für Properties mit bekannter Metadaten-Definition
+          const lazyPath = await this._lazyCreateState(did, element.siid, element.piid, element.value);
+          if (!lazyPath) {
+            // Fallback für völlig unbekannte siid-piid (kein Eintrag in specPropsToIdDict)
             this.log.debug(`No path found for ${did} ${element.siid}-${element.piid}`);
-            path = `${did}.status.${element.siid}-${element.piid}`;
-            await this.extendObject(path, {
+            const statusPath = `${did}.status.${element.siid}-${element.piid}`;
+            await this.extendObject(statusPath, {
               type: 'state',
               common: {
-                name: path,
+                name: statusPath,
                 type: 'mixed',
                 role: 'state',
                 write: false,
@@ -3382,12 +3434,12 @@ class Dreame extends utils.Adapter {
               },
               native: {},
             });
-            this.setState(path, JSON.stringify(element.value), true);
-            path = `${did}.remote.${element.siid}-${element.piid}`;
-            await this.extendObject(path, {
+            this.setState(statusPath, JSON.stringify(element.value), true);
+            const remotePath = `${did}.remote.${element.siid}-${element.piid}`;
+            await this.extendObject(remotePath, {
               type: 'state',
               common: {
-                name: path,
+                name: remotePath,
                 type: 'mixed',
                 role: 'state',
                 write: true,
@@ -3400,15 +3452,6 @@ class Dreame extends utils.Adapter {
                 did: did,
               },
             });
-          }
-          if (path) {
-            this.log.debug(
-              `Set ${path} to ${typeof element.value === 'object' ? JSON.stringify(element.value) : element.value}`,
-            );
-            if (element.value != null) {
-              const val = typeof element.value === 'object' ? JSON.stringify(element.value) : element.value;
-              this.setState(path, val, true);
-            }
           }
         }
       }
@@ -3855,6 +3898,7 @@ class Dreame extends utils.Adapter {
       });
       delete multiMap.mapInfo;
       delete multiMap.floorMapInfo;
+      delete multiMap.furniture;
       this.json2iob.parse(device.did + '.map.maps.' + stateMapId + '.info', multiMap);
       await this.extendObject(device.did + '.map.maps.' + stateMapId + '.image', {
         type: 'state',
