@@ -5216,12 +5216,17 @@ class Dreame extends utils.Adapter {
         };
         if (stateObject && stateObject.native.piid) {
           data.data.method = 'set_properties';
-          data.data.params = {
-            did: deviceId,
-            siid: stateObject.native.siid,
-            piid: stateObject.native.piid,
-            value: state.val,
-          };
+          // miIO/Dreame cloud expects an array of property objects, not a single object.
+          // Sending a bare object is silently ignored by the device — see official APK
+          // (Ljava/util/List;) and HA dreame_vacuum protocol.set_property().
+          data.data.params = [
+            {
+              did: deviceId,
+              siid: stateObject.native.siid,
+              piid: stateObject.native.piid,
+              value: state.val,
+            },
+          ];
         }
         if (stateObject && stateObject.native.aiid) {
           data.data.params = {
