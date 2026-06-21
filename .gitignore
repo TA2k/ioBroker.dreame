@@ -27,3 +27,8 @@ PROJEKTSTAND.md
 CLAUDE_CODE_AUFTRAG.md
 L40s_Objekte_Optimierung.md
 REFACTORING_PLAN.md
+
+# Local research/probe scripts — never commit, may contain credentials
+scripts/
+*.pyc
+__pycache__/
