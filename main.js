@@ -2530,7 +2530,7 @@ class Dreame extends utils.Adapter {
         continue;
       }
       const path = `${did}.status.${s.id}`;
-      let sStates = s.states;
+      let sStates = /** @type {any} */ (s.states);
       if (!sStates && s.stateKeys) {
         sStates = {};
         for (const [k, stateKey] of Object.entries(s.stateKeys)) {
