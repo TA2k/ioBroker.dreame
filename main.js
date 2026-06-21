@@ -2658,8 +2658,10 @@ class Dreame extends utils.Adapter {
           write: meta?.write ?? false,
           unit: meta?.unit || '',
           ...(resolvedStates ? { states: resolvedStates } : {}),
+          ...(meta?.min !== undefined ? { min: meta.min } : {}),
+          ...(meta?.max !== undefined ? { max: meta.max } : {}),
         },
-        native: { siid, piid },
+        native: { siid, piid, did },
       });
       this.createdStates.add(path);
     }
@@ -3073,6 +3075,22 @@ class Dreame extends utils.Adapter {
                   this.log.debug(
                     `Set ${path} to ${typeof element.value === 'object' ? JSON.stringify(element.value) : element.value}`,
                   );
+                } else {
+                  // Fallback for unknown siid-piid: mirror MQTT-path behaviour
+                  this.log.debug(`No path found for ${device.did} ${element.siid}-${element.piid}`);
+                  const statusPath = `${device.did}.status.${element.siid}-${element.piid}`;
+                  await this.extendObject(statusPath, {
+                    type: 'state',
+                    common: { name: statusPath, type: 'mixed', role: 'state', write: false, read: true },
+                    native: {},
+                  });
+                  this.setState(statusPath, JSON.stringify(element.value), true);
+                  const remotePath = `${device.did}.remote.${element.siid}-${element.piid}`;
+                  await this.extendObject(remotePath, {
+                    type: 'state',
+                    common: { name: remotePath, type: 'mixed', role: 'state', write: true, read: true },
+                    native: { siid: element.siid, piid: element.piid, did: device.did },
+                  });
                 }
               }
             })
@@ -5263,7 +5281,17 @@ class Dreame extends utils.Adapter {
           const compoundMeta = this.specMetaDict?.[deviceId]?.[compoundKey];
           let writeValue = state.val;
           if (compoundMeta?.encode) {
-            const rawCompound = this.compoundRaw?.[deviceId]?.[compoundKey] ?? 0;
+            const rawCompound = this.compoundRaw?.[deviceId]?.[compoundKey];
+            if (rawCompound === undefined) {
+              // SIID 4 never responds to HTTP get_properties (code:80001); raw value
+              // arrives only via MQTT push. Refuse the write rather than silently
+              // destroying the packed bits (humidity, area) with rawCompound=0.
+              this.log.warn(
+                `Write aborted for ${compoundKey}: raw compound not yet received from device. ` +
+                `Trigger an MQTT push first (e.g. change a setting in the app).`,
+              );
+              return;
+            }
             writeValue = compoundMeta.encode(Number(state.val), rawCompound);
             this.log.info(`Compound encode ${compoundKey}: field=${state.val}, raw=${rawCompound} → ${writeValue}`);
           }

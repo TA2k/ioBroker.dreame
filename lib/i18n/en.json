@@ -228,7 +228,7 @@
   "vacuum.carpet-sensitivity.medium": "Medium",
   "vacuum.carpet-sensitivity.high":   "High",
 
-  "vacuum.cleaning-mode.sweeping":        "Vacuuming",
+  "vacuum.cleaning-mode.vacuuming":       "Vacuuming",
   "vacuum.cleaning-mode.mopping":         "Mopping",
   "vacuum.cleaning-mode.sweep-mop":       "Vacuum+Mop",
   "vacuum.cleaning-mode.mop-after-sweep": "Mop after vacuum",
