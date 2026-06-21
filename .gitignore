@@ -23,10 +23,12 @@ release.sh
 .npmrc
 .commitinfo
 DevScripts/
+# Lokale Arbeits- und Planungsdateien
+*_PLAN.md
+*_AUFTRAG.md
+*_INVENTAR.md
+*_Optimierung.md
 PROJEKTSTAND.md
-CLAUDE_CODE_AUFTRAG.md
-L40s_Objekte_Optimierung.md
-REFACTORING_PLAN.md
 
 # Local research/probe scripts — never commit, may contain credentials
 scripts/
