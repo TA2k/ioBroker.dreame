@@ -405,6 +405,7 @@ class Dreame extends utils.Adapter {
     this.specPropsToIdDict = {};
     this.specActionsToIdDict = {};
     this.specMetaDict = {};
+    this.compoundRaw = {};
     this.createdStates = new Set();
   }
   /**
@@ -1480,9 +1481,12 @@ class Dreame extends utils.Adapter {
 
     for (const a of actionStates) {
       const path = `${did}.remote.${a.id}`;
+      const isButton = a.in.length === 0;
       await this.extendObject(path, {
         type: 'state',
-        common: { name: a.name, type: 'string', role: 'text', read: true, write: true, def: JSON.stringify(a.in) },
+        common: isButton
+          ? { name: a.name, type: 'boolean', role: 'button', read: false, write: true }
+          : { name: a.name, type: 'string', role: 'text', read: true, write: true, def: JSON.stringify(a.in) },
         native: { siid: a.siid, aiid: a.aiid, did: did },
       });
       this.specActionsToIdDict[did][`${a.siid}-${a.aiid}`] = path;
@@ -2006,6 +2010,7 @@ class Dreame extends utils.Adapter {
         type: 'number',
         role: 'value',
         desc: '0=Daily, 1=Accurate, 2=Deep',
+        stateKeys: { 0: 'vacuum.mopping-type.daily', 1: 'vacuum.mopping-type.accurate', 2: 'vacuum.mopping-type.deep' },
       },
       {
         id: 'clean-genius',
@@ -2013,6 +2018,7 @@ class Dreame extends utils.Adapter {
         type: 'number',
         role: 'value',
         desc: '0=Off, 1=Routine, 2=Deep',
+        stateKeys: { 0: 'vacuum.cleangenius-mode.off', 1: 'vacuum.cleangenius-mode.routine', 2: 'vacuum.cleangenius-mode.deep' },
       },
       {
         id: 'cleaning-route',
@@ -2020,6 +2026,7 @@ class Dreame extends utils.Adapter {
         type: 'number',
         role: 'value',
         desc: '1=Standard, 2=Intensive, 3=Deep, 4=Quick',
+        stateKeys: { 1: 'vacuum.cleaning-route.standard', 2: 'vacuum.cleaning-route.intensive', 3: 'vacuum.cleaning-route.deep', 4: 'vacuum.cleaning-route.quick' },
       },
       {
         id: 'wider-corner',
@@ -2027,6 +2034,7 @@ class Dreame extends utils.Adapter {
         type: 'number',
         role: 'value',
         desc: '0=Off, 1=HighFreq, -7=LowFreq',
+        stateKeys: { 0: 'vacuum.wider-corner.off', 1: 'vacuum.wider-corner.high-freq', '-7': 'vacuum.wider-corner.low-freq' },
       },
       {
         id: 'floor-direction',
@@ -2048,6 +2056,7 @@ class Dreame extends utils.Adapter {
         type: 'number',
         role: 'value',
         desc: '-1=disabled, 0=off, 1=on',
+        stateKeys: { '-1': 'vacuum.auto-recleaning.disabled', 0: 'vacuum.auto-recleaning.off', 1: 'vacuum.auto-recleaning.on' },
       },
       {
         id: 'auto-rewashing',
@@ -2079,6 +2088,7 @@ class Dreame extends utils.Adapter {
         type: 'number',
         role: 'value',
         desc: '0=Per room, 1=Standard, 2=High',
+        stateKeys: { 0: 'vacuum.self-clean-frequency.per-room', 1: 'vacuum.self-clean-frequency.standard', 2: 'vacuum.self-clean-frequency.high' },
       },
       {
         id: 'intensive-carpet',
@@ -2115,6 +2125,7 @@ class Dreame extends utils.Adapter {
         type: 'number',
         role: 'value',
         desc: '1=Low, 2=High',
+        stateKeys: { 1: 'vacuum.mop-extend-frequency.low', 2: 'vacuum.mop-extend-frequency.high' },
       },
       {
         id: 'smart-charging',
@@ -2342,6 +2353,7 @@ class Dreame extends utils.Adapter {
         type: 'number',
         role: 'level',
         desc: '0=Daily, 1=Accurate, 2=Deep',
+        stateKeys: { 0: 'vacuum.mopping-type.daily', 1: 'vacuum.mopping-type.accurate', 2: 'vacuum.mopping-type.deep' },
       },
       {
         id: 'set-clean-genius',
@@ -2350,6 +2362,7 @@ class Dreame extends utils.Adapter {
         type: 'number',
         role: 'level',
         desc: '0=Off, 1=Routine, 2=Deep',
+        stateKeys: { 0: 'vacuum.cleangenius-mode.off', 1: 'vacuum.cleangenius-mode.routine', 2: 'vacuum.cleangenius-mode.deep' },
       },
       {
         id: 'set-cleaning-route',
@@ -2358,6 +2371,7 @@ class Dreame extends utils.Adapter {
         type: 'number',
         role: 'level',
         desc: '1=Standard, 2=Intensive, 3=Deep, 4=Quick',
+        stateKeys: { 1: 'vacuum.cleaning-route.standard', 2: 'vacuum.cleaning-route.intensive', 3: 'vacuum.cleaning-route.deep', 4: 'vacuum.cleaning-route.quick' },
       },
       {
         id: 'set-wider-corner',
@@ -2366,6 +2380,7 @@ class Dreame extends utils.Adapter {
         type: 'number',
         role: 'level',
         desc: '0=Off, 1=HighFreq, -7=LowFreq',
+        stateKeys: { 0: 'vacuum.wider-corner.off', 1: 'vacuum.wider-corner.high-freq', '-7': 'vacuum.wider-corner.low-freq' },
       },
       {
         id: 'set-floor-direction',
@@ -2438,6 +2453,7 @@ class Dreame extends utils.Adapter {
         type: 'number',
         role: 'level',
         desc: '0=Per room, 1=Standard, 2=High',
+        stateKeys: { 0: 'vacuum.self-clean-frequency.per-room', 1: 'vacuum.self-clean-frequency.standard', 2: 'vacuum.self-clean-frequency.high' },
       },
       {
         id: 'set-intensive-carpet',
@@ -2509,11 +2525,18 @@ class Dreame extends utils.Adapter {
     await this.extendObject(did + '.remote', { type: 'channel', common: { name: 'Vacuum Remote' }, native: {} });
 
     for (const s of statusStates) {
-      // Einträge aus lib/specs (SIID 2,3,4) werden lazy erstellt — hier überspringen
+      // Einträge aus lib/specs (SIID 2,3,4,5,6,7,8,9,10,11,12,15,16,27,28,30,10001) werden lazy erstellt — hier überspringen
       if (s.siid && s.piid && lookup.propsToId[`${s.siid}-${s.piid}`]) {
         continue;
       }
       const path = `${did}.status.${s.id}`;
+      let sStates = s.states;
+      if (!sStates && s.stateKeys) {
+        sStates = {};
+        for (const [k, stateKey] of Object.entries(s.stateKeys)) {
+          sStates[k] = I18n.translate(stateKey);
+        }
+      }
       await this.extendObject(path, {
         type: 'state',
         common: /** @type {any} */ ({
@@ -2523,7 +2546,7 @@ class Dreame extends utils.Adapter {
           read: true,
           write: false,
           unit: s.unit || '',
-          ...(s.states ? { states: s.states } : {}),
+          ...(sStates ? { states: sStates } : {}),
           ...(s.desc ? { desc: s.desc } : {}),
         }),
         native: { siid: s.siid, piid: s.piid, did: did },
@@ -2535,7 +2558,7 @@ class Dreame extends utils.Adapter {
     }
 
     for (const r of remoteStates) {
-      // Einträge aus lib/specs (SIID 4) werden lazy erstellt — hier überspringen
+      // Einträge aus lib/specs (SIID 4,5,7,15,28) werden lazy erstellt — hier überspringen
       if (r.siid && r.piid && lookup.propsToId[`${r.siid}-${r.piid}`]) {
         continue;
       }
@@ -2557,6 +2580,13 @@ class Dreame extends utils.Adapter {
 
     for (const c of autoSwitchRemotes) {
       const path = `${did}.remote.${c.id}`;
+      let cStates;
+      if (c.stateKeys) {
+        cStates = {};
+        for (const [k, stateKey] of Object.entries(c.stateKeys)) {
+          cStates[k] = I18n.translate(stateKey);
+        }
+      }
       await this.extendObject(path, {
         type: 'state',
         common: /** @type {any} */ ({
@@ -2565,6 +2595,7 @@ class Dreame extends utils.Adapter {
           role: c.role,
           read: true,
           write: true,
+          ...(cStates ? { states: cStates } : {}),
           ...(c.desc ? { desc: c.desc } : {}),
         }),
         native: { autoSwitchKey: c.autoSwitchKey, did: did },
@@ -2573,17 +2604,14 @@ class Dreame extends utils.Adapter {
 
     for (const a of actionStates) {
       const path = `${did}.remote.${a.id}`;
+      const isButton = a.in.length === 0;
       await this.extendObject(path, {
         type: 'state',
-        common: /** @type {any} */ ({
-          name: a.name,
-          type: 'string',
-          role: 'text',
-          read: true,
-          write: true,
-          def: JSON.stringify(a.in),
-          ...(a.desc ? { desc: a.desc } : {}),
-        }),
+        common: /** @type {any} */ (
+          isButton
+            ? { name: a.name, type: 'boolean', role: 'button', read: false, write: true }
+            : { name: a.name, type: 'string', role: 'text', read: true, write: true, def: JSON.stringify(a.in), ...(a.desc ? { desc: a.desc } : {}) }
+        ),
         native: { siid: a.siid, aiid: a.aiid, did: did },
       });
       this.specActionsToIdDict[did][`${a.siid}-${a.aiid}`] = path;
@@ -2609,9 +2637,17 @@ class Dreame extends utils.Adapter {
     const path = this.specPropsToIdDict[did]?.[key];
     if (!path) return null;
 
+    const meta = this.specMetaDict?.[did]?.[key];
+
     if (!this.createdStates.has(path)) {
-      const meta = this.specMetaDict?.[did]?.[key];
       const name = meta?.nameKey ? I18n.getTranslatedObject(meta.nameKey) : path;
+      let resolvedStates = meta?.states;
+      if (!resolvedStates && meta?.stateKeys) {
+        resolvedStates = {};
+        for (const [k, stateKey] of Object.entries(meta.stateKeys)) {
+          resolvedStates[k] = I18n.translate(stateKey);
+        }
+      }
       await this.extendObject(path, {
         type: 'state',
         common: {
@@ -2621,7 +2657,7 @@ class Dreame extends utils.Adapter {
           read: true,
           write: meta?.write ?? false,
           unit: meta?.unit || '',
-          ...(meta?.states ? { states: meta.states } : {}),
+          ...(resolvedStates ? { states: resolvedStates } : {}),
         },
         native: { siid, piid },
       });
@@ -2629,8 +2665,13 @@ class Dreame extends utils.Adapter {
     }
 
     if (value != null) {
-      const val = typeof value === 'object' ? JSON.stringify(value) : value;
-      this.setState(path, val, true);
+      let val = value;
+      if (meta?.decode) {
+        this.compoundRaw[did] = this.compoundRaw[did] || {};
+        this.compoundRaw[did][key] = value;
+        val = meta.decode(value);
+      }
+      this.setState(path, typeof val === 'object' ? JSON.stringify(val) : val, true);
     }
     return path;
   }
@@ -3133,7 +3174,7 @@ class Dreame extends utils.Adapter {
               const basePath = `${did}.status`;
               await this.extendObject(basePath + '.robot-position', {
                 type: 'state',
-                common: { name: 'Robot Position (1-4 B1-6)', type: 'string', role: 'json', read: true, write: false },
+                common: { name: I18n.getTranslatedObject('mower.binary.robot-position'), type: 'string', role: 'json', read: true, write: false },
                 native: {},
               });
               this.setState(basePath + '.robot-position', JSON.stringify({ x: x * 10, y: y * 10, angle }), true);
@@ -3147,7 +3188,7 @@ class Dreame extends utils.Adapter {
                 await this.extendObject(basePath + '.mowing-progress', {
                   type: 'state',
                   common: {
-                    name: 'Mowing Progress (1-4 B22-31)',
+                    name: I18n.getTranslatedObject('mower.binary.mowing-progress'),
                     type: 'number',
                     role: 'value',
                     unit: '%',
@@ -3160,7 +3201,7 @@ class Dreame extends utils.Adapter {
                 await this.extendObject(basePath + '.mowed-area', {
                   type: 'state',
                   common: {
-                    name: 'Mowed Area (1-4 B29-31)',
+                    name: I18n.getTranslatedObject('mower.binary.mowed-area'),
                     type: 'number',
                     role: 'value',
                     unit: 'm²',
@@ -3173,7 +3214,7 @@ class Dreame extends utils.Adapter {
                 await this.extendObject(basePath + '.total-mow-area-task', {
                   type: 'state',
                   common: {
-                    name: 'Total Area to Mow (1-4 B26-28)',
+                    name: I18n.getTranslatedObject('mower.binary.total-mow-area-task'),
                     type: 'number',
                     role: 'value',
                     unit: 'm²',
@@ -3186,7 +3227,7 @@ class Dreame extends utils.Adapter {
                 await this.extendObject(basePath + '.mowing-task', {
                   type: 'state',
                   common: {
-                    name: 'Mowing Task Info (1-4 B22-31)',
+                    name: I18n.getTranslatedObject('mower.binary.mowing-task'),
                     type: 'string',
                     role: 'json',
                     read: true,
@@ -3234,7 +3275,7 @@ class Dreame extends utils.Adapter {
                 await this.extendObject(basePath + '.dock-position', {
                   type: 'state',
                   common: {
-                    name: 'Dock Position (1-1 inferred)',
+                    name: I18n.getTranslatedObject('mower.binary.dock-position'),
                     type: 'string',
                     role: 'json',
                     read: true,
@@ -3247,18 +3288,18 @@ class Dreame extends utils.Adapter {
               await this.extendObject(basePath + '.docking-state', {
                 type: 'state',
                 common: {
-                  name: 'Docking State (1-1 B14.2-4)',
+                  name: I18n.getTranslatedObject('mower.binary.docking-state'),
                   type: 'string',
                   role: 'text',
                   read: true,
                   write: false,
                   states: {
-                    0: 'IN_STATION',
-                    1: 'OUT_OF_STATION',
-                    2: 'PAUSE_DOCKING',
-                    3: 'FINISH_DOCKING',
-                    4: 'DOCKING_FAILED',
-                    5: 'DOCKING_IN_BASE',
+                    0: I18n.translate('mower.docking-state.IN_STATION'),
+                    1: I18n.translate('mower.docking-state.OUT_OF_STATION'),
+                    2: I18n.translate('mower.docking-state.PAUSE_DOCKING'),
+                    3: I18n.translate('mower.docking-state.FINISH_DOCKING'),
+                    4: I18n.translate('mower.docking-state.DOCKING_FAILED'),
+                    5: I18n.translate('mower.docking-state.DOCKING_IN_BASE'),
                   },
                 },
                 native: {},
@@ -3267,7 +3308,7 @@ class Dreame extends utils.Adapter {
               await this.extendObject(basePath + '.location-state', {
                 type: 'state',
                 common: {
-                  name: 'Location State (1-1 B14.0-1)',
+                  name: I18n.getTranslatedObject('mower.binary.location-state'),
                   type: 'number',
                   role: 'value',
                   read: true,
@@ -3278,26 +3319,26 @@ class Dreame extends utils.Adapter {
               this.setState(basePath + '.location-state', locationState, true);
               await this.extendObject(basePath + '.pin-state', {
                 type: 'state',
-                common: { name: 'Pin State (1-1 B14.5)', type: 'number', role: 'value', read: true, write: false },
+                common: { name: I18n.getTranslatedObject('mower.binary.pin-state'), type: 'number', role: 'value', read: true, write: false },
                 native: {},
               });
               this.setState(basePath + '.pin-state', pinState, true);
               await this.extendObject(basePath + '.undocking', {
                 type: 'state',
-                common: { name: 'Undocking (1-1 B14.6)', type: 'number', role: 'value', read: true, write: false },
+                common: { name: I18n.getTranslatedObject('mower.binary.undocking'), type: 'number', role: 'value', read: true, write: false },
                 native: {},
               });
               this.setState(basePath + '.undocking', unDocking, true);
               await this.extendObject(basePath + '.camera-state', {
                 type: 'state',
-                common: { name: 'Camera State (1-1 B14.7)', type: 'number', role: 'value', read: true, write: false },
+                common: { name: I18n.getTranslatedObject('mower.binary.camera-state'), type: 'number', role: 'value', read: true, write: false },
                 native: {},
               });
               this.setState(basePath + '.camera-state', cameraState, true);
               await this.extendObject(basePath + '.error-code-binary', {
                 type: 'state',
                 common: {
-                  name: 'Error Code Binary (1-1 B1-4)',
+                  name: I18n.getTranslatedObject('mower.binary.error-code-binary'),
                   type: 'number',
                   role: 'value',
                   read: true,
@@ -3309,7 +3350,7 @@ class Dreame extends utils.Adapter {
               await this.extendObject(basePath + '.battery-level-live', {
                 type: 'state',
                 common: {
-                  name: 'Battery Level Live (1-1 B13)',
+                  name: I18n.getTranslatedObject('mower.binary.battery-level-live'),
                   type: 'number',
                   role: 'value.battery',
                   unit: '%',
@@ -3324,12 +3365,12 @@ class Dreame extends utils.Adapter {
               await this.extendObject(basePath + '.charging-live', {
                 type: 'state',
                 common: {
-                  name: 'Charging Live (1-1 B13.7)',
+                  name: I18n.getTranslatedObject('mower.binary.charging-live'),
                   type: 'number',
                   role: 'value',
                   read: true,
                   write: false,
-                  states: { 0: 'Not Charging', 1: 'Charging' },
+                  states: { 0: I18n.translate('common.not-charging'), 1: I18n.translate('common.charging') },
                 },
                 native: {},
               });
@@ -3337,7 +3378,7 @@ class Dreame extends utils.Adapter {
               await this.extendObject(basePath + '.wifi-rssi', {
                 type: 'state',
                 common: {
-                  name: 'WiFi RSSI (1-1 B17)',
+                  name: I18n.getTranslatedObject('mower.binary.wifi-rssi'),
                   type: 'number',
                   role: 'value',
                   unit: 'dBm',
@@ -3350,7 +3391,7 @@ class Dreame extends utils.Adapter {
               await this.extendObject(basePath + '.lte-rssi', {
                 type: 'state',
                 common: {
-                  name: 'LTE RSSI (1-1 B18)',
+                  name: I18n.getTranslatedObject('mower.binary.lte-rssi'),
                   type: 'number',
                   role: 'value',
                   unit: 'dBm',
@@ -3363,7 +3404,7 @@ class Dreame extends utils.Adapter {
               await this.extendObject(basePath + '.ble-rssi', {
                 type: 'state',
                 common: {
-                  name: 'BLE RSSI (1-1 B16)',
+                  name: I18n.getTranslatedObject('mower.binary.ble-rssi'),
                   type: 'number',
                   role: 'value',
                   unit: 'dBm',
@@ -5216,15 +5257,25 @@ class Dreame extends utils.Adapter {
         };
         if (stateObject && stateObject.native.piid) {
           data.data.method = 'set_properties';
+          const wSiid = stateObject.native.siid;
+          const wPiid = stateObject.native.piid;
+          const compoundKey = `${wSiid}-${wPiid}`;
+          const compoundMeta = this.specMetaDict?.[deviceId]?.[compoundKey];
+          let writeValue = state.val;
+          if (compoundMeta?.encode) {
+            const rawCompound = this.compoundRaw?.[deviceId]?.[compoundKey] ?? 0;
+            writeValue = compoundMeta.encode(Number(state.val), rawCompound);
+            this.log.info(`Compound encode ${compoundKey}: field=${state.val}, raw=${rawCompound} → ${writeValue}`);
+          }
           // miIO/Dreame cloud expects an array of property objects, not a single object.
           // Sending a bare object is silently ignored by the device — see official APK
           // (Ljava/util/List;) and HA dreame_vacuum protocol.set_property().
           data.data.params = [
             {
               did: deviceId,
-              siid: stateObject.native.siid,
-              piid: stateObject.native.piid,
-              value: state.val,
+              siid: wSiid,
+              piid: wPiid,
+              value: writeValue,
             },
           ];
         }
