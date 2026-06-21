@@ -1,6 +1,6 @@
 {
   "name": "iobroker.dreame",
-  "version": "0.3.16",
+  "version": "0.3.17",
   "description": "Adapter for dreame home devices",
   "author": {
     "name": "TA2k",
@@ -41,7 +41,7 @@
     "@eslint/js": "^10.0.1",
     "@iobroker/testing": "^5.2.2",
     "@tsconfig/node22": "^22.0.5",
-    "@types/node": "^22.19.21",
+    "@types/node": "^22.20.0",
     "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",

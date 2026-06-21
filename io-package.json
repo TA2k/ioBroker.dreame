@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.3.16",
+    "version": "0.3.17",
     "news": {
+      "0.3.17": {
+        "en": "Fix command sent for some states\nAdapter requires admin >= 7.8.23 now.",
+        "de": "Nichtsenden von manchen States behoben.\nDer Adapter benötigt jetzt Administratorrechte ab Version 7.8.23.",
+        "ru": "Исправлена команда, отправленная для некоторых штатов.\nДля работы адаптера теперь требуется версия admin >= 7.8.23.",
+        "pt": "Comando de correção enviado para alguns estados\nO adaptador agora requer o admin versão >= 7.8.23.",
+        "nl": "Correctieopdracht verzonden voor sommige staten\nDe adapter vereist nu admin >= 7.8.23.",
+        "fr": "Commande de correction envoyée pour certains états\nL'adaptateur nécessite désormais une version d'administrateur supérieure ou égale à 7.8.23.",
+        "it": "Comando di correzione inviato per alcuni stati\nL'adattatore ora richiede admin >= 7.8.23.",
+        "es": "Comando de corrección enviado para algunos estados\nEl adaptador ahora requiere admin >= 7.8.23.",
+        "pl": "Napraw polecenie wysłane dla niektórych stanów\nAdapter wymaga teraz uprawnień administratora >= 7.8.23.",
+        "uk": "Виправлення команди, надісланої для деяких штатів\nАдаптер тепер вимагає адміністратора версії >= 7.8.23.",
+        "zh-cn": "已针对某些状态发送修复命令\n适配器现在需要管理员版本 >= 7.8.23。"
+      },
       "0.3.16": {
         "en": "Bugfixes and dependency updates",
         "de": "Bugfixes und Dependency-Updates",
@@ -43,13 +56,8 @@
       "uk": "Адаптер для домашніх пристроїв Dreame",
       "zh-cn": "Dreame 家用设备适配器"
     },
-    "authors": [
-      "TA2k <tombox2020@gmail.com>"
-    ],
-    "keywords": [
-      "dreame",
-      "dreamehome"
-    ],
+    "authors": ["TA2k <tombox2020@gmail.com>"],
+    "keywords": ["dreame", "dreamehome"],
     "licenseInformation": {
       "type": "free",
       "license": "MIT"
@@ -85,12 +93,8 @@
       }
     }
   },
-  "encryptedNative": [
-    "password"
-  ],
-  "protectedNative": [
-    "password"
-  ],
+  "encryptedNative": ["password"],
+  "protectedNative": ["password"],
   "native": {
     "cloudService": "dreame",
     "username": "",
