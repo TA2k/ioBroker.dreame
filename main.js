@@ -890,61 +890,12 @@ class Dreame extends utils.Adapter {
     this.specStatusDict[did].push(...mowerLookup.statusList);
 
     const statusStates = [
-      // SIID 4 (Work Extend), SIID 5 (RTK/GPS), SIID 8 (Schedule), SIID 12 (Statistics)
-      // and getCFG / AutoSwitch / PRE / CMS states (no siid/piid) remain hardcoded
-      // until Mower Bereich 1 migration is complete.
-      { id: 'work-mode', name: 'Work Mode (4-1)', siid: 4, piid: 1, type: 'number', role: 'value' },
-      { id: 'mowing-time', name: 'Mowing Time (4-2)', siid: 4, piid: 2, type: 'number', role: 'value', unit: 'min' },
-      { id: 'mowing-area', name: 'Mowed Area (4-3)', siid: 4, piid: 3, type: 'number', role: 'value', unit: 'm²' },
-      { id: 'task-status', name: 'Task Status (4-7)', siid: 4, piid: 7, type: 'number', role: 'value' },
-      { id: 'serial-number', name: 'Serial Number (4-14)', siid: 4, piid: 14, type: 'string', role: 'text' },
-      { id: 'faults', name: 'Faults (4-18)', siid: 4, piid: 18, type: 'string', role: 'text' },
-      { id: 'warn-status', name: 'Warning Status (4-35)', siid: 4, piid: 35, type: 'number', role: 'value' },
-      { id: 'mow-cancel', name: 'Mow Cancel (4-30)', siid: 4, piid: 30, type: 'number', role: 'value' },
-      { id: 'map-index', name: 'Map Index (4-42)', siid: 4, piid: 42, type: 'number', role: 'value' },
-      { id: 'map-name', name: 'Map Name (4-43)', siid: 4, piid: 43, type: 'string', role: 'text' },
-      { id: 'device-capability', name: 'Device Capability (4-83)', siid: 4, piid: 83, type: 'string', role: 'json' },
-      { id: 'rtk-status', name: 'RTK Status (5-100)', siid: 5, piid: 100, type: 'number', role: 'value' },
-      { id: 'gps-satellites', name: 'GPS Satellites (5-106)', siid: 5, piid: 106, type: 'number', role: 'value' },
-      { id: 'positioning-mode', name: 'Positioning Mode (5-107)', siid: 5, piid: 107, type: 'number', role: 'value' },
-      { id: 'first-mow-time', name: 'First Mow Time (12-1)', siid: 12, piid: 1, type: 'number', role: 'value' },
-      {
-        id: 'total-mow-time',
-        name: 'Total Mow Time (12-2)',
-        siid: 12,
-        piid: 2,
-        type: 'number',
-        role: 'value',
-        unit: 'min',
-      },
-      { id: 'total-mow-count', name: 'Total Mow Count (12-3)', siid: 12, piid: 3, type: 'number', role: 'value' },
-      {
-        id: 'total-mow-area',
-        name: 'Total Mowed Area (12-4)',
-        siid: 12,
-        piid: 4,
-        type: 'number',
-        role: 'value',
-        unit: 'm²',
-      },
-      {
-        id: 'total-runtime',
-        name: 'Total Runtime (12-5)',
-        siid: 12,
-        piid: 5,
-        type: 'number',
-        role: 'value',
-        unit: 'min',
-      },
-      {
-        id: 'total-cruise-time',
-        name: 'Total Cruise Time (12-6)',
-        siid: 12,
-        piid: 6,
-        type: 'number',
-        role: 'value',
-        unit: 'min',
-      },
+      // SIID 2 (Mower Service), SIID 3 (Battery), SIID 4 (Work Extend),
+      // SIID 5 (RTK/GPS), SIID 8 (Schedule), SIID 12 (Statistics):
+      // all lazy-created via spec system (buildMowerLookup above).
+      // getCFG / AutoSwitch / PRE / CMS states (no siid/piid) remain hardcoded
+      // until Mower Bereich 2 migration.
+      //
       // getCFG Settings (kein siid/piid, befüllt via loadMowerSettings)
       {
         id: 'rain-protection',
@@ -1119,25 +1070,9 @@ class Dreame extends utils.Adapter {
       { id: 'edge-detection', name: 'Edge Detection (PRE)', type: 'number', role: 'value', desc: '0=aus, 1=an' },
     ];
 
-    const remoteStates = [
-      {
-        id: 'obstacle-avoidance',
-        name: 'Obstacle Avoidance (4-21)',
-        siid: 4,
-        piid: 21,
-        type: 'boolean',
-        role: 'switch',
-      },
-      { id: 'ai-detection', name: 'AI Detection (4-22)', siid: 4, piid: 22, type: 'boolean', role: 'switch' },
-      { id: 'mow-setting', name: 'Mow Setting (4-23)', siid: 4, piid: 23, type: 'number', role: 'value' },
-      { id: 'custom-mowing', name: 'Custom Mowing (4-26)', siid: 4, piid: 26, type: 'boolean', role: 'switch' },
-      { id: 'child-lock', name: 'Child Lock (4-27)', siid: 4, piid: 27, type: 'boolean', role: 'switch' },
-      { id: 'dnd-enable', name: 'Do Not Disturb (5-1)', siid: 5, piid: 1, type: 'boolean', role: 'switch' },
-      { id: 'dnd-start', name: 'DND Start Time (5-2)', siid: 5, piid: 2, type: 'string', role: 'text' },
-      { id: 'dnd-end', name: 'DND End Time (5-3)', siid: 5, piid: 3, type: 'string', role: 'text' },
-      { id: 'timezone', name: 'Timezone (8-1)', siid: 8, piid: 1, type: 'string', role: 'text' },
-      { id: 'schedule', name: 'Mow Schedule (8-2)', siid: 8, piid: 2, type: 'string', role: 'text' },
-    ];
+    // SIID 4 (4-21/22/23/26/27), SIID 5 (5-1/2/3), SIID 8 (8-1/2):
+    // writable states now in spec system (mower-work, mower-nav, mower-sched).
+    const remoteStates = [];
 
     // Plugin SET commands via action channel (siid:2 aiid:50, m:'s')
     // Format: {m:'s', t:cfgKey, d:{value:X}} or d:{value:X, time:Y, ...}
