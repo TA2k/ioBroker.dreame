@@ -880,59 +880,19 @@ class Dreame extends utils.Adapter {
     const did = device.did;
     this.log.info(`Creating mower-specific states for ${device.model}`);
 
+    // SIID 2 (Mower Service) + SIID 3 (Battery): lazy-created via spec system.
+    // Further SIIDs will be migrated here as Mower Bereich 1 progresses.
+    const { buildMowerLookup } = require('./lib/specs/mower-index');
+    const mowerLookup = buildMowerLookup(did);
+    Object.assign(this.specPropsToIdDict[did], mowerLookup.propsToId);
+    this.specMetaDict[did] = {};
+    Object.assign(this.specMetaDict[did], mowerLookup.metaMap);
+    this.specStatusDict[did].push(...mowerLookup.statusList);
+
     const statusStates = [
-      {
-        id: 'status',
-        name: 'Mower Status (2-1)',
-        siid: 2,
-        piid: 1,
-        type: 'number',
-        role: 'value',
-        states: DEVICE_STATUS_STATES.mower,
-      },
-      { id: 'fault', name: 'Error Code (2-2)', siid: 2, piid: 2, type: 'number', role: 'value' },
-      { id: 'task-info', name: 'Task Execution Info (2-50)', siid: 2, piid: 50, type: 'string', role: 'json' },
-      {
-        id: 'settings-update',
-        name: 'Settings Update (2-51)',
-        siid: 2,
-        piid: 51,
-        type: 'string',
-        role: 'json',
-        desc: 'Generischer Settings-Trigger via MQTT. 2 Werte = Rain Protection (WRP), 1 Wert = Frost Protection (FDP), 3 Werte = Low Speed Nachts (LOW)',
-      },
-      {
-        id: 'mowing-preference',
-        name: 'Mowing Preference Update (2-52)',
-        siid: 2,
-        piid: 52,
-        type: 'string',
-        role: 'json',
-      },
-      {
-        id: 'voice-download',
-        name: 'Voice Download Progress (2-53)',
-        siid: 2,
-        piid: 53,
-        type: 'number',
-        role: 'value',
-        unit: '%',
-      },
-      { id: 'ai-obstacles', name: 'AI Obstacle Detection (2-55)', siid: 2, piid: 55, type: 'string', role: 'json' },
-      { id: 'zone-status', name: 'Zone Status (2-56)', siid: 2, piid: 56, type: 'string', role: 'json' },
-      { id: 'self-check', name: 'Self-Check Result (2-58)', siid: 2, piid: 58, type: 'string', role: 'json' },
-      { id: 'task-progress-flag', name: 'Task Progress Flag (2-62)', siid: 2, piid: 62, type: 'number', role: 'value' },
-      { id: 'task-type', name: 'Task Type (2-65)', siid: 2, piid: 65, type: 'string', role: 'text' },
-      {
-        id: 'battery-level',
-        name: 'Battery Level (3-1)',
-        siid: 3,
-        piid: 1,
-        type: 'number',
-        role: 'value.battery',
-        unit: '%',
-      },
-      { id: 'charging-state', name: 'Charging State (3-2)', siid: 3, piid: 2, type: 'number', role: 'value' },
+      // SIID 4 (Work Extend), SIID 5 (RTK/GPS), SIID 8 (Schedule), SIID 12 (Statistics)
+      // and getCFG / AutoSwitch / PRE / CMS states (no siid/piid) remain hardcoded
+      // until Mower Bereich 1 migration is complete.
       { id: 'work-mode', name: 'Work Mode (4-1)', siid: 4, piid: 1, type: 'number', role: 'value' },
       { id: 'mowing-time', name: 'Mowing Time (4-2)', siid: 4, piid: 2, type: 'number', role: 'value', unit: 'min' },
       { id: 'mowing-area', name: 'Mowed Area (4-3)', siid: 4, piid: 3, type: 'number', role: 'value', unit: 'm²' },
