@@ -120,7 +120,10 @@
   "vacuum.status.map-backup-status":         "Map Backup Status",
   "vacuum.status.wifi-map":                  "WiFi Map",
 
+  "vacuum.status.stream-status":             "Camera Stream Status",
   "vacuum.status.camera-light-brightness":   "Camera Light Brightness",
+  "vacuum.status.map-object-name":           "Map Object Name",
+  "vacuum.status.robot-cleaner-2-6":         "Robot Cleaner (2-6)",
 
   "common.installed":             "Installed",
   "common.not-installed":         "Not installed",

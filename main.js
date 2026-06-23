@@ -2673,7 +2673,10 @@ class Dreame extends utils.Adapter {
         this.compoundRaw[did][key] = value;
         val = meta.decode(value);
       }
-      this.setState(path, typeof val === 'object' ? JSON.stringify(val) : val, true);
+      const finalVal = typeof val === 'object'
+        ? JSON.stringify(val)
+        : (meta?.type === 'boolean' && (val === 0 || val === 1)) ? val !== 0 : val;
+      this.setState(path, finalVal, true);
     }
     return path;
   }
@@ -3076,7 +3079,9 @@ class Dreame extends utils.Adapter {
                     `Set ${path} to ${typeof element.value === 'object' ? JSON.stringify(element.value) : element.value}`,
                   );
                 } else {
-                  // Fallback for unknown siid-piid: mirror MQTT-path behaviour
+                  // Fallback for unknown siid-piid: status-only (no remote.*).
+                  // HTTP/MQTT responses carry no access/write flag, so we cannot
+                  // determine writability — only expose as read-only status state.
                   this.log.debug(`No path found for ${device.did} ${element.siid}-${element.piid}`);
                   const statusPath = `${device.did}.status.${element.siid}-${element.piid}`;
                   await this.extendObject(statusPath, {
@@ -3085,12 +3090,6 @@ class Dreame extends utils.Adapter {
                     native: {},
                   });
                   this.setState(statusPath, JSON.stringify(element.value), true);
-                  const remotePath = `${device.did}.remote.${element.siid}-${element.piid}`;
-                  await this.extendObject(remotePath, {
-                    type: 'state',
-                    common: { name: remotePath, type: 'mixed', role: 'state', write: true, read: true },
-                    native: { siid: element.siid, piid: element.piid, did: device.did },
-                  });
                 }
               }
             })
@@ -3479,7 +3478,9 @@ class Dreame extends utils.Adapter {
           // Lazy create + setState für Properties mit bekannter Metadaten-Definition
           const lazyPath = await this._lazyCreateState(did, element.siid, element.piid, element.value);
           if (!lazyPath) {
-            // Fallback für völlig unbekannte siid-piid (kein Eintrag in specPropsToIdDict)
+            // Fallback für völlig unbekannte siid-piid (kein Eintrag in specPropsToIdDict).
+            // Kein remote.* — MQTT properties_changed trägt kein access/write-Flag,
+            // Schreibbarkeit ist unbekannt. Nur read-only status.* anlegen.
             this.log.debug(`No path found for ${did} ${element.siid}-${element.piid}`);
             const statusPath = `${did}.status.${element.siid}-${element.piid}`;
             await this.extendObject(statusPath, {
@@ -3494,23 +3495,6 @@ class Dreame extends utils.Adapter {
               native: {},
             });
             this.setState(statusPath, JSON.stringify(element.value), true);
-            const remotePath = `${did}.remote.${element.siid}-${element.piid}`;
-            await this.extendObject(remotePath, {
-              type: 'state',
-              common: {
-                name: remotePath,
-                type: 'mixed',
-                role: 'state',
-                write: true,
-                read: true,
-              },
-              native: {
-                siid: element.siid,
-                piid: element.piid,
-                aiid: element.aiid,
-                did: did,
-              },
-            });
           }
         }
       }
