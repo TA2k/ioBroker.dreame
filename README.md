@@ -461,6 +461,9 @@ translations should be submitted as PRs against the respective
 
 ## Changelog
 
+### 0.3.19 (2026-06-23)
+- Documentation fix: 0.3.18 changelog entry was missing from README.md due to a release script bug. No functional changes.
+
 ### 0.3.18 (2026-06-23)
 - Vacuum states are now created lazily — only properties actually reported by the device appear in the object tree, filling in gradually after adapter start. All vacuum states now have full translations in 11 languages. Fixed cleaning-mode encoding for L40s Pro Ultra and similar models (mode, area and humidity were previously combined into a single raw value). Action buttons (start, stop, reset, etc.) now display correctly as buttons instead of raw text. Added translated, lazily-created states for mower position/task data (binary protocol). Fixed data loss on first write to rawCompound states (previous compound value was discarded before decoding, causing partial state updates). Added min/max range (1-32) for wetness-level state. BREAKING CHANGE: Action states (start-clean, stop-clean, return-to-base, etc.) changed from type string/text to boolean/button. Scripts or Vis widgets that write string values to these states must be updated to write true instead.
 
