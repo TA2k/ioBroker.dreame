@@ -462,6 +462,12 @@ class Dreame extends utils.Adapter {
       await I18n.init(join(__dirname, 'lib'), this);
       await this.fetchSpecs();
       await this.createRemotes();
+      // Load mower settings after state objects are created (ordering fix: was in getDeviceList before extendObject ran)
+      for (const device of this.deviceArray) {
+        if (this.isMower(device)) {
+          await this.loadMowerSettings(device);
+        }
+      }
       await this.updateDevicesViaSpec();
       await this.connectMqtt();
       this.updateInterval = setInterval(
@@ -744,7 +750,6 @@ class Dreame extends utils.Adapter {
             });
             if (this.isMower(device)) {
               await this.getMowerMap(device);
-              await this.loadMowerSettings(device);
               await this.loadMowerHistory(device);
               const dockState = await this.getStateAsync(device.did + '.status.dock-position');
               if (dockState && dockState.val) {
@@ -1324,7 +1329,7 @@ class Dreame extends utils.Adapter {
       await this.extendObject(path, {
         type: 'state',
         common: /** @type {any} */ ({
-          name: s.name,
+          name: I18n.translate(`mower.status.${s.id}`) || s.name,
           type: s.type,
           role: s.role,
           read: true,
@@ -1356,7 +1361,7 @@ class Dreame extends utils.Adapter {
       await this.extendObject(path, {
         type: 'state',
         common: /** @type {any} */ ({
-          name: c.name,
+          name: I18n.translate(`mower.remote.${c.id}`) || c.name,
           type: c.type,
           role: c.role,
           read: true,
