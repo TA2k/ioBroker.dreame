@@ -39,7 +39,7 @@ Adapter for Dreame and MOVA robot vacuums and robot mowers.
 
 ## Vacuum (L10, L20, X40, ...)
 
-The adapter creates a dedicated state tree for vacuum robots with named states, writable settings, and action buttons.
+The adapter creates states for vacuum robots lazily — only properties actually reported by your device appear in the object tree. States fill in gradually after adapter start and after the first polling cycle. The tables below show all known possible states; your device may only report a subset.
 
 ### Vacuum Status
 
@@ -147,7 +147,7 @@ These are parsed from the `auto-switch-settings` JSON and available as individua
 | volume                 | Volume level                                          |
 | auto-dust-collecting   | Auto dust collecting on/off                           |
 | auto-empty-frequency   | Auto empty frequency                                  |
-| wetness-level          | Wetness level                                         |
+| wetness-level          | Wetness level (1–32)                                  |
 | cleangenius-mode       | 0=Off, 1=Routine, 2=Deep                              |
 | water-temperature      | 0=Cold, 1=Warm, 2=Hot, 3=Boiling                      |
 | silent-drying          | Silent drying on/off                                  |
@@ -184,6 +184,12 @@ These write directly to the device's AutoSwitch settings (property 4-50):
 | set-custom-mopping          | Set custom mopping mode: 0=off, 1=on                         |
 
 #### Actions
+
+> **Breaking change since 0.3.18:** Action states (`start-clean`, `stop`,
+> `pause`, `return-to-dock`, `locate`, `start-washing`, `start-auto-empty`,
+> `clear-warning`, and all reset buttons) are now **type boolean / role button**.
+> Write `true` to trigger them. Scripts or Vis widgets that previously wrote
+> a string value must be updated.
 
 | State              | Description                                            |
 | ------------------ | ------------------------------------------------------ |
@@ -230,7 +236,7 @@ X = mapId (see `dreame.0.XXXX.status.map-list`)
 
 ## Mower (A2, A2 1200, ...)
 
-The adapter supports Dreame robotic mowers with dedicated states and map rendering.
+The adapter supports Dreame robotic mowers with dedicated states and map rendering. States are created lazily — only properties actually reported by your device appear in the object tree.
 
 ### Mower Status
 
@@ -285,16 +291,48 @@ The adapter supports Dreame robotic mowers with dedicated states and map renderi
 | edge-mowing              | Edge mowing (PRE): 0=off, 1=on                                                                             |
 | edge-detection           | Edge detection (PRE): 0=off, 1=on                                                                          |
 
+#### Position and Task Data (binary protocol, live)
+
+These states are populated from MQTT binary messages and created lazily —
+they only appear after the mower sends its first binary update.
+
+**From robot position packet (siid 1-5):**
+
+| State                | Description                                                        |
+| -------------------- | ------------------------------------------------------------------ |
+| robot-position       | Current robot position JSON: `{"x":..., "y":..., "angle":...}`    |
+| mowing-progress      | Current task progress (%)                                          |
+| mowed-area           | Area completed in current task (m²)                                |
+| total-mow-area-task  | Total planned area for current task (m²)                           |
+| mowing-task          | Full task data JSON: `{regionId, taskId, percent, total, finish}`  |
+
+**From device telemetry packet (siid 1-1):**
+
+| State              | Description                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| dock-position      | Dock/charger position JSON: `{"x":..., "y":..., "angle":...}` (updated when docking)            |
+| docking-state      | IN_STATION / OUT_OF_STATION / PAUSE_DOCKING / FINISH_DOCKING / DOCKING_FAILED / DOCKING_IN_BASE |
+| location-state     | Location state (0–3)                                                                             |
+| battery-level-live | Live battery level (%) from binary telemetry                                                     |
+| charging-live      | Live charging: 0=Not charging, 1=Charging                                                        |
+| wifi-rssi          | WiFi signal strength (dBm)                                                                       |
+| lte-rssi           | LTE signal strength (dBm)                                                                        |
+| ble-rssi           | Bluetooth signal strength (dBm)                                                                  |
+| error-code-binary  | Raw error code from binary telemetry                                                             |
+| pin-state          | Pin state (0/1)                                                                                  |
+| undocking          | Undocking flag (0/1)                                                                             |
+| camera-state       | Camera state                                                                                     |
+
 ### Mower Remote
 
 | State                   | Description                                                              |
 | ----------------------- | ------------------------------------------------------------------------ |
-| start-mow               | Start mowing                                                             |
-| stop-mow                | Stop mowing                                                              |
-| pause-mow               | Pause mowing                                                             |
-| start-charge            | Return to dock                                                           |
+| start-mow               | Start mowing (button)                                                    |
+| stop-mow                | Stop mowing (button)                                                     |
+| pause-mow               | Pause mowing (button)                                                    |
+| start-charge            | Return to dock (button)                                                  |
 | start-mow-ext           | Start custom mow (zone/segment cleaning with params)                     |
-| clear-warning           | Clear warning/error state                                                |
+| clear-warning           | Clear warning/error state (button)                                       |
 | obstacle-avoidance      | Obstacle avoidance on/off                                                |
 | ai-detection            | AI detection on/off                                                      |
 | child-lock              | Child lock on/off                                                        |
@@ -382,6 +420,44 @@ Via `dreame.0.XXXXXX.remote.customCommand`:
   "in": [{ "order": 4, "region": [1], "type": "order" }]
 }
 ```
+
+## Known Limitations
+
+**Object tree fills in gradually (lazy state creation)**
+States only appear once the device has reported the corresponding property at
+least once. After a fresh installation or adapter restart, the tree may look
+incomplete for a few minutes — this is expected behaviour.
+
+**L40s Pro Ultra and similar: some states appear only after active use**
+Properties in the SIID 4 group (`cleaning-mode` 4-23, `suction-level` 4-4,
+`water-volume` 4-5) and SIID 28 (`wetness-level` 28-1) may only be pushed
+by the device after an active cleaning session, not during idle polling.
+These states will not appear until at least one cleaning cycle has completed
+after the adapter was installed or restarted.
+
+**`cleaning-mode` raw values on some devices**
+Versions before 0.3.18 could report raw compound values (e.g. 5120, 5121,
+5122) instead of the documented 0–3 range on some devices, including the
+L40s Pro Ultra. This was caused by the adapter not decoding a
+compound-encoded value that combines mode, area and humidity in a single
+integer. Since 0.3.18 this is decoded correctly. If you still see raw values
+above 1000 after updating, please open an issue with your model and the raw
+value you observe.
+
+---
+
+## Translations
+
+State names and descriptions are available in 11 languages: English, German,
+Russian, Portuguese, Dutch, French, Italian, Spanish, Polish, Ukrainian, and
+Chinese (simplified).
+
+`lib/i18n/en.json` is the authoritative source. All other languages are
+generated from it via `npm run translate`. Corrections to non-English
+translations should be submitted as PRs against the respective
+`lib/i18n/<lang>.json` file.
+
+---
 
 ## Changelog
 ### 0.3.17 (2026-06-21)
