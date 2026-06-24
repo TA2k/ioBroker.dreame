@@ -23,6 +23,38 @@ Adapter for Dreame and MOVA robot vacuums and robot mowers.
 
 ---
 
+## Installation
+
+### Via ioBroker Admin (recommended)
+
+1. Make sure the "Latest" repository is active under
+   Admin → Settings → Repositories
+2. Go to the "Adapters" tab and search for "dreame"
+3. Click install
+
+The adapter is currently available in the **Latest** repository. Stable
+repository inclusion has been requested (see status at
+https://github.com/ioBroker/ioBroker.repositories/pull/6200).
+
+### Via CLI
+
+```
+iobroker install dreame@latest
+```
+
+### For adapter development
+
+If you want to contribute to the adapter code itself (not just use it):
+
+```
+git clone https://github.com/TA2k/ioBroker.dreame.git
+cd ioBroker.dreame
+npm install
+npm link
+```
+
+---
+
 ## Configuration
 
 | Setting         | Description                                         |
