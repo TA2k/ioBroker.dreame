@@ -426,8 +426,44 @@ class Dreame extends utils.Adapter {
     if (model.includes('hold')) return 'hold';
     return 'vacuum';
   }
+  // One-time migration: delete old phantom remote.<siid>-<piid> states created by the
+  // pre-0664fd5 fallback, which incorrectly marked unknown properties as write:true.
+  // Runs once per adapter instance, then marks itself done via a persistent state.
+  async _cleanupPhantomRemoteStates() {
+    const MARKER = 'info.phantomCleanupV1';
+    if (await this.getObjectAsync(MARKER)) return;
+
+    const allObjects = await this.getAdapterObjects();
+    let count = 0;
+    for (const [fullId, obj] of Object.entries(allObjects || {})) {
+      if (!obj || obj.type !== 'state') continue;
+      const c = obj.common || {};
+      if (!/\.remote\.\d+-\d+$/.test(fullId)) continue;
+      if (c.type !== 'mixed' || c.write !== true) continue;
+      try {
+        await this.delForeignObjectAsync(fullId);
+        this.log.info(`[phantom-cleanup] Deleted legacy state: ${fullId}`);
+        count++;
+      } catch (e) {
+        this.log.warn(`[phantom-cleanup] Could not delete ${fullId}: ${e.message}`);
+      }
+    }
+    if (count > 0) {
+      this.log.info(`[phantom-cleanup] Removed ${count} legacy remote state(s).`);
+    } else {
+      this.log.debug('[phantom-cleanup] No legacy states found.');
+    }
+    await this.extendObjectAsync(MARKER, {
+      type: 'state',
+      common: { name: 'Phantom Cleanup V1 done', type: 'boolean', role: 'indicator', write: false, read: true },
+      native: {},
+    });
+    await this.setStateAsync(MARKER, true, true);
+  }
+
   async onReady() {
     this.setState('info.connection', false, true);
+    await this._cleanupPhantomRemoteStates();
     if (this.config.interval < 0.5) {
       this.log.info('Set interval to minimum 0.5');
       this.config.interval = 0.5;
