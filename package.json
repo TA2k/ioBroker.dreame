@@ -69,6 +69,9 @@
     "translate": "translate-adapter --base lib/i18n/en.json --languages de ru pt nl fr it es pl uk zh-cn",
     "release": "release-script --all"
   },
+  "overrides": {
+    "serialize-javascript": "^7.0.5"
+  },
   "bugs": {
     "url": "https://github.com/TA2k/ioBroker.dreame/issues"
   },
