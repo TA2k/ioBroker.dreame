@@ -24,6 +24,7 @@ try {
 }
 
 const { decodeMultiMapData } = require('./lib/dreame');
+const { getRoomDisplayName } = require('./lib/cleanset');
 
 const BRAND_CONFIG = {
   dreame: {
@@ -487,6 +488,8 @@ class Dreame extends utils.Adapter {
     this.refreshTokenTimeout = null;
     this.session = {};
     this.firstStart = true;
+    this._areaInfoByDid = {};
+    this._loggedMissingAreaInfo = {};
     this.subscribeStates('*.remote.*');
     this.subscribeStates('*.shortcuts.*.start');
     this.subscribeStates('*.cleanset.*');
@@ -3577,10 +3580,33 @@ class Dreame extends utils.Adapter {
             if (value != null) {
               const pathMap = In_path + key + '.' + Subkey;
               if (pathMap.toString().indexOf('.cleanset') != -1) {
+                const _mapDid = In_path.split('.')[0];
+                const _areaInfo = this._areaInfoByDid[_mapDid];
+                if (!_areaInfo && !this._loggedMissingAreaInfo[_mapDid]) {
+                  this._loggedMissingAreaInfo[_mapDid] = true;
+                  this.log.debug(
+                    `Room names not yet available for device ${_mapDid} - waiting for map data via getMap(). Using generic room numbers until next successful map fetch.`,
+                  );
+                }
+                const _roomResult = getRoomDisplayName(Subkey, _areaInfo ? _areaInfo[Subkey] : null);
+                let _roomName;
+                if (_roomResult.type === 'custom') {
+                  _roomName = _roomResult.value;
+                } else if (_roomResult.type === 'predefined') {
+                  const _translated = I18n.getTranslatedObject(_roomResult.nameKey);
+                  if (_roomResult.indexSuffix > 0) {
+                    // Multiple rooms of same type: append numeric suffix as plain string
+                    _roomName = `${_translated.en || _roomResult.nameKey} ${_roomResult.indexSuffix}`;
+                  } else {
+                    _roomName = _translated;
+                  }
+                } else {
+                  _roomName = _roomResult.value;
+                }
                 await this.extendObject(pathMap, {
                   type: 'channel',
                   common: {
-                    name: 'Cleaning Settings for Room: ' + Subkey,
+                    name: _roomName,
                   },
                   native: {},
                 });
@@ -3712,6 +3738,9 @@ class Dreame extends utils.Adapter {
         }
       }
       const multiMap = decodeMultiMapData(firstMap.thb || firstMap.map, 0);
+      if (multiMap && multiMap.areaInfo) {
+        this._areaInfoByDid[device.did] = multiMap.areaInfo;
+      }
       //convert mapInfo bitmap to image
       if (!createCanvas) {
         this.log.debug('Canvas not available, cannot create map image');
