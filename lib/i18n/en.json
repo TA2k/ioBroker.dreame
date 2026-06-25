@@ -445,5 +445,22 @@
   "mower.remote.set-mow-mode":            "Set Mow Mode",
   "mower.remote.set-edge-mowing":         "Set Edge Mowing",
   "mower.remote.set-edge-detection":      "Set Edge Detection",
-  "mower.remote.set-direction-change":    "Set Direction Change"
+  "mower.remote.set-direction-change":    "Set Direction Change",
+
+  "segment.type.room":                    "Room",
+  "segment.type.living-room":             "Living Room",
+  "segment.type.primary-bedroom":         "Primary Bedroom",
+  "segment.type.study":                   "Study",
+  "segment.type.kitchen":                 "Kitchen",
+  "segment.type.dining-hall":             "Dining Hall",
+  "segment.type.bathroom":                "Bathroom",
+  "segment.type.balcony":                 "Balcony",
+  "segment.type.corridor":                "Corridor",
+  "segment.type.utility-room":            "Utility Room",
+  "segment.type.closet":                  "Closet",
+  "segment.type.meeting-room":            "Meeting Room",
+  "segment.type.office":                  "Office",
+  "segment.type.fitness-area":            "Fitness Area",
+  "segment.type.recreation-area":         "Recreation Area",
+  "segment.type.secondary-bedroom":       "Secondary Bedroom"
 }

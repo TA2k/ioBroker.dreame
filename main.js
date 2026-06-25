@@ -3025,7 +3025,9 @@ class Dreame extends utils.Adapter {
                     common: { name: statusPath, type: 'mixed', role: 'state', write: false, read: true },
                     native: {},
                   });
-                  this.setState(statusPath, JSON.stringify(element.value), true);
+                  if (element.value != null) {
+                    this.setState(statusPath, JSON.stringify(element.value), true);
+                  }
                 }
               }
             })
@@ -3430,7 +3432,9 @@ class Dreame extends utils.Adapter {
               },
               native: {},
             });
-            this.setState(statusPath, JSON.stringify(element.value), true);
+            if (element.value != null) {
+              this.setState(statusPath, JSON.stringify(element.value), true);
+            }
           }
         }
       }
