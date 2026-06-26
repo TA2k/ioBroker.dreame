@@ -24,7 +24,7 @@ try {
 }
 
 const { decodeMultiMapData } = require('./lib/dreame');
-const { getRoomDisplayName } = require('./lib/cleanset');
+const { getRoomDisplayName, buildSegmentTypeMap } = require('./lib/cleanset');
 
 const BRAND_CONFIG = {
   dreame: {
@@ -2567,10 +2567,94 @@ class Dreame extends utils.Adapter {
       native: {},
     });
 
+    // custom-room-cleaning: top-level channel + persistent control states
+    await this.extendObject(`${did}.remote.custom-room-cleaning`, {
+      type: 'channel',
+      common: { name: 'Custom Room Cleaning' },
+      native: {},
+    });
+    const _crcActiveMapPath = `${did}.remote.custom-room-cleaning.active-map`;
+    await this.extendObject(_crcActiveMapPath, {
+      type: 'state',
+      common: { name: 'Active Map ID', type: 'string', role: 'text', read: true, write: true },
+      native: {},
+    });
+    const _crcCmdPath = `${did}.remote.custom-room-cleaning.customCommand`;
+    await this.extendObject(_crcCmdPath, {
+      type: 'state',
+      common: { name: 'Custom Command (selects JSON)', type: 'string', role: 'text', read: true, write: true },
+      native: {},
+    });
+    const _crcExistingCmd = await this.getStateAsync(_crcCmdPath);
+    if (!_crcExistingCmd || _crcExistingCmd.val === null || _crcExistingCmd.val === undefined) {
+      await this.setState(_crcCmdPath, '{"selects":[]}', true);
+    }
+    await this.extendObject(`${did}.remote.custom-room-cleaning.start`, {
+      type: 'state',
+      common: { name: 'Start Custom Room Cleaning', type: 'boolean', role: 'button', read: false, write: true },
+      native: {},
+    });
+
     this.log.info(
       `Vacuum states created: ${statusStates.length} status, ${remoteStates.length} remote, ${autoSwitchRemotes.length} autoSwitch, ${actionStates.length} actions`,
     );
   }
+  async _setCustomRoomCleaningMap(device, mapId, areaInfo) {
+    const did = device.did;
+    const segTypeMap = buildSegmentTypeMap();
+    const mapChannelPath = `${did}.remote.custom-room-cleaning.map-${mapId}`;
+
+    await this.extendObject(mapChannelPath, {
+      type: 'channel',
+      common: { name: 'Map ' + mapId },
+      native: {},
+    });
+
+    for (const roomId of Object.keys(areaInfo)) {
+      const areaEntry = areaInfo[roomId];
+
+      // Stable English slug from segment type; falls back to room-<id> for custom names (type=0)
+      const aType = areaEntry && areaEntry.areaType;
+      let roomSlug;
+      if (aType && aType.type >= 1) {
+        const typeSlug = segTypeMap[aType.type];
+        const idxSuffix = aType.index > 0 ? `-${aType.index + 1}` : '';
+        roomSlug = typeSlug ? `${typeSlug}${idxSuffix}` : `room-${roomId}`;
+      } else {
+        roomSlug = `room-${roomId}`;
+      }
+
+      // Display name — same three-condition logic as setMapInfos
+      const _roomResult = getRoomDisplayName(roomId, areaEntry);
+      let _roomName;
+      if (_roomResult.type === 'custom') {
+        _roomName = _roomResult.value;
+      } else if (_roomResult.type === 'predefined') {
+        const _translated = I18n.getTranslatedObject(_roomResult.nameKey);
+        if (_roomResult.indexSuffix > 0) {
+          _roomName = Object.fromEntries(
+            Object.entries(_translated).map(([lang, val]) => [lang, `${val} ${_roomResult.indexSuffix}`]),
+          );
+        } else {
+          _roomName = _translated;
+        }
+      } else {
+        _roomName = _roomResult.value;
+      }
+
+      const roomPath = `${mapChannelPath}.${roomSlug}`;
+      await this.extendObject(roomPath, {
+        type: 'state',
+        common: { name: _roomName, type: 'boolean', role: 'switch', read: true, write: true },
+        native: { roomId: Number(roomId) },
+      });
+      const _existingRoom = await this.getStateAsync(roomPath);
+      if (!_existingRoom || _existingRoom.val === null || _existingRoom.val === undefined) {
+        await this.setState(roomPath, false, true);
+      }
+    }
+  }
+
   async _lazyCreateState(did, siid, piid, value) {
     const key = `${siid}-${piid}`;
     const path = this.specPropsToIdDict[did]?.[key];
@@ -3741,6 +3825,7 @@ class Dreame extends utils.Adapter {
       const multiMap = decodeMultiMapData(firstMap.thb || firstMap.map, 0);
       if (multiMap && multiMap.areaInfo) {
         this._areaInfoByDid[device.did] = multiMap.areaInfo;
+        await this._setCustomRoomCleaningMap(device, multiMap.map_id, multiMap.areaInfo);
       }
       //convert mapInfo bitmap to image
       if (!createCanvas) {
@@ -5159,6 +5244,114 @@ class Dreame extends utils.Adapter {
             });
             return;
           }
+        }
+        // custom-room-cleaning: bidirectional sync between checkboxes and customCommand
+        if (id.includes('.remote.custom-room-cleaning.')) {
+          const _crcParts = id.split('.');
+          // Part A — Checkbox changed → rebuild customCommand
+          if (_crcParts[5] && _crcParts[5].startsWith('map-') && _crcParts[6]) {
+            const _mapGroup = _crcParts[5];
+            const _cbStatesA = await this.getStatesAsync(
+              `${deviceId}.remote.custom-room-cleaning.${_mapGroup}.*`,
+            );
+            const _suctionSt = await this.getStateAsync(`${deviceId}.remote.suction-level`);
+            const _waterSt = await this.getStateAsync(`${deviceId}.remote.water-volume`);
+            const _suctionLevel = _suctionSt ? Number(_suctionSt.val) : 0;
+            const _waterVolume = _waterSt ? Number(_waterSt.val) : 0;
+            const _selects = [];
+            let _selectIdx = 1;
+            for (const _cbId of Object.keys(_cbStatesA)) {
+              if (_cbStatesA[_cbId] && _cbStatesA[_cbId].val === true) {
+                const _cbObj = await this.getObjectAsync(_cbId);
+                if (_cbObj && _cbObj.native && _cbObj.native.roomId !== undefined) {
+                  _selects.push([_cbObj.native.roomId, 1, _suctionLevel, _waterVolume, _selectIdx]);
+                  _selectIdx++;
+                }
+              }
+            }
+            await this.setState(
+              `${deviceId}.remote.custom-room-cleaning.customCommand`,
+              JSON.stringify({ selects: _selects }),
+              true,
+            );
+            return;
+          }
+          // Part B — customCommand edited directly → sync checkboxes of active map
+          if (_crcParts[5] === 'customCommand') {
+            let _parsed;
+            try {
+              _parsed = JSON.parse(String(state.val));
+            } catch (_e) {
+              this.log.warn(`custom-room-cleaning: invalid JSON in customCommand: ${state.val}`);
+              return;
+            }
+            const _activeMapSt = await this.getStateAsync(
+              `${deviceId}.remote.custom-room-cleaning.active-map`,
+            );
+            const _activeMapId = _activeMapSt && _activeMapSt.val ? String(_activeMapSt.val) : null;
+            if (!_activeMapId) {
+              this.log.warn('custom-room-cleaning: active-map not set, cannot sync checkboxes from customCommand');
+              return;
+            }
+            const _cbStatesB = await this.getStatesAsync(
+              `${deviceId}.remote.custom-room-cleaning.map-${_activeMapId}.*`,
+            );
+            // Build roomId → checkboxPath map
+            const _cbMap = new Map();
+            for (const _cbId of Object.keys(_cbStatesB)) {
+              const _cbObj = await this.getObjectAsync(_cbId);
+              if (_cbObj && _cbObj.native && _cbObj.native.roomId !== undefined) {
+                _cbMap.set(_cbObj.native.roomId, _cbId);
+              }
+            }
+            // Warn about room IDs in customCommand not present in active map
+            const _roomIdsInCmd = (_parsed.selects || []).map(e => e[0]);
+            for (const _rid of _roomIdsInCmd) {
+              if (!_cbMap.has(_rid)) {
+                this.log.warn(
+                  `custom-room-cleaning: unknown roomId ${_rid} in customCommand (not in active map ${_activeMapId})`,
+                );
+              }
+            }
+            // Update all checkboxes with ack:true (prevents Part A from re-triggering)
+            const _checkedSet = new Set(_roomIdsInCmd);
+            for (const [_roomId, _cbPath] of _cbMap) {
+              await this.setState(_cbPath, _checkedSet.has(_roomId), true);
+            }
+            return;
+          }
+          // Part C — start button → send cleaning command
+          if (_crcParts[5] === 'start' && state.val) {
+            const _custSt = await this.getStateAsync(`${deviceId}.remote.customized-cleaning`);
+            if (!_custSt || !_custSt.val) {
+              this.log.warn(
+                'custom-room-cleaning: customized-cleaning must be enabled before starting custom room cleaning',
+              );
+              await this.setStateAsync(id, false, true);
+              return;
+            }
+            const _cmdSt = await this.getStateAsync(`${deviceId}.remote.custom-room-cleaning.customCommand`);
+            // TODO: validate JSON here before sending; invalid JSON is passed through silently and rejected by device
+            const _selectsJson = _cmdSt && _cmdSt.val ? String(_cmdSt.val) : '{"selects":[]}';
+            this.log.info(`custom-room-cleaning start: ${_selectsJson}`);
+            await this.sendCommand({
+              did: deviceId,
+              method: 'action',
+              params: {
+                did: deviceId,
+                siid: 4,
+                aiid: 1,
+                in: [
+                  { piid: 1, value: 18 },
+                  { piid: 10, value: _selectsJson },
+                ],
+              },
+            });
+            await this.setStateAsync(id, false, true);
+            return;
+          }
+          // Any other sub-state (e.g. active-map): no device command needed
+          return;
         }
         // Plugin CFG SET/ACTION remotes (cfgKey or actionOp or autoSwitchKey in native)
         const stateObjCfg = await this.getObjectAsync(id);
