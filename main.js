@@ -3595,8 +3595,9 @@ class Dreame extends utils.Adapter {
                 } else if (_roomResult.type === 'predefined') {
                   const _translated = I18n.getTranslatedObject(_roomResult.nameKey);
                   if (_roomResult.indexSuffix > 0) {
-                    // Multiple rooms of same type: append numeric suffix as plain string
-                    _roomName = `${_translated.en || _roomResult.nameKey} ${_roomResult.indexSuffix}`;
+                    _roomName = Object.fromEntries(
+                      Object.entries(_translated).map(([lang, val]) => [lang, `${val} ${_roomResult.indexSuffix}`]),
+                    );
                   } else {
                     _roomName = _translated;
                   }
@@ -3901,13 +3902,31 @@ class Dreame extends utils.Adapter {
         },
         native: {},
       });
+      const _mapNamePath = device.did + '.map.maps.' + stateMapId + '.mapName';
+      const _existingMapName = await this.getStateAsync(_mapNamePath);
+      const _mapDisplayName =
+        _existingMapName && _existingMapName.val ? String(_existingMapName.val) : 'Map ' + stateMapId;
       await this.extendObject(device.did + '.map.maps.' + stateMapId, {
         type: 'channel',
         common: {
-          name: 'Map ' + stateMapId,
+          name: _mapDisplayName,
         },
         native: {},
       });
+      await this.extendObject(_mapNamePath, {
+        type: 'state',
+        common: {
+          name: 'Map Name',
+          type: 'string',
+          role: 'text',
+          read: true,
+          write: true,
+        },
+        native: {},
+      });
+      if (!_existingMapName || _existingMapName.val === null || _existingMapName.val === undefined) {
+        await this.setState(_mapNamePath, 'Map ' + stateMapId, true);
+      }
       delete multiMap.mapInfo;
       delete multiMap.floorMapInfo;
       delete multiMap.furniture;
@@ -5295,6 +5314,19 @@ class Dreame extends utils.Adapter {
             this.log.error(error);
             return;
           }
+        }
+        if (id.toString().indexOf('.map.maps.') !== -1 && id.endsWith('.mapName')) {
+          const _parts = id.split('.');
+          const _did = _parts[2];
+          const _mapId = _parts[5];
+          await this.extendObject(_did + '.map.maps.' + _mapId, {
+            type: 'channel',
+            common: {
+              name: String(state.val),
+            },
+            native: {},
+          });
+          return;
         }
         if (id.toString().indexOf('.cleanset') != -1) {
           const RoomIdx = id.lastIndexOf('.');
