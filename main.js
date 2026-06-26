@@ -5257,6 +5257,8 @@ class Dreame extends utils.Adapter {
             const _suctionSt = await this.getStateAsync(`${deviceId}.remote.suction-level`);
             const _waterSt = await this.getStateAsync(`${deviceId}.remote.water-volume`);
             const _suctionLevel = _suctionSt ? Number(_suctionSt.val) : 0;
+            // water-volume (SIID 4-5) not present on all models (e.g. L40s Pro Ultra uses
+            // wetness-level SIID 28-1 instead); 0 means the device applies its own global setting.
             const _waterVolume = _waterSt ? Number(_waterSt.val) : 0;
             const _selects = [];
             let _selectIdx = 1;
