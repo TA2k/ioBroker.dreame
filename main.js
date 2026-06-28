@@ -5333,8 +5333,14 @@ class Dreame extends utils.Adapter {
               return;
             }
             const _cmdSt = await this.getStateAsync(`${deviceId}.remote.custom-room-cleaning.customCommand`);
-            // TODO: validate JSON here before sending; invalid JSON is passed through silently and rejected by device
             const _selectsJson = _cmdSt && _cmdSt.val ? String(_cmdSt.val) : '{"selects":[]}';
+            try {
+              JSON.parse(_selectsJson);
+            } catch (_e) {
+              this.log.warn(`custom-room-cleaning start aborted: customCommand contains invalid JSON: ${_selectsJson}`);
+              await this.setStateAsync(id, false, true);
+              return;
+            }
             this.log.info(`custom-room-cleaning start: ${_selectsJson}`);
             await this.sendCommand({
               did: deviceId,
