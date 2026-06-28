@@ -266,6 +266,60 @@ X = mapId (see `dreame.0.XXXX.status.map-list`)
 
 ---
 
+### Custom Room Cleaning
+
+The **Custom Room Cleaning** feature lets you select individual rooms and send the robot only to those rooms, instead of cleaning the entire floor. Suction level and water volume apply globally to all selected rooms.
+
+#### Step-by-step guide
+
+**a) Name your map (optional, recommended for multi-floor households)**
+
+When a map is first detected, `map.maps.<id>.mapName` is created with the placeholder value `"Map <id>"` (e.g. `"Map 1"`). This state is directly writable — change the value in the ioBroker object tree to something meaningful, e.g. from `"Map 1"` to `"Ground Floor"`. The channel name of `map.maps.<id>` updates automatically as soon as you save the new value. No adapter restart required.
+
+**b) Set the active map**
+
+Write the map ID (e.g. `1`) to `remote.custom-room-cleaning.active-map`. Only the rooms belonging to that map will be sent to the robot when you trigger start. The named map from step (a) helps you identify which ID corresponds to which floor.
+
+**c) Select rooms**
+
+Under `remote.custom-room-cleaning.map-<id>/`, each recognized room appears as a boolean state. The channel and state names show the translated room name from the map (e.g. `kitchen`, `living-room`, `bathroom`). Set the desired rooms to `true`.
+
+**d) Adjust suction level and water volume (optional)**
+
+`remote.suction-level` and `remote.water-volume` apply to all selected rooms. Set them before triggering start if you want non-default values. These are the same states used for regular cleaning.
+
+**e) Enable customized cleaning mode**
+
+`remote.customized-cleaning` must be `true` before starting. If it is not active, the start command is rejected and a warning is logged. This is a device-level prerequisite and is not set automatically.
+
+**f) Start the cleaning run**
+
+Set `remote.custom-room-cleaning.start` to `true`. The adapter builds the room selection from the active map's checkboxes, sends it to the robot, and resets the `start` state to `false` automatically.
+
+#### Advanced: direct `customCommand` editing
+
+`remote.custom-room-cleaning.customCommand` holds the raw selection as a JSON string. You can write it directly if you prefer:
+
+```json
+{"selects":[[roomId, repeats, suctionLevel, waterVolume, index], ...]}
+```
+
+Example — kitchen (ID 4) once at strong suction, medium water:
+
+```json
+{"selects":[[4, 1, 2, 2, 1]]}
+```
+
+The `customCommand` and the room checkboxes are **bidirectionally synchronized**: editing either one updates the other automatically. Writing `customCommand` directly updates the checkboxes for the active map; ticking a checkbox rebuilds `customCommand`. Both paths are equivalent.
+
+#### Known limitations
+
+- **Global suction/water only** — suction level and water volume are set identically for all selected rooms. Per-room settings (as shown in `map.cleanset.*`) are not supported by this feature.
+- **`customized-cleaning` prerequisite** — `remote.customized-cleaning` must be enabled manually before triggering `start`. The adapter does not activate it automatically.
+- **Multi-floor tested with one map** — the multi-map structure (one channel group per map) is fully implemented, but only single-map operation has been tested extensively on real hardware. Multi-floor households with two or more maps should work but are not yet verified end-to-end.
+
+---
+
 ## Mower (A2, A2 1200, ...)
 
 The adapter supports Dreame robotic mowers with dedicated states and map rendering. States are created lazily — only properties actually reported by your device appear in the object tree.
