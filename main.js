@@ -493,6 +493,7 @@ class Dreame extends utils.Adapter {
     this.subscribeStates('*.remote.*');
     this.subscribeStates('*.shortcuts.*.start');
     this.subscribeStates('*.cleanset.*');
+    this.subscribeStates('*.map.maps.*.mapName');
     this.log.info(`Login to ${(this.config.cloudService || 'dreame').toUpperCase()} Cloud...`);
     await this.login();
     if (this.session.access_token) {
