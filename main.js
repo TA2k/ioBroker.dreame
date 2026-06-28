@@ -496,9 +496,8 @@ class Dreame extends utils.Adapter {
     this.log.info(`Login to ${(this.config.cloudService || 'dreame').toUpperCase()} Cloud...`);
     await this.login();
     if (this.session.access_token) {
-      await this.getDeviceList();
-
       await I18n.init(join(__dirname, 'lib'), this);
+      await this.getDeviceList();
       await this.fetchSpecs();
       await this.createRemotes();
       // Load mower settings after state objects are created (ordering fix: was in getDeviceList before extendObject ran)
