@@ -2714,6 +2714,32 @@ class Dreame extends utils.Adapter {
     await this.setObjectAsync(activeMapPath, activeMapObj);
   }
 
+  // Builds the "selects" array (device command payload) from the currently-checked room
+  // checkboxes of one custom-room-cleaning map group (e.g. "map-53"). Room ids are only
+  // meaningful within the map they were read from - callers must pass the map group whose
+  // rooms should actually be cleaned, never mix roomIds across maps.
+  async _buildCustomRoomCleaningSelects(did, mapGroup) {
+    const cbStates = await this.getStatesAsync(`${did}.remote.custom-room-cleaning.${mapGroup}.*`);
+    const suctionSt = await this.getStateAsync(`${did}.remote.suction-level`);
+    const waterSt = await this.getStateAsync(`${did}.remote.water-volume`);
+    const suctionLevel = suctionSt ? Number(suctionSt.val) : 0;
+    // water-volume (SIID 4-5) not present on all models (e.g. L40s Pro Ultra uses
+    // wetness-level SIID 28-1 instead); 0 means the device applies its own global setting.
+    const waterVolume = waterSt ? Number(waterSt.val) : 0;
+    const selects = [];
+    let selectIdx = 1;
+    for (const cbId of Object.keys(cbStates)) {
+      if (cbStates[cbId] && cbStates[cbId].val === true) {
+        const cbObj = await this.getObjectAsync(cbId);
+        if (cbObj && cbObj.native && cbObj.native.roomId !== undefined) {
+          selects.push([cbObj.native.roomId, 1, suctionLevel, waterVolume, selectIdx]);
+          selectIdx++;
+        }
+      }
+    }
+    return selects;
+  }
+
   async _lazyCreateState(did, siid, piid, value) {
     const key = `${siid}-${piid}`;
     const path = this.specPropsToIdDict[did]?.[key];
@@ -5314,31 +5340,28 @@ class Dreame extends utils.Adapter {
           // Part A — Checkbox changed → rebuild customCommand
           if (_crcParts[5] && _crcParts[5].startsWith('map-') && _crcParts[6]) {
             const _mapGroup = _crcParts[5];
-            const _cbStatesA = await this.getStatesAsync(
-              `${deviceId}.remote.custom-room-cleaning.${_mapGroup}.*`,
-            );
-            const _suctionSt = await this.getStateAsync(`${deviceId}.remote.suction-level`);
-            const _waterSt = await this.getStateAsync(`${deviceId}.remote.water-volume`);
-            const _suctionLevel = _suctionSt ? Number(_suctionSt.val) : 0;
-            // water-volume (SIID 4-5) not present on all models (e.g. L40s Pro Ultra uses
-            // wetness-level SIID 28-1 instead); 0 means the device applies its own global setting.
-            const _waterVolume = _waterSt ? Number(_waterSt.val) : 0;
-            const _selects = [];
-            let _selectIdx = 1;
-            for (const _cbId of Object.keys(_cbStatesA)) {
-              if (_cbStatesA[_cbId] && _cbStatesA[_cbId].val === true) {
-                const _cbObj = await this.getObjectAsync(_cbId);
-                if (_cbObj && _cbObj.native && _cbObj.native.roomId !== undefined) {
-                  _selects.push([_cbObj.native.roomId, 1, _suctionLevel, _waterVolume, _selectIdx]);
-                  _selectIdx++;
-                }
-              }
-            }
+            const _selects = await this._buildCustomRoomCleaningSelects(deviceId, _mapGroup);
             await this.setState(
               `${deviceId}.remote.custom-room-cleaning.customCommand`,
               JSON.stringify({ selects: _selects }),
               true,
             );
+            return;
+          }
+          // Part A2 — active-map changed → rebuild customCommand from the newly selected map's
+          // checkboxes (otherwise customCommand keeps holding roomIds from whichever map's
+          // checkbox was clicked last, which may no longer match the now-active map).
+          if (_crcParts[5] === 'active-map') {
+            const _newActiveMapId =
+              state.val !== null && state.val !== undefined && state.val !== '' ? String(state.val) : null;
+            if (_newActiveMapId) {
+              const _selects = await this._buildCustomRoomCleaningSelects(deviceId, `map-${_newActiveMapId}`);
+              await this.setState(
+                `${deviceId}.remote.custom-room-cleaning.customCommand`,
+                JSON.stringify({ selects: _selects }),
+                true,
+              );
+            }
             return;
           }
           // Part B — customCommand edited directly → sync checkboxes of active map
@@ -5395,15 +5418,26 @@ class Dreame extends utils.Adapter {
               await this.setStateAsync(id, false, true);
               return;
             }
-            const _cmdSt = await this.getStateAsync(`${deviceId}.remote.custom-room-cleaning.customCommand`);
-            const _selectsJson = _cmdSt && _cmdSt.val ? String(_cmdSt.val) : '{"selects":[]}';
-            try {
-              JSON.parse(_selectsJson);
-            } catch (_e) {
-              this.log.warn(`custom-room-cleaning start aborted: customCommand contains invalid JSON: ${_selectsJson}`);
+            const _startActiveMapSt = await this.getStateAsync(`${deviceId}.remote.custom-room-cleaning.active-map`);
+            const _startActiveMapId =
+              _startActiveMapSt && _startActiveMapSt.val ? String(_startActiveMapSt.val) : null;
+            if (!_startActiveMapId) {
+              this.log.warn('custom-room-cleaning: active-map not set, start aborted');
               await this.setStateAsync(id, false, true);
               return;
             }
+            // Recompute fresh from the checkboxes of the active map instead of trusting the
+            // persisted customCommand value, which may still hold roomIds from a different map
+            // (e.g. left over from a checkbox click before active-map was switched).
+            const _selects = await this._buildCustomRoomCleaningSelects(deviceId, `map-${_startActiveMapId}`);
+            if (_selects.length === 0) {
+              this.log.warn('custom-room-cleaning: kein Raum ausgewählt für aktive Map, Start abgebrochen');
+              await this.setStateAsync(id, false, true);
+              return;
+            }
+            const _selectsJson = JSON.stringify({ selects: _selects });
+            // Keep customCommand in sync with what is actually sent.
+            await this.setState(`${deviceId}.remote.custom-room-cleaning.customCommand`, _selectsJson, true);
             this.log.info(`custom-room-cleaning start: ${_selectsJson}`);
             await this.sendCommand({
               did: deviceId,
