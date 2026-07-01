@@ -489,6 +489,7 @@ class Dreame extends utils.Adapter {
     this.session = {};
     this.firstStart = true;
     this._areaInfoByDid = {};
+    this._areaInfoByMapId = {};
     this._loggedMissingAreaInfo = {};
     this.subscribeStates('*.remote.*');
     this.subscribeStates('*.shortcuts.*.start');
@@ -2599,14 +2600,14 @@ class Dreame extends utils.Adapter {
       `Vacuum states created: ${statusStates.length} status, ${remoteStates.length} remote, ${autoSwitchRemotes.length} autoSwitch, ${actionStates.length} actions`,
     );
   }
-  async _setCustomRoomCleaningMap(device, mapId, areaInfo) {
+  async _setCustomRoomCleaningMap(device, mapId, areaInfo, displayName) {
     const did = device.did;
     const segTypeMap = buildSegmentTypeMap();
     const mapChannelPath = `${did}.remote.custom-room-cleaning.map-${mapId}`;
 
     await this.extendObject(mapChannelPath, {
       type: 'channel',
-      common: { name: 'Map ' + mapId },
+      common: { name: displayName || 'Map ' + mapId },
       native: {},
     });
 
@@ -2653,6 +2654,64 @@ class Dreame extends utils.Adapter {
         await this.setState(roomPath, false, true);
       }
     }
+  }
+
+  // Keeps remote.custom-room-cleaning.map-<mapId> in sync with map.maps.<id>.mapName.
+  // Only common.name of the map channel itself is touched - room states underneath are untouched.
+  async _syncCustomRoomCleaningMapName(did, mapId, mapName) {
+    if (mapId === undefined || mapId === null || mapId === '' || Number.isNaN(Number(mapId))) {
+      // "current" is an alias for the active map and has no stable numeric id to sync against.
+      return;
+    }
+    const mapChannelPath = `${did}.remote.custom-room-cleaning.map-${mapId}`;
+    const existingObj = await this.getObjectAsync(mapChannelPath);
+    if (existingObj) {
+      if (existingObj.common?.name !== mapName) {
+        await this.extendObject(mapChannelPath, { common: { name: mapName } });
+      }
+    } else {
+      const areaInfo = this._areaInfoByMapId?.[did]?.[String(mapId)];
+      if (areaInfo) {
+        const device = this.deviceArray.find((d) => d.did === did);
+        if (device) {
+          await this._setCustomRoomCleaningMap(device, mapId, areaInfo, mapName);
+        }
+      } else {
+        this.log.debug(
+          `custom-room-cleaning: map-${mapId} channel does not exist yet and no room data is cached for it, skipping rename`,
+        );
+      }
+    }
+    await this.updateActiveMapStates(did);
+  }
+
+  // Rebuilds common.states of remote.custom-room-cleaning.active-map from all currently known maps
+  // (key = map id as string, value = "<mapName> (<id>)"). The stored/written value stays the raw id.
+  async updateActiveMapStates(did) {
+    const activeMapPath = `${did}.remote.custom-room-cleaning.active-map`;
+    const activeMapObj = await this.getObjectAsync(activeMapPath);
+    if (!activeMapObj) {
+      return;
+    }
+    const mapNameStates = await this.getStatesAsync(`${did}.map.maps.*.mapName`);
+    const states = {};
+    for (const fullId of Object.keys(mapNameStates || {})) {
+      const stateObj = mapNameStates[fullId];
+      if (!stateObj || stateObj.val === null || stateObj.val === undefined) {
+        continue;
+      }
+      const idParts = fullId.split('.');
+      const mapId = idParts[idParts.length - 2];
+      if (mapId === 'current') {
+        // alias for the active map, not a selectable id in its own right
+        continue;
+      }
+      states[mapId] = `${stateObj.val} (${mapId})`;
+    }
+    // extendObject would merge common.states instead of replacing it, leaving stale map ids
+    // behind forever - so the already-loaded object is mutated in place and written back whole.
+    activeMapObj.common.states = states;
+    await this.setObjectAsync(activeMapPath, activeMapObj);
   }
 
   async _lazyCreateState(did, siid, piid, value) {
@@ -3825,6 +3884,8 @@ class Dreame extends utils.Adapter {
       const multiMap = decodeMultiMapData(firstMap.thb || firstMap.map, 0);
       if (multiMap && multiMap.areaInfo) {
         this._areaInfoByDid[device.did] = multiMap.areaInfo;
+        this._areaInfoByMapId[device.did] = this._areaInfoByMapId[device.did] || {};
+        this._areaInfoByMapId[device.did][String(multiMap.map_id)] = multiMap.areaInfo;
         await this._setCustomRoomCleaningMap(device, multiMap.map_id, multiMap.areaInfo);
       }
       //convert mapInfo bitmap to image
@@ -3989,8 +4050,9 @@ class Dreame extends utils.Adapter {
       });
       const _mapNamePath = device.did + '.map.maps.' + stateMapId + '.mapName';
       const _existingMapName = await this.getStateAsync(_mapNamePath);
+      const _defaultMapName = 'Map ' + stateMapId;
       const _mapDisplayName =
-        _existingMapName && _existingMapName.val ? String(_existingMapName.val) : 'Map ' + stateMapId;
+        _existingMapName && _existingMapName.val ? String(_existingMapName.val) : _defaultMapName;
       await this.extendObject(device.did + '.map.maps.' + stateMapId, {
         type: 'channel',
         common: {
@@ -4010,8 +4072,9 @@ class Dreame extends utils.Adapter {
         native: {},
       });
       if (!_existingMapName || _existingMapName.val === null || _existingMapName.val === undefined) {
-        await this.setState(_mapNamePath, 'Map ' + stateMapId, true);
+        await this.setState(_mapNamePath, _defaultMapName, true);
       }
+      await this._syncCustomRoomCleaningMapName(device.did, multiMap.map_id, _mapDisplayName);
       delete multiMap.mapInfo;
       delete multiMap.floorMapInfo;
       delete multiMap.furniture;
@@ -5527,6 +5590,7 @@ class Dreame extends utils.Adapter {
             },
             native: {},
           });
+          await this._syncCustomRoomCleaningMapName(_did, _mapId, String(state.val));
           return;
         }
         if (id.toString().indexOf('.cleanset') != -1) {
