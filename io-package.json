@@ -1,21 +1,8 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.3.22",
+    "version": "0.3.23",
     "news": {
-      "0.3.16": {
-        "en": "Bugfixes and dependency updates",
-        "de": "Bugfixes und Dependency-Updates",
-        "ru": "Исправления ошибок и обновления зависимостей",
-        "pt": "Correções de bugs e atualizações de dependências",
-        "nl": "Bugfixes en dependency-updates",
-        "fr": "Corrections de bugs et mises à jour des dépendances",
-        "it": "Bugfix e aggiornamenti delle dipendenze",
-        "es": "Correcciones de errores y actualizaciones de dependencias",
-        "pl": "Poprawki błędów i aktualizacje zależności",
-        "uk": "Виправлення помилок та оновлення залежностей",
-        "zh-cn": "Bug 修复和依赖更新"
-      },
       "0.3.17": {
         "en": "Fix command sent for some states\nAdapter requires admin >= 7.8.23 now.",
         "de": "Nichtsenden von manchen States behoben.\nDer Adapter benötigt jetzt Administratorrechte ab Version 7.8.23.",
@@ -93,6 +80,19 @@
         "pl": "Dodano funkcję niestandardowego sprzątania pomieszczeń w remote.custom-room-cleaning: wybór pomieszczeń dla danej mapy za pomocą checkboxów, zsynchronizowany dwukierunkowo z customCommand, z użyciem globalnego poziomu ssania i ilości wody; uruchomienie wysyła prawdziwe polecenie sprzątania wielostrefowego. Dodano edytowalny stan nazwy mapy (map.maps.<id>.mapName) umożliwiający zmianę nazwy map bezpośrednio w ioBroker admin bez ponownego uruchamiania adaptera. Naprawiono kolejność inicjalizacji I18n przy starcie, dzięki czemu stan mapName jest teraz poprawnie tworzony przy pierwszym uruchomieniu. Naprawiono nazwy kanałów cleanset, aby wyświetlały przetłumaczone nazwy pomieszczeń zamiast surowych ciągów ścieżek. Dodano walidację JSON przed wysłaniem customCommand do urządzenia. Naprawiono sufiks indeksu wielojęzycznego dla pomieszczeń o identycznych typach (np. Sypialnia 2). Naprawiono niemieckie tłumaczenie dla typu pomieszczenia korytarz (Flur).",
         "uk": "Додано функцію користувацького прибирання кімнат у remote.custom-room-cleaning: вибір кімнат по карті за допомогою прапорців, двосторонньо синхронізований з customCommand, з використанням глобального рівня всмоктування та об'єму води; запуск надсилає реальну команду багатозонного прибирання. Додано редагований стан назви карти (map.maps.<id>.mapName) для перейменування карт безпосередньо в ioBroker admin без перезапуску адаптера. Виправлено порядок ініціалізації I18n при запуску, тому стан mapName тепер коректно створюється при першому запуску. Виправлено назви каналів cleanset — тепер відображаються перекладені назви кімнат замість необроблених рядків шляху. Додано перевірку JSON перед надсиланням customCommand на пристрій. Виправлено багатомовний суфікс індексу для кімнат з однаковими типами (наприклад, Спальня 2). Виправлено німецький переклад для типу кімнати коридор (Flur).",
         "zh-cn": "Added custom room cleaning feature under remote.custom-room-cleaning: select rooms per map via checkboxes, bidirectionally synchronized with customCommand, using global suction level and water volume; start triggers a real multi-zone cleaning command. Added editable map name state (map.maps.<id>.mapName) to rename maps directly in ioBroker admin without adapter restart. Fixed I18n initialization order on startup so mapName state is now correctly created on first start. Fixed cleanset channel names to show translated room names instead of raw path strings. Added JSON validation before sending customCommand to device. Fixed multi-language index suffix for rooms with identical types (e.g. Bedroom 2). Fixed German translation for corridor room type (Flur)."
+      },
+      "0.3.23": {
+        "en": "Added map name synchronization: renaming a map via map.maps.<id>.mapName now automatically updates the corresponding remote.custom-room-cleaning channel name. Changed active-map state to a dropdown (common.states) showing map names with their id instead of requiring the raw numeric id to be typed manually.",
+        "de": "Kartenname-Synchronisierung hinzugefügt: Das Umbenennen einer Karte über map.maps.<id>.mapName aktualisiert jetzt automatisch den zugehörigen remote.custom-room-cleaning-Kanalnamen. Der active-map-State zeigt jetzt ein Dropdown (common.states) mit Kartennamen und ID, statt die numerische ID manuell eintippen zu müssen.",
+        "ru": "Added map name synchronization: renaming a map via map.maps.<id>.mapName now automatically updates the corresponding remote.custom-room-cleaning channel name. Changed active-map state to a dropdown (common.states) showing map names with their id instead of requiring the raw numeric id to be typed manually.",
+        "pt": "Added map name synchronization: renaming a map via map.maps.<id>.mapName now automatically updates the corresponding remote.custom-room-cleaning channel name. Changed active-map state to a dropdown (common.states) showing map names with their id instead of requiring the raw numeric id to be typed manually.",
+        "nl": "Added map name synchronization: renaming a map via map.maps.<id>.mapName now automatically updates the corresponding remote.custom-room-cleaning channel name. Changed active-map state to a dropdown (common.states) showing map names with their id instead of requiring the raw numeric id to be typed manually.",
+        "fr": "Added map name synchronization: renaming a map via map.maps.<id>.mapName now automatically updates the corresponding remote.custom-room-cleaning channel name. Changed active-map state to a dropdown (common.states) showing map names with their id instead of requiring the raw numeric id to be typed manually.",
+        "it": "Added map name synchronization: renaming a map via map.maps.<id>.mapName now automatically updates the corresponding remote.custom-room-cleaning channel name. Changed active-map state to a dropdown (common.states) showing map names with their id instead of requiring the raw numeric id to be typed manually.",
+        "es": "Added map name synchronization: renaming a map via map.maps.<id>.mapName now automatically updates the corresponding remote.custom-room-cleaning channel name. Changed active-map state to a dropdown (common.states) showing map names with their id instead of requiring the raw numeric id to be typed manually.",
+        "pl": "Added map name synchronization: renaming a map via map.maps.<id>.mapName now automatically updates the corresponding remote.custom-room-cleaning channel name. Changed active-map state to a dropdown (common.states) showing map names with their id instead of requiring the raw numeric id to be typed manually.",
+        "uk": "Added map name synchronization: renaming a map via map.maps.<id>.mapName now automatically updates the corresponding remote.custom-room-cleaning channel name. Changed active-map state to a dropdown (common.states) showing map names with their id instead of requiring the raw numeric id to be typed manually.",
+        "zh-cn": "Added map name synchronization: renaming a map via map.maps.<id>.mapName now automatically updates the corresponding remote.custom-room-cleaning channel name. Changed active-map state to a dropdown (common.states) showing map names with their id instead of requiring the raw numeric id to be typed manually."
       }
     },
     "titleLang": {
