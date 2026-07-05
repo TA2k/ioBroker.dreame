@@ -1350,6 +1350,100 @@ class Dreame extends utils.Adapter {
         role: 'switch',
         desc: '0=auto, 1=aus',
       },
+      // Mower start-mow actions (m:a p:0 o:N) — reverse-engineered from Dreame mower plugin.
+      // mowAction encodes the o-code + how to build the "d" payload:
+      //   dTemplate: null  → no payload (button)
+      //   dTemplate: 'region' → parse state.val as CSV/JSON of zone IDs, wrap as {region:[...]}
+      //   dTemplate: 'idx'    → parse state.val as int, wrap as {idx:N}
+      //   dTemplate: 'raw'    → parse state.val as JSON, pass through as d
+      {
+        id: 'mow-all',
+        name: 'Mow All Areas',
+        mowAction: { o: 100, dTemplate: null },
+        type: 'boolean',
+        role: 'button',
+        desc: 'Alle Bereiche mähen (globalMower)',
+      },
+      {
+        id: 'mow-plan',
+        name: 'Mow According to Plan',
+        mowAction: { o: 104, dTemplate: null },
+        type: 'boolean',
+        role: 'button',
+        desc: 'Nach gespeichertem Plan mähen (planMower)',
+      },
+      {
+        id: 'mow-obstacle-scan',
+        name: 'Obstacle Scan',
+        mowAction: { o: 105, dTemplate: null },
+        type: 'boolean',
+        role: 'button',
+        desc: 'Hinderniserkennungslauf (obstacleMower)',
+      },
+      {
+        id: 'mow-zone',
+        name: 'Mow Selected Zones',
+        mowAction: { o: 102, dTemplate: 'region' },
+        type: 'string',
+        role: 'text',
+        desc: 'Zone-IDs als CSV "1,3" oder JSON "[1,3]" — IDs aus mower.map.slot*.zone*',
+      },
+      {
+        id: 'mow-edge',
+        name: 'Mow Edge (Contour)',
+        mowAction: { o: 101, dTemplate: 'raw' },
+        type: 'string',
+        role: 'json',
+        desc: 'JSON: {"edge":[[x1,y1],[x2,y2],...]}',
+      },
+      {
+        id: 'mow-spot',
+        name: 'Mow Spot Area',
+        mowAction: { o: 103, dTemplate: 'raw' },
+        type: 'string',
+        role: 'json',
+        desc: 'JSON: {"area":{...}}',
+      },
+      {
+        id: 'mow-change-map',
+        name: 'Switch Active Map',
+        mowAction: { o: 200, dTemplate: 'idx' },
+        type: 'number',
+        role: 'value',
+        desc: 'Kartenindex (0-basiert)',
+      },
+      {
+        id: 'mow-start-auto-build',
+        name: 'Start Auto Build Map',
+        mowAction: { o: 230, dTemplate: null },
+        type: 'boolean',
+        role: 'button',
+        desc: 'Automatischen Kartenaufbau starten',
+      },
+      {
+        id: 'mow-stop-auto-build',
+        name: 'Stop Auto Build Map',
+        mowAction: { o: 231, dTemplate: null },
+        type: 'boolean',
+        role: 'button',
+        desc: 'Automatischen Kartenaufbau stoppen',
+      },
+      {
+        id: 'mow-start-plan',
+        name: 'Start Plan Mode',
+        mowAction: { o: 300, dTemplate: null },
+        type: 'boolean',
+        role: 'button',
+        desc: 'Plan-Modus starten',
+      },
+      {
+        id: 'mow-stop-plan',
+        name: 'Stop Plan Mode',
+        mowAction: { o: 301, dTemplate: null },
+        type: 'boolean',
+        role: 'button',
+        desc: 'Plan-Modus stoppen',
+      },
     ];
 
     const actionStates = [
@@ -1414,6 +1508,7 @@ class Dreame extends utils.Adapter {
           resetIndex: c.resetIndex,
           preIndex: c.preIndex,
           autoSwitchKey: c.autoSwitchKey,
+          mowAction: c.mowAction,
           did: did,
         },
       });
@@ -5458,12 +5553,15 @@ class Dreame extends utils.Adapter {
           // Any other sub-state (e.g. active-map): no device command needed
           return;
         }
-        // Plugin CFG SET/ACTION remotes (cfgKey or actionOp or autoSwitchKey in native)
+        // Plugin CFG SET/ACTION remotes (cfgKey or actionOp or autoSwitchKey or mowAction in native)
         const stateObjCfg = await this.getObjectAsync(id);
         if (
           stateObjCfg &&
           stateObjCfg.native &&
-          (stateObjCfg.native.cfgKey || stateObjCfg.native.actionOp !== undefined || stateObjCfg.native.autoSwitchKey)
+          (stateObjCfg.native.cfgKey ||
+            stateObjCfg.native.actionOp !== undefined ||
+            stateObjCfg.native.autoSwitchKey ||
+            stateObjCfg.native.mowAction)
         ) {
           const device = this.deviceArray.find((obj) => obj.did === deviceId);
           if (stateObjCfg.native.autoSwitchKey) {
@@ -5479,7 +5577,47 @@ class Dreame extends utils.Adapter {
             return;
           }
           if (!device || !this.isMower(device)) return;
-          if (stateObjCfg.native.actionOp !== undefined) {
+          if (stateObjCfg.native.mowAction) {
+            // Mower start-mow action: {m:'a', p:0, o:N, d:<template-driven>}
+            const { o, dTemplate } = stateObjCfg.native.mowAction;
+            const payload = { m: 'a', p: 0, o };
+            if (dTemplate === 'region') {
+              // Zone list — accept "1,3" CSV or "[1,3]" JSON
+              let region;
+              const raw = String(state.val || '').trim();
+              if (!raw) {
+                this.log.warn(`mow-zone: empty region, ignoring`);
+                return;
+              }
+              try {
+                region = raw.startsWith('[') ? JSON.parse(raw) : raw.split(',').map((s) => parseInt(s.trim(), 10));
+              } catch (e) {
+                this.log.error(`mow-zone: cannot parse "${raw}" as region list: ${e.message}`);
+                return;
+              }
+              if (!Array.isArray(region) || region.some((n) => !Number.isFinite(n))) {
+                this.log.error(`mow-zone: region must be a list of integers, got ${JSON.stringify(region)}`);
+                return;
+              }
+              payload.d = { region };
+            } else if (dTemplate === 'idx') {
+              const idx = Number(state.val);
+              if (!Number.isFinite(idx)) {
+                this.log.error(`mow-change-map: idx must be a number, got ${state.val}`);
+                return;
+              }
+              payload.d = { idx };
+            } else if (dTemplate === 'raw') {
+              try {
+                payload.d = JSON.parse(String(state.val));
+              } catch (e) {
+                this.log.error(`mowAction o=${o}: invalid JSON payload: ${e.message}`);
+                return;
+              }
+            }
+            this.log.info(`Mower action o=${o} payload=${JSON.stringify(payload.d || {})} for ${device.model}`);
+            await this.sendMowerCommand(device, payload);
+          } else if (stateObjCfg.native.actionOp !== undefined) {
             // Action command: {m:'a', p:0, o:actionOp}
             this.log.info(`Mower action o=${stateObjCfg.native.actionOp} for ${device.model}`);
             await this.sendMowerCommand(device, { m: 'a', p: 0, o: stateObjCfg.native.actionOp });
