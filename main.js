@@ -1412,38 +1412,6 @@ class Dreame extends utils.Adapter {
         role: 'value',
         desc: 'Kartenindex (0-basiert)',
       },
-      {
-        id: 'mow-start-auto-build',
-        name: 'Start Auto Build Map',
-        mowAction: { o: 230, dTemplate: null },
-        type: 'boolean',
-        role: 'button',
-        desc: 'Automatischen Kartenaufbau starten',
-      },
-      {
-        id: 'mow-stop-auto-build',
-        name: 'Stop Auto Build Map',
-        mowAction: { o: 231, dTemplate: null },
-        type: 'boolean',
-        role: 'button',
-        desc: 'Automatischen Kartenaufbau stoppen',
-      },
-      {
-        id: 'mow-start-plan',
-        name: 'Start Plan Mode',
-        mowAction: { o: 300, dTemplate: null },
-        type: 'boolean',
-        role: 'button',
-        desc: 'Plan-Modus starten',
-      },
-      {
-        id: 'mow-stop-plan',
-        name: 'Stop Plan Mode',
-        mowAction: { o: 301, dTemplate: null },
-        type: 'boolean',
-        role: 'button',
-        desc: 'Plan-Modus stoppen',
-      },
     ];
 
     const actionStates = [
