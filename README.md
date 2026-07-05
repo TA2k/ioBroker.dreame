@@ -452,6 +452,52 @@ they only appear after the mower sends its first binary update.
 | set-edge-mowing         | Set edge mowing (PRE): 0=off, 1=on                                       |
 | set-edge-detection      | Set edge detection (PRE): 0=off, 1=on                                    |
 | set-direction-change    | Set direction change (PRE): 0=auto, 1=off                                |
+| mow-all                 | Mow all areas (button, o=100)                                            |
+| mow-zone                | Mow selected zones — CSV `"1,3"` or JSON `"[1,3]"` (o=102)               |
+| mow-plan                | Start mowing per stored plan (button, o=104)                             |
+| mow-obstacle-scan       | Obstacle recognition run (button, o=105)                                 |
+| mow-edge                | Mow contour: JSON `{"edge":[[x,y],...]}` (o=101)                         |
+| mow-spot                | Mow spot area: JSON `{"area":{...}}` (o=103)                             |
+| mow-change-map          | Switch active map (number, 0-based index, o=200)                         |
+
+#### Mowing Specific Zones
+
+Every mowing area on the map is exposed under `dreame.0.<did>.mower.map.slot<X>.zone<zoneId>`. The numeric part of the object name (`zoneId`) is what you write into `remote.mow-zone`.
+
+Single zone (id 2):
+
+```text
+dreame.0.<did>.remote.mow-zone = "2"
+```
+
+Multiple zones (ids 1, 3, 5):
+
+```text
+dreame.0.<did>.remote.mow-zone = "1,3,5"
+```
+
+JSON form works too — useful from Blockly or JavaScript scripts:
+
+```text
+dreame.0.<did>.remote.mow-zone = "[1,3,5]"
+```
+
+Blockly / JavaScript-Adapter example:
+
+```js
+setState('dreame.0.' + did + '.remote.mow-zone', '1,3', false);
+```
+
+The mower parses the list, starts mowing the selected zones, and returns to the dock when done. To stop mid-run, press `stop-mow` (o=2) or `pause-mow` (o=4). Switching maps first (`mow-change-map`) is required if the target zones live on a different map — otherwise the zone IDs will not resolve.
+
+#### Switching the Active Map
+
+If the mower has more than one map, select which map is active before writing zone IDs:
+
+```text
+dreame.0.<did>.remote.mow-change-map = 0   // first map
+dreame.0.<did>.remote.mow-change-map = 1   // second map
+```
 
 ### Mower Shortcuts
 
