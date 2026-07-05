@@ -462,15 +462,32 @@ they only appear after the mower sends its first binary update.
 
 #### Mowing Specific Zones
 
-Every mowing area on the map is exposed under `dreame.0.<did>.mower.map.slot<X>.zone<zoneId>`. The numeric part of the object name (`zoneId`) is what you write into `remote.mow-zone`.
+Every mowing area defined on the map is exposed as its own channel under
+`dreame.0.<did>.mower.map.slot<X>.zone<zoneId>`. Open ioBroker's Object
+Browser, navigate to your mower, then to `mower.map`, and you will see
+one `slot0`, `slot1`, ... per stored map. Each slot contains one
+`zone<N>` channel per mowing area — for example `slot0.zone1`,
+`slot0.zone3`. Inside each zone you find `name` (as shown in the app),
+`area` (m²), `time`, and `path`.
 
-Single zone (id 2):
+The **numeric part after `zone`** is the zone ID you write into
+`remote.mow-zone`. So if the tree looks like this:
 
 ```text
-dreame.0.<did>.remote.mow-zone = "2"
+dreame.0.<did>.mower.map.slot0.zone1     name = "Front lawn"
+dreame.0.<did>.mower.map.slot0.zone3     name = "Back lawn"
+dreame.0.<did>.mower.map.slot0.zone5     name = "Side strip"
 ```
 
-Multiple zones (ids 1, 3, 5):
+then:
+
+Single zone — mow "Front lawn":
+
+```text
+dreame.0.<did>.remote.mow-zone = "1"
+```
+
+Multiple zones — mow "Front lawn" + "Back lawn" + "Side strip":
 
 ```text
 dreame.0.<did>.remote.mow-zone = "1,3,5"
