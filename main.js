@@ -542,10 +542,20 @@ class Dreame extends utils.Adapter {
           await this.loadMowerSettings(device);
         }
       }
+      // Seed status.state / status.battery-level from the device-list summary
+      // BEFORE the property poll runs, so that on models whose get_properties
+      // poll returns the core services (siid 2 = state, siid 3 = battery) the
+      // poll value wins (it runs afterwards and overwrites). On models that do
+      // not return them (e.g. dreame.vacuum.r95475) the summary value stays as
+      // the baseline. specPropsToIdDict is already populated by createRemotes.
+      for (const device of this.deviceArray) {
+        await this._bridgeStatusSummary(device);
+      }
       await this.updateDevicesViaSpec();
       await this.connectMqtt();
       this.updateInterval = setInterval(
         async () => {
+          await this.updateDeviceStatusSummary();
           await this.updateDevicesViaSpec();
         },
         this.config.interval * 60 * 1000,
@@ -846,6 +856,48 @@ class Dreame extends utils.Adapter {
         this.log.error('Device list error: ' + error);
         error.response && this.log.error('Device list error response: ' + JSON.stringify(error.response.data));
         this.log.error(error.stack);
+      });
+  }
+
+  // Mirror the device-list summary (latestStatus code + battery %) into
+  // status.state / status.battery-level. Newer vacuum models (e.g.
+  // dreame.vacuum.r95475) do not return the core services (siid 2 = robot
+  // state, siid 3 = battery) via the periodic get_properties poll — those only
+  // arrive via MQTT when they change, so the states would stay null while the
+  // robot is idle. The listV2 device summary always carries the current
+  // values, so mirror them as a baseline (an actual poll/MQTT value overwrites
+  // this because the poll runs afterwards / MQTT is realtime).
+  async _bridgeStatusSummary(record) {
+    if (!record || this.isMower(record)) return;
+    const did = String(record.did);
+    if (record.latestStatus != null) {
+      await this._lazyCreateState(did, 2, 1, record.latestStatus);
+    }
+    if (record.battery != null) {
+      await this._lazyCreateState(did, 3, 1, record.battery);
+    }
+  }
+
+  async updateDeviceStatusSummary() {
+    await this.requestClient({
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: `https://${this.brand.domain}/dreame-user-iot/iotuserbind/device/listV2`,
+      headers: this.getHeaders(),
+      data: { sharedStatus: 1, current: 1, size: 100, lang: 'de', timestamp: Date.now() },
+    })
+      .then(async (response) => {
+        const records =
+          response && response.data && response.data.data && response.data.data.page
+            ? response.data.data.page.records
+            : null;
+        if (!Array.isArray(records)) return;
+        for (const record of records) {
+          await this._bridgeStatusSummary(record);
+        }
+      })
+      .catch((error) => {
+        this.log.debug('updateDeviceStatusSummary failed: ' + (error && error.message));
       });
   }
 
