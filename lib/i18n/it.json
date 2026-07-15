@@ -424,5 +424,7 @@
   "vacuum.status.save-water-tips": "Consigli per risparmiare acqua",
   "vacuum.status.dry-stop-remainder": "Promemoria di arresto asciugatura",
   "vacuum.status.back-clean-mode": "Modalità pulizia al ritorno",
-  "vacuum.status.current-city": "Città attuale"
+  "vacuum.status.current-city": "Città attuale",
+  "vacuum.status.camera-light": "Luce della fotocamera",
+  "vacuum.status.mode": "Modalità"
 }

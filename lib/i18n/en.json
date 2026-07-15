@@ -473,5 +473,7 @@
   "vacuum.status.save-water-tips": "Save Water Tips",
   "vacuum.status.dry-stop-remainder": "Dry Stop Reminder",
   "vacuum.status.back-clean-mode": "Back Clean Mode",
-  "vacuum.status.current-city": "Current City"
+  "vacuum.status.current-city": "Current City",
+  "vacuum.status.camera-light": "Camera Light",
+  "vacuum.status.mode": "Mode"
 }
