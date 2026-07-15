@@ -3840,7 +3840,7 @@ class Dreame extends utils.Adapter {
       if (Object.prototype.toString.call(value) !== '[object Object]') {
         if (value != null) {
           const pathMap = In_path + key;
-          this.getType(value, pathMap);
+          await this.getType(value, pathMap);
           if (typeof value === 'object' && value !== null) {
             this.setState(pathMap, JSON.stringify(value), true);
           } else {
@@ -3900,27 +3900,27 @@ class Dreame extends utils.Adapter {
                       //1: DreameLevel, 2: DreameWaterVolume, 3: DreameRepeat, 4: DreameRoomNumber, 5: DreameCleaningMode, 6: Route
                       //map-req[{"piid": 2,"value": "{\"req_type\":1,\"frame_type\":I,\"force_type\":1}"}]
                       let pathMap = In_path + key + '.' + Subkey + '.RoomSettings';
-                      this.getType(JSON.stringify(Subvalue), pathMap);
+                      await this.getType(JSON.stringify(Subvalue), pathMap);
                       this.setState(pathMap, JSON.stringify(Subvalue), true);
                       pathMap = In_path + key + '.' + Subkey + '.RoomOrder';
-                      this.getType(parseFloat(Subvalue[3]), pathMap);
+                      await this.getType(parseFloat(Subvalue[3]), pathMap);
                       this.setState(pathMap, parseFloat(Subvalue[3]), true);
                       if (!isMowerDevice) {
                         pathMap = In_path + key + '.' + Subkey + '.Level';
-                        this.setcleansetPath(pathMap, DreameLevel);
+                        await this.setcleansetPath(pathMap, DreameLevel);
                         this.setState(pathMap, Subvalue[0], true);
                         pathMap = In_path + key + '.' + Subkey + '.CleaningMode';
-                        this.setcleansetPath(pathMap, DreameCleaningMode);
+                        await this.setcleansetPath(pathMap, DreameCleaningMode);
                         this.setState(pathMap, Subvalue[4], true);
                         pathMap = In_path + key + '.' + Subkey + '.WaterVolume';
-                        this.setcleansetPath(pathMap, DreameWaterVolume);
+                        await this.setcleansetPath(pathMap, DreameWaterVolume);
                         this.setState(pathMap, Subvalue[1], true);
                       }
                       pathMap = In_path + key + '.' + Subkey + '.Repeat';
-                      this.setcleansetPath(pathMap, DreameRepeat);
+                      await this.setcleansetPath(pathMap, DreameRepeat);
                       this.setState(pathMap, Subvalue[2], true);
                       pathMap = In_path + key + '.' + Subkey + '.Route';
-                      this.setcleansetPath(pathMap, DreameRoute);
+                      await this.setcleansetPath(pathMap, DreameRoute);
                       this.setState(pathMap, Subvalue[5], true);
                       pathMap = In_path + key + '.' + Subkey + '.Cleaning';
                       await this.setcleansetPath(pathMap, DreameRoomClean);
@@ -3932,7 +3932,7 @@ class Dreame extends utils.Adapter {
                   }
                 }
               } else {
-                this.getType(Subvalue, pathMap);
+                await this.getType(Subvalue, pathMap);
                 this.setState(pathMap, JSON.stringify(Subvalue), true);
               }
             }
