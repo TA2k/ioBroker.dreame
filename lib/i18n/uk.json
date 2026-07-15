@@ -413,5 +413,16 @@
   "vacuum.water-temperature.warm": "Теплий",
   "vacuum.wider-corner.high-freq": "HighFreq",
   "vacuum.wider-corner.low-freq": "LowFreq",
-  "vacuum.wider-corner.off": "Вимкнено"
+  "vacuum.wider-corner.off": "Вимкнено",
+  "vacuum.status.mop-pad-left": "Залишок ресурсу насадки для миття",
+  "vacuum.status.mop-pad-time-left": "Залишений час насадки для миття",
+  "vacuum.status.dirty-water-tank-left": "Залишок ресурсу баку брудної води",
+  "vacuum.status.dirty-water-tank-time-left": "Залишений час баку брудної води",
+  "vacuum.status.firmware-version": "Версія прошивки",
+  "vacuum.status.mcu-version": "Версія MCU",
+  "vacuum.status.y-clean": "Y-Clean",
+  "vacuum.status.save-water-tips": "Поради з економії води",
+  "vacuum.status.dry-stop-remainder": "Нагадування про зупинку сушіння",
+  "vacuum.status.back-clean-mode": "Режим прибирання на зворотному шляху",
+  "vacuum.status.current-city": "Поточне місто"
 }

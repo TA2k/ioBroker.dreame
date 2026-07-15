@@ -413,5 +413,16 @@
   "vacuum.water-temperature.warm": "Caldo",
   "vacuum.wider-corner.high-freq": "Alta frequenza",
   "vacuum.wider-corner.low-freq": "Bassa frequenza",
-  "vacuum.wider-corner.off": "Spento"
+  "vacuum.wider-corner.off": "Spento",
+  "vacuum.status.mop-pad-left": "Durata residua del panno mop",
+  "vacuum.status.mop-pad-time-left": "Tempo rimanente del panno mop",
+  "vacuum.status.dirty-water-tank-left": "Durata residua del serbatoio dell'acqua sporca",
+  "vacuum.status.dirty-water-tank-time-left": "Tempo rimanente del serbatoio dell'acqua sporca",
+  "vacuum.status.firmware-version": "Versione firmware",
+  "vacuum.status.mcu-version": "Versione MCU",
+  "vacuum.status.y-clean": "Y-Clean",
+  "vacuum.status.save-water-tips": "Consigli per risparmiare acqua",
+  "vacuum.status.dry-stop-remainder": "Promemoria di arresto asciugatura",
+  "vacuum.status.back-clean-mode": "Modalità pulizia al ritorno",
+  "vacuum.status.current-city": "Città attuale"
 }
