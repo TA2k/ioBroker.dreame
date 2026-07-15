@@ -413,5 +413,16 @@
   "vacuum.water-temperature.warm": "Warm",
   "vacuum.wider-corner.high-freq": "Hoge frequentie",
   "vacuum.wider-corner.low-freq": "Lage frequentie",
-  "vacuum.wider-corner.off": "Uit"
+  "vacuum.wider-corner.off": "Uit",
+  "vacuum.status.mop-pad-left": "Levensduur dweilpad resterend",
+  "vacuum.status.mop-pad-time-left": "Resterende tijd dweilpad",
+  "vacuum.status.dirty-water-tank-left": "Levensduur vuilwatertank resterend",
+  "vacuum.status.dirty-water-tank-time-left": "Resterende tijd vuilwatertank",
+  "vacuum.status.firmware-version": "Firmwareversie",
+  "vacuum.status.mcu-version": "MCU-versie",
+  "vacuum.status.y-clean": "Y-Clean",
+  "vacuum.status.save-water-tips": "Tips voor waterbesparing",
+  "vacuum.status.dry-stop-remainder": "Herinnering droogstop",
+  "vacuum.status.back-clean-mode": "Terugweg-reinigingsmodus",
+  "vacuum.status.current-city": "Huidige stad"
 }

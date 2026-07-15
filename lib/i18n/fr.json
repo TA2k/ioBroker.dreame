@@ -413,5 +413,16 @@
   "vacuum.water-temperature.warm": "Chaud",
   "vacuum.wider-corner.high-freq": "HauteFréq",
   "vacuum.wider-corner.low-freq": "Faible fréquence",
-  "vacuum.wider-corner.off": "Désactivé"
+  "vacuum.wider-corner.off": "Désactivé",
+  "vacuum.status.mop-pad-left": "Durée de vie restante du tampon de lavage",
+  "vacuum.status.mop-pad-time-left": "Temps restant du tampon de lavage",
+  "vacuum.status.dirty-water-tank-left": "Durée de vie restante du réservoir d'eau sale",
+  "vacuum.status.dirty-water-tank-time-left": "Temps restant du réservoir d'eau sale",
+  "vacuum.status.firmware-version": "Version du micrologiciel",
+  "vacuum.status.mcu-version": "Version MCU",
+  "vacuum.status.y-clean": "Y-Clean",
+  "vacuum.status.save-water-tips": "Conseils pour économiser l'eau",
+  "vacuum.status.dry-stop-remainder": "Rappel d'arrêt de séchage",
+  "vacuum.status.back-clean-mode": "Mode de nettoyage au retour",
+  "vacuum.status.current-city": "Ville actuelle"
 }
