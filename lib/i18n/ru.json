@@ -424,5 +424,7 @@
   "vacuum.status.save-water-tips": "Советы по экономии воды",
   "vacuum.status.dry-stop-remainder": "Напоминание об остановке сушки",
   "vacuum.status.back-clean-mode": "Режим уборки на обратном пути",
-  "vacuum.status.current-city": "Текущий город"
+  "vacuum.status.current-city": "Текущий город",
+  "vacuum.status.camera-light": "Подсветка камеры",
+  "vacuum.status.mode": "Режим"
 }

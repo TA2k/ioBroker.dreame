@@ -424,5 +424,7 @@
   "vacuum.status.save-water-tips": "Tips voor waterbesparing",
   "vacuum.status.dry-stop-remainder": "Herinnering droogstop",
   "vacuum.status.back-clean-mode": "Terugweg-reinigingsmodus",
-  "vacuum.status.current-city": "Huidige stad"
+  "vacuum.status.current-city": "Huidige stad",
+  "vacuum.status.camera-light": "Cameralamp",
+  "vacuum.status.mode": "Modus"
 }
