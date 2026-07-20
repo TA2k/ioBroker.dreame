@@ -3841,7 +3841,11 @@ class Dreame extends utils.Adapter {
                   common: {
                     name: _roomName,
                   },
-                  native: {},
+                  // roomId = echte Raum-/Segment-ID (der cleanset-Schluessel Subkey).
+                  // Wird beim Schreiben ans Geraet gebraucht; NICHT die RoomOrder (Reihenfolge)
+                  // verwenden - die kollidiert mit fremden Raum-Schluesseln (Kueche Order 4 =
+                  // Wohnzimmer Schluessel 4) und schrieb die Aenderung in den falschen Raum.
+                  native: { roomId: Number(Subkey) },
                 });
                 //this.log.info(' Long subkey ' + Subvalue.length + ' / ' + Subvalue[3]);
                 if (Subvalue.length == 6) {
@@ -5217,12 +5221,15 @@ class Dreame extends utils.Adapter {
     return Object.assign({}, ...matches.map((m) => m)); //JSON.parse(m)));
   }
   async UpdateRoomSettings(RoomInd, ChangeType, ChangeVal) {
-    const RoomIdOb = await this.getStateAsync(RoomInd + '.RoomOrder');
     this.log.debug('Update Room Settings: ' + RoomInd + ' ' + ChangeType + ' ' + ChangeVal);
-    let stateSuctionLevel, stateWaterVolume, stateRepeats, stateCleaningMode, stateRoute, RoomId;
-    if (RoomIdOb) {
-      RoomId = RoomIdOb.val;
-    }
+    let stateSuctionLevel, stateWaterVolume, stateRepeats, stateCleaningMode, stateRoute;
+    // Raum-ID = echte Segment-ID (native.roomId, an der Anlage hinterlegt). Fallback: letztes
+    // Pfadsegment (ist derselbe cleanset-Schluessel). NICHT RoomOrder - die traf den falschen Raum.
+    const RoomObj = await this.getObjectAsync(RoomInd);
+    const RoomId =
+      RoomObj && RoomObj.native && RoomObj.native.roomId != null
+        ? Number(RoomObj.native.roomId)
+        : parseInt(RoomInd.split('.').pop(), 10);
 
     const getStateValues = async () => {
       const stateSuctionLevelOb = await this.getStateAsync(RoomInd + '.Level');
@@ -5764,8 +5771,13 @@ class Dreame extends utils.Adapter {
                     const RPath = idx.substring(0, RIdx);
                     //start-clean[{"piid": 1,"value": 18},{"piid": 10,"value": "{\"selects\": [[3,1,3,2,1]]}"}]
                     //Room ID, Repeats, Suction Level, Water Volume, Multi Room Id
-                    GetRoomIdOb = await this.getStateAsync(RPath + '.RoomOrder');
-                    GetRoomId = GetRoomIdOb.val;
+                    // Raum-ID = echte Segment-ID (native.roomId), NICHT RoomOrder - die traf den
+                    // falschen Raum. Fallback: letztes Pfadsegment (= cleanset-Schluessel).
+                    GetRoomIdOb = await this.getObjectAsync(RPath);
+                    GetRoomId =
+                      GetRoomIdOb && GetRoomIdOb.native && GetRoomIdOb.native.roomId != null
+                        ? Number(GetRoomIdOb.native.roomId)
+                        : parseInt(RPath.split('.').pop(), 10);
                     GetRepeatsOb = await this.getStateAsync(RPath + '.Repeat');
                     GetRepeats = GetRepeatsOb.val;
                     GetSuctionLevelOb = await this.getStateAsync(RPath + '.Level');
