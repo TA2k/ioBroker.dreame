@@ -2315,8 +2315,8 @@ class Dreame extends utils.Adapter {
         name: 'Clean Carpets First (28-2)',
         siid: 28,
         piid: 2,
-        type: 'boolean',
-        role: 'switch',
+        type: 'number',
+        role: 'level',
       },
       { id: 'auto-lds-coverage', name: 'Auto LDS Coverage (28-3)', siid: 28, piid: 3, type: 'number', role: 'level' },
       {
@@ -2337,15 +2337,15 @@ class Dreame extends utils.Adapter {
         role: 'level',
         states: { 0: 'Cold', 1: 'Warm', 2: 'Hot', 3: 'Boiling' },
       },
-      { id: 'silent-drying', name: 'Silent Drying (28-27)', siid: 28, piid: 27, type: 'boolean', role: 'switch' },
-      { id: 'hair-compression', name: 'Hair Compression (28-28)', siid: 28, piid: 28, type: 'boolean', role: 'switch' },
+      { id: 'silent-drying', name: 'Silent Drying (28-27)', siid: 28, piid: 27, type: 'number', role: 'level' },
+      { id: 'hair-compression', name: 'Hair Compression (28-28)', siid: 28, piid: 28, type: 'number', role: 'level' },
       {
         id: 'mopping-with-detergent',
         name: 'Mopping With Detergent (28-52)',
         siid: 28,
         piid: 52,
-        type: 'boolean',
-        role: 'switch',
+        type: 'number',
+        role: 'level',
       },
     ];
 
