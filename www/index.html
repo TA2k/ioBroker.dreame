@@ -431,6 +431,15 @@
   .opt .od{font-size:11.5px;opacity:.7}
   .ovlclose{width:100%;padding:11px;border-radius:11px;border:none;background:var(--panel2);
     color:var(--txt);font-size:13px;font-weight:700;cursor:pointer;margin-top:4px}
+  /* Eigene Hintergrundfarbe: natives Farbfeld statt Overlay-Auswahl (keine feste
+     Werteliste). Zuruecksetzen-Knopf daneben, nur sichtbar wenn eine Farbe gewaehlt ist. */
+  .farbSwatch{width:34px;height:28px;padding:0;border:1.5px solid var(--line);border-radius:7px;
+    background:none;cursor:pointer}
+  .farbSwatch::-webkit-color-swatch-wrapper{padding:2px}
+  .farbSwatch::-webkit-color-swatch{border:none;border-radius:4px}
+  .farbReset{padding:5px 10px;border-radius:8px;border:1.5px solid var(--line);
+    background:var(--panel2);color:var(--txt);font-size:11px;font-weight:700;cursor:pointer}
+  .farbReset:hover{border-color:var(--accent,#4a78e0)}
   .ovlsave{width:100%;padding:12px;border-radius:11px;border:none;background:var(--accent,#4a78e0);
     color:#fff;font-size:13px;font-weight:800;cursor:pointer;margin-top:4px;transition:.12s}
   .ovlsave:disabled{opacity:.35;cursor:default}
@@ -586,6 +595,13 @@
         <span class="pk">Hintergrund</span>
         <span class="pv"><span id="hgVal">Gefüllt</span></span>
       </div>
+      <div class="pickrow" id="bgFarbeRow" style="cursor:default">
+        <span class="pk">Hintergrundfarbe</span>
+        <span class="pv" style="gap:8px">
+          <button class="farbReset" id="bgFarbeReset" style="display:none" title="Auf Theme-Standard zurücksetzen">Zurücksetzen</button>
+          <input type="color" id="bgFarbeInput" class="farbSwatch" value="#0f1420">
+        </span>
+      </div>
       <div class="pickrow" id="leisteRow">
         <span class="pk">Bedienung</span>
         <span class="pv"><span id="leisteVal">Rechts</span></span>
@@ -696,6 +712,18 @@
     } catch (e) {}
     return standard;
   };
+  /** Wie holeWahl, aber fuer einen freien Hex-Farbwert statt einer festen Werteliste.
+   * null = keine eigene Farbe gewaehlt, dann gilt die Theme-Grundfarbe. */
+  const holeFarbe = (name) => {
+    const passt = (v) => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v);
+    const ausAdresse = _par.get(name);
+    if (passt(ausAdresse)) return ausAdresse.toLowerCase();
+    try {
+      const gemerkt = localStorage.getItem('dreame.' + name);
+      if (passt(gemerkt)) return gemerkt.toLowerCase();
+    } catch (e) {}
+    return null;
+  };
 
   const FARBEN = [
     { id:'auto',   name:'Automatisch', desc:'Folgt der Einstellung des Geräts' },
@@ -725,6 +753,15 @@
   let leisteWahl = holeWahl('leiste', LEISTE.map(l=>l.id), 'rechts');
   // Als Zahl gehalten, weil damit gerechnet wird (applyT, hitRoom, visibleBox).
   let kartenDrehung = Number(holeWahl('drehung', DREHUNG.map(d=>d.id), '0'));
+  // Eigene Hintergrundfarbe (ueberschreibt --bg/--flaeche); null = Theme-Standard.
+  let bgFarbe = holeFarbe('bg');
+  /** Startfarbe fuer den Farbwaehler, solange keine eigene Farbe gewaehlt ist — die
+   * aktuell wirksame Theme-Grundfarbe (siehe :root/:root[data-farben="hell"] oben). */
+  function themeFarbe(){
+    const hell = farbWahl === 'hell' ||
+      (farbWahl === 'auto' && matchMedia('(prefers-color-scheme: light)').matches);
+    return hell ? '#eef2f8' : '#0f1420';
+  }
 
   // Groesse der Bedienleiste. Zwei getrennte Werte, weil sie nicht dasselbe meinen:
   // senkrecht zaehlt die Breite, waagerecht die Hoehe. Ein gemeinsamer Wert wuerde beim
@@ -777,6 +814,20 @@
     else w.setAttribute('data-farben', farbWahl);
     if (hgWahl === 'transparent') w.setAttribute('data-hintergrund', 'transparent');
     else w.removeAttribute('data-hintergrund');
+    // Eigene Hintergrundfarbe: als Inline-Style gesetzt, schlaegt damit immer die
+    // CSS-Regel fuer data-hintergrund="transparent" (Inline-Style > jede Selektor-Regel)
+    // — gewollt: wer eine eigene Farbe waehlt, meint das ernst. data-bg zusaetzlich als
+    // Attribut gesetzt, analog zu data-farben/data-hintergrund (Hook fuer eigenes CSS
+    // bei iframe-Einbettung, siehe README).
+    if (bgFarbe) {
+      w.style.setProperty('--bg', bgFarbe);
+      w.style.setProperty('--flaeche', bgFarbe);
+      w.setAttribute('data-bg', bgFarbe);
+    } else {
+      w.style.removeProperty('--bg');
+      w.style.removeProperty('--flaeche');
+      w.removeAttribute('data-bg');
+    }
     // "rechts" ist die Grundanordnung im CSS — dafuer braucht es kein Attribut
     if (leisteWahl === 'rechts') w.removeAttribute('data-leiste');
     else w.setAttribute('data-leiste', leisteWahl);
@@ -791,15 +842,21 @@
     const hv = document.getElementById('hgVal');
     const lv = document.getElementById('leisteVal');
     const dv = document.getElementById('drehVal');
+    const bgi = document.getElementById('bgFarbeInput');
+    const bgr = document.getElementById('bgFarbeReset');
     if (fv) fv.textContent = (FARBEN.find(f=>f.id===farbWahl)||FARBEN[0]).name;
     if (hv) hv.textContent = (HINTERGRUND.find(h=>h.id===hgWahl)||HINTERGRUND[0]).name;
     if (lv) lv.textContent = (LEISTE.find(l=>l.id===leisteWahl)||LEISTE[0]).name;
     if (dv) dv.textContent = kartenDrehung + '°';
+    if (bgi) bgi.value = bgFarbe || themeFarbe();
+    if (bgr) bgr.style.display = bgFarbe ? '' : 'none';
     if (merken){
       try { localStorage.setItem('dreame.farben', farbWahl);
             localStorage.setItem('dreame.hintergrund', hgWahl);
             localStorage.setItem('dreame.leiste', leisteWahl);
-            localStorage.setItem('dreame.drehung', String(kartenDrehung)); } catch (e) {}
+            localStorage.setItem('dreame.drehung', String(kartenDrehung));
+            if (bgFarbe) localStorage.setItem('dreame.bg', bgFarbe);
+            else localStorage.removeItem('dreame.bg'); } catch (e) {}
     }
     baueAdresse();
     // Die Karte kann jetzt anders viel Platz haben (bei oben/unten aendert sich die
@@ -816,6 +873,7 @@
     if (DID) p.set('did', DID);
     if (farbWahl !== 'auto') p.set('farben', farbWahl);
     if (hgWahl !== 'gefuellt') p.set('hintergrund', hgWahl);
+    if (bgFarbe) p.set('bg', bgFarbe);
     if (leisteWahl !== 'rechts') p.set('leiste', leisteWahl);
     if (kartenDrehung) p.set('drehung', String(kartenDrehung));
     if (lgWert.breite !== LG.breite.standard) p.set('breite', String(lgWert.breite));
@@ -2894,6 +2952,12 @@
       (id)=>{ farbWahl = id; setzeAussehen(true); });
     document.getElementById('hgRow').onclick = ()=> openPicker('Hintergrund', HINTERGRUND, hgWahl,
       (id)=>{ hgWahl = id; setzeAussehen(true); });
+    // Eigene Hintergrundfarbe: waehrend des Ziehens im Farbwaehler nur anzeigen (input),
+    // gemerkt wird erst beim Bestaetigen (change) — gleiches Prinzip wie bei den Reglern.
+    const bgIn = document.getElementById('bgFarbeInput');
+    bgIn.oninput  = ()=> { bgFarbe = bgIn.value; setzeAussehen(false); };
+    bgIn.onchange = ()=> { bgFarbe = bgIn.value; setzeAussehen(true); };
+    document.getElementById('bgFarbeReset').onclick = ()=> { bgFarbe = null; setzeAussehen(true); };
     document.getElementById('leisteRow').onclick = ()=> openPicker('Bedienung', LEISTE, leisteWahl,
       (id)=>{ leisteWahl = id; setzeAussehen(true); });
     document.getElementById('drehRow').onclick = ()=> openPicker('Karte drehen', DREHUNG,
