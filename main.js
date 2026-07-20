@@ -427,6 +427,40 @@ class Dreame extends utils.Adapter {
     if (model.includes('hold')) return 'hold';
     return 'vacuum';
   }
+  // Praxis-Proxy fuer HA's "mop_pad_lifting" Capability (Tasshack dreame-vacuum types.py):
+  // die volle Formel ist eine OR-Verknuepfung von fuenf Flags, von denen drei (mop_pad_lifting,
+  // mop_pad_lifting_plus, mop_pad_unmounting) in ISSUES_FUER_TA2K.md nicht auf SIID/PIID
+  // zurueckgefuehrt werden. Die verbleibende, dort als "in der Praxis ausreichend" markierte
+  // Bedingung ist geraetespezifisch pruefbar: Waschstation (4-25) UND Absaugstation (15-5)
+  // im MIoT-Spec des KONKRETEN Geraets (nicht der statischen lib/specs-Tabelle, die fuer
+  // alle Staubsauger gleich ist und daher als Praesenz-Check untauglich waere).
+  deviceHasMopPadLifting(device) {
+    const specType = device && device.spec_type;
+    this._mopPadLiftingCache = this._mopPadLiftingCache || {};
+    if (Object.prototype.hasOwnProperty.call(this._mopPadLiftingCache, specType)) {
+      return this._mopPadLiftingCache[specType];
+    }
+    const spec = device && this.specs[specType];
+    let result = false;
+    if (spec && Array.isArray(spec.services)) {
+      let siid = 0;
+      let hasSelfWashBase = false;
+      let hasAutoEmptyBase = false;
+      for (const service of spec.services) {
+        siid = service.iid ? service.iid : siid + 1;
+        if (!service.properties) continue;
+        let piid = 0;
+        for (const property of service.properties) {
+          piid = property.iid ? property.iid : piid + 1;
+          if (siid === 4 && piid === 25) hasSelfWashBase = true;
+          if (siid === 15 && piid === 5) hasAutoEmptyBase = true;
+        }
+      }
+      result = hasSelfWashBase && hasAutoEmptyBase;
+    }
+    this._mopPadLiftingCache[specType] = result;
+    return result;
+  }
   // One-time migration: delete old phantom remote.<siid>-<piid> states created by the
   // pre-0664fd5 fallback, which incorrectly marked unknown properties as write:true.
   // Runs once per adapter instance, then marks itself done via a persistent state.
@@ -2790,13 +2824,15 @@ class Dreame extends utils.Adapter {
     // wetness-level SIID 28-1 instead); 0 means the device applies its own global setting.
     const waterVolume = waterSt ? Number(waterSt.val) : 0;
     const selects = [];
-    let selectIdx = 1;
     for (const cbId of Object.keys(cbStates)) {
       if (cbStates[cbId] && cbStates[cbId].val === true) {
         const cbObj = await this.getObjectAsync(cbId);
         if (cbObj && cbObj.native && cbObj.native.roomId !== undefined) {
-          selects.push([cbObj.native.roomId, 1, suctionLevel, waterVolume, selectIdx]);
-          selectIdx++;
+          // 5. Feld muss bei Multi-Raum-Reinigung fest 1 sein, NICHT hochzaehlen - sonst
+          // reinigt das Geraet (5th gen) nur den ersten ausgewaehlten Raum und ueberspringt
+          // den Rest stillschweigend (siehe HA device.py: "Sending index other than 1
+          // breaks the operation of 5th gen devices").
+          selects.push([cbObj.native.roomId, 1, suctionLevel, waterVolume, 1]);
         }
       }
     }
@@ -2842,11 +2878,18 @@ class Dreame extends utils.Adapter {
       if (meta?.decode) {
         this.compoundRaw[did] = this.compoundRaw[did] || {};
         this.compoundRaw[did][key] = value;
-        val = meta.decode(value);
+        const decodeDevice = this.deviceArray.find((d) => String(d.did) === String(did));
+        val = meta.decode(value, decodeDevice && this.deviceHasMopPadLifting(decodeDevice));
       }
+      // Manche Properties (z.B. stream-status 10001-1) liefern einen rein numerischen
+      // String statt einer Zahl, obwohl der Datenpunkt als type:number definiert ist.
+      // Nur konvertieren, wenn der Wert tatsaechlich ein reiner Ziffernstring ist - sonst
+      // unveraendert durchreichen (kein Raten bei anderen Formaten).
       const finalVal = typeof val === 'object'
         ? JSON.stringify(val)
-        : (meta?.type === 'boolean' && (val === 0 || val === 1)) ? val !== 0 : val;
+        : (meta?.type === 'boolean' && (val === 0 || val === 1)) ? val !== 0
+          : (meta?.type === 'number' && typeof val === 'string' && /^-?\d+$/.test(val)) ? Number(val)
+            : val;
       this.setState(path, finalVal, true);
     }
     return path;
@@ -3841,7 +3884,11 @@ class Dreame extends utils.Adapter {
                   common: {
                     name: _roomName,
                   },
-                  native: {},
+                  // roomId = echte Raum-/Segment-ID (der cleanset-Schluessel Subkey).
+                  // Wird beim Schreiben ans Geraet gebraucht; NICHT die RoomOrder (Reihenfolge)
+                  // verwenden - die kollidiert mit fremden Raum-Schluesseln (Kueche Order 4 =
+                  // Wohnzimmer Schluessel 4) und schrieb die Aenderung in den falschen Raum.
+                  native: { roomId: Number(Subkey) },
                 });
                 //this.log.info(' Long subkey ' + Subvalue.length + ' / ' + Subvalue[3]);
                 if (Subvalue.length == 6) {
@@ -3911,145 +3958,170 @@ class Dreame extends utils.Adapter {
   }
 
   async getMap(device, fetchAllMaps) {
-    let mapFileName;
-    const mapFileNameResponse = await this.sendCommand({
-      did: device.did,
-      method: 'get_properties',
-      params: [
-        {
-          piid: fetchAllMaps ? 9 : 8,
-          siid: 6,
-          did: device.did,
-        },
-      ],
-    });
-    if (
-      mapFileNameResponse &&
-      mapFileNameResponse.result &&
-      mapFileNameResponse.result[0] &&
-      mapFileNameResponse.result[0].value
-    ) {
-      try {
-        const json = JSON.parse(mapFileNameResponse.result[0].value);
-        mapFileName = json.object_name;
-      } catch (error) {
-        this.log.error('Error getting map url: ' + JSON.stringify(mapFileNameResponse));
-        this.log.error(error);
-      }
-    }
-
-    if (!mapFileName) {
-      return;
-    }
-
-    const fileUrl = await this.getFile(mapFileName, device);
-
-    const mapsContent = await this.requestClient({
-      method: 'get',
-      headers: {
-        Accept: '*/*',
-        'Accept-Language': 'de-de',
-        Connection: 'keep-alive',
-        'User-Agent': 'Dreame_Smarthome/1043 CFNetwork/1240.0.4 Darwin/20.6.0',
-      },
-      url: fileUrl,
-    }).catch((error) => {
-      this.log.error('Error getting map content: ' + JSON.stringify(error));
-      this.log.error(error);
-    });
-
-    if (!fetchAllMaps) {
-      mapsContent.data = [{ id: mapsContent.data.curr_id, info: mapsContent.data.mapstr }];
-    }
-    for (const mapsInfo of mapsContent.data) {
-      const mapId = mapsInfo.id;
-      //find first = 1
-      let firstMap = mapsInfo.info[0];
-      for (const map of mapsInfo.info) {
-        if (map.first === 0 || map.id === 0) {
-          firstMap = map;
+    try {
+      let mapFileName;
+      const mapFileNameResponse = await this.sendCommand({
+        did: device.did,
+        method: 'get_properties',
+        params: [
+          {
+            piid: fetchAllMaps ? 9 : 8,
+            siid: 6,
+            did: device.did,
+          },
+        ],
+      });
+      if (
+        mapFileNameResponse &&
+        mapFileNameResponse.result &&
+        mapFileNameResponse.result[0] &&
+        mapFileNameResponse.result[0].value
+      ) {
+        try {
+          const json = JSON.parse(mapFileNameResponse.result[0].value);
+          mapFileName = json.object_name;
+        } catch (error) {
+          this.log.error('Error getting map url: ' + JSON.stringify(mapFileNameResponse));
+          this.log.error(error);
         }
       }
-      const multiMap = decodeMultiMapData(firstMap.thb || firstMap.map, 0);
-      if (multiMap && multiMap.areaInfo) {
-        this._areaInfoByDid[device.did] = multiMap.areaInfo;
-        this._areaInfoByMapId[device.did] = this._areaInfoByMapId[device.did] || {};
-        this._areaInfoByMapId[device.did][String(multiMap.map_id)] = multiMap.areaInfo;
-        await this._setCustomRoomCleaningMap(device, multiMap.map_id, multiMap.areaInfo);
-      }
-      //convert mapInfo bitmap to image
-      if (!createCanvas) {
-        this.log.debug('Canvas not available, cannot create map image');
+
+      if (!mapFileName) {
         return;
       }
-      const canvas = createCanvas(multiMap.width, multiMap.height);
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const bitmapArray = new Uint8ClampedArray(multiMap.width * multiMap.height * 4);
-      const colorPalette = [
-        [0, 0, 0], // Black
-        [255, 255, 255], // White
-        [255, 0, 0], // Red
-        [0, 200, 0], // Green
-        [0, 0, 255], // Blue
-        [255, 255, 0], // Yellow
-        [255, 0, 255], // Magenta
-        [0, 255, 255], // Cyan
-        [128, 0, 0], // Maroon
-        [0, 128, 0], // Dark Green
-        [0, 0, 128], // Navy
-        [128, 128, 0], // Olive
-        [128, 0, 128], // Purple
-        [0, 128, 128], // Teal
-        [192, 192, 192], // Silver
-        [128, 128, 128], // Gray
-        [255, 192, 203], // Pink
-        [255, 165, 0], // Orange
-        [255, 105, 180], // Hot Pink
-        [210, 105, 30], // Chocolate
-        [34, 139, 34], // Forest Green
-        [240, 230, 140], // Khaki
-        [255, 228, 196], // Bisque
-        [64, 224, 208], // Turquoise
-        [221, 160, 221], // Plum
-        [90, 90, 90], // Placeholder for transparency
-      ];
-      // Create an ImageData object
-      for (let i = 0; i < multiMap.mapInfo.length; i++) {
-        const colorIndex = multiMap.mapInfo[i];
-        const [r, g, b] = colorPalette[colorIndex] || [0, 0, 0]; // Default to black
-        let alpha = 255;
-        if (colorIndex === 0) {
-          alpha = 0;
-        }
-        bitmapArray[i * 4] = r; // Red
-        bitmapArray[i * 4 + 1] = g; // Green
-        bitmapArray[i * 4 + 2] = b; // Blue
-        bitmapArray[i * 4 + 3] = alpha; // Alpha (fully opaque)
+      const fileUrl = await this.getFile(mapFileName, device);
+
+      const mapsContent = await this.requestClient({
+        method: 'get',
+        headers: {
+          Accept: '*/*',
+          'Accept-Language': 'de-de',
+          Connection: 'keep-alive',
+          'User-Agent': 'Dreame_Smarthome/1043 CFNetwork/1240.0.4 Darwin/20.6.0',
+        },
+        url: fileUrl,
+      }).catch((error) => {
+        this.log.error('Error getting map content: ' + JSON.stringify(error));
+        this.log.error(error);
+      });
+
+      if (!fetchAllMaps) {
+        mapsContent.data = [{ id: mapsContent.data.curr_id, info: mapsContent.data.mapstr }];
       }
+      for (const mapsInfo of mapsContent.data) {
+        if (!mapsInfo || !Array.isArray(mapsInfo.info) || !mapsInfo.info.length) {
+          this.log.info(`Map entry ${mapsInfo && mapsInfo.id} without info data, skipping`);
+          continue;
+        }
+        const mapId = mapsInfo.id;
+        //find first = 1
+        let firstMap = mapsInfo.info[0];
+        for (const map of mapsInfo.info) {
+          if (map.first === 0 || map.id === 0) {
+            firstMap = map;
+          }
+        }
+        const multiMap = decodeMultiMapData(firstMap.thb || firstMap.map, 0);
+        if (multiMap && multiMap.areaInfo) {
+          this._areaInfoByDid[device.did] = multiMap.areaInfo;
+          this._areaInfoByMapId[device.did] = this._areaInfoByMapId[device.did] || {};
+          this._areaInfoByMapId[device.did][String(multiMap.map_id)] = multiMap.areaInfo;
+          await this._setCustomRoomCleaningMap(device, multiMap.map_id, multiMap.areaInfo);
+        }
+        //convert mapInfo bitmap to image
+        if (!createCanvas) {
+          this.log.debug('Canvas not available, cannot create map image');
+          return;
+        }
+        const canvas = createCanvas(multiMap.width, multiMap.height);
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const imageData = new ImageData(bitmapArray, multiMap.width, multiMap.height);
-      ctx.putImageData(imageData, 0, 0);
+        const bitmapArray = new Uint8ClampedArray(multiMap.width * multiMap.height * 4);
+        const colorPalette = [
+          [0, 0, 0], // Black
+          [255, 255, 255], // White
+          [255, 0, 0], // Red
+          [0, 200, 0], // Green
+          [0, 0, 255], // Blue
+          [255, 255, 0], // Yellow
+          [255, 0, 255], // Magenta
+          [0, 255, 255], // Cyan
+          [128, 0, 0], // Maroon
+          [0, 128, 0], // Dark Green
+          [0, 0, 128], // Navy
+          [128, 128, 0], // Olive
+          [128, 0, 128], // Purple
+          [0, 128, 128], // Teal
+          [192, 192, 192], // Silver
+          [128, 128, 128], // Gray
+          [255, 192, 203], // Pink
+          [255, 165, 0], // Orange
+          [255, 105, 180], // Hot Pink
+          [210, 105, 30], // Chocolate
+          [34, 139, 34], // Forest Green
+          [240, 230, 140], // Khaki
+          [255, 228, 196], // Bisque
+          [64, 224, 208], // Turquoise
+          [221, 160, 221], // Plum
+          [90, 90, 90], // Placeholder for transparency
+        ];
+        // Create an ImageData object
+        for (let i = 0; i < multiMap.mapInfo.length; i++) {
+          const colorIndex = multiMap.mapInfo[i];
+          const [r, g, b] = colorPalette[colorIndex] || [0, 0, 0]; // Default to black
+          let alpha = 255;
+          if (colorIndex === 0) {
+            alpha = 0;
+          }
+          bitmapArray[i * 4] = r; // Red
+          bitmapArray[i * 4 + 1] = g; // Green
+          bitmapArray[i * 4 + 2] = b; // Blue
+          bitmapArray[i * 4 + 3] = alpha; // Alpha (fully opaque)
+        }
 
-      const toPixelX = (wx) => (wx - multiMap.x) / multiMap.gridWidth;
-      const toPixelY = (wy) => (wy - multiMap.y) / multiMap.gridWidth;
+        const imageData = new ImageData(bitmapArray, multiMap.width, multiMap.height);
+        ctx.putImageData(imageData, 0, 0);
 
-      // Draw virtual walls (vw.line) as red lines
-      if (multiMap.vw) {
-        ctx.strokeStyle = '#FF0000';
-        ctx.lineWidth = 2;
-        for (const key in multiMap.vw) {
-          const items = multiMap.vw[key];
-          if (!Array.isArray(items)) continue;
-          for (const item of items) {
-            if (!Array.isArray(item) || item.length < 4) continue;
-            if (key === 'line' || key === 'cliff') {
-              ctx.beginPath();
-              ctx.moveTo(toPixelX(item[0]), toPixelY(item[1]));
-              ctx.lineTo(toPixelX(item[2]), toPixelY(item[3]));
-              ctx.stroke();
-            } else {
+        const toPixelX = (wx) => (wx - multiMap.x) / multiMap.gridWidth;
+        const toPixelY = (wy) => (wy - multiMap.y) / multiMap.gridWidth;
+
+        // Draw virtual walls (vw.line) as red lines
+        if (multiMap.vw) {
+          ctx.strokeStyle = '#FF0000';
+          ctx.lineWidth = 2;
+          for (const key in multiMap.vw) {
+            const items = multiMap.vw[key];
+            if (!Array.isArray(items)) continue;
+            for (const item of items) {
+              if (!Array.isArray(item) || item.length < 4) continue;
+              if (key === 'line' || key === 'cliff') {
+                ctx.beginPath();
+                ctx.moveTo(toPixelX(item[0]), toPixelY(item[1]));
+                ctx.lineTo(toPixelX(item[2]), toPixelY(item[3]));
+                ctx.stroke();
+              } else {
+                const x1 = toPixelX(Math.min(item[0], item[2]));
+                const y1 = toPixelY(Math.min(item[1], item[3]));
+                const x2 = toPixelX(Math.max(item[0], item[2]));
+                const y2 = toPixelY(Math.max(item[1], item[3]));
+                ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+              }
+            }
+          }
+        }
+
+        // Draw no-go zones (vws) as red dashed rectangles
+        if (multiMap.vws) {
+          ctx.strokeStyle = '#FF4444';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 3]);
+          for (const key in multiMap.vws) {
+            const items = multiMap.vws[key];
+            if (!Array.isArray(items)) continue;
+            for (const item of items) {
+              if (!Array.isArray(item) || item.length < 4) continue;
               const x1 = toPixelX(Math.min(item[0], item[2]));
               const y1 = toPixelY(Math.min(item[1], item[3]));
               const x2 = toPixelX(Math.max(item[0], item[2]));
@@ -4057,135 +4129,119 @@ class Dreame extends utils.Adapter {
               ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
             }
           }
+          ctx.setLineDash([]);
         }
-      }
 
-      // Draw no-go zones (vws) as red dashed rectangles
-      if (multiMap.vws) {
-        ctx.strokeStyle = '#FF4444';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 3]);
-        for (const key in multiMap.vws) {
-          const items = multiMap.vws[key];
-          if (!Array.isArray(items)) continue;
-          for (const item of items) {
-            if (!Array.isArray(item) || item.length < 4) continue;
-            const x1 = toPixelX(Math.min(item[0], item[2]));
-            const y1 = toPixelY(Math.min(item[1], item[3]));
-            const x2 = toPixelX(Math.max(item[0], item[2]));
-            const y2 = toPixelY(Math.max(item[1], item[3]));
-            ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        // Draw zone names
+        if (multiMap.areaInfo) {
+          const fontSize = Math.max(8, Math.min(multiMap.width, multiMap.height) * 0.03);
+          ctx.font = `${fontSize}px sans-serif`;
+          ctx.fillStyle = '#FFFFFF';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          for (const key in multiMap.areaInfo) {
+            const area = multiMap.areaInfo[key];
+            if (!area || area.centerX == null || area.centerY == null) continue;
+            const label = area.areaName || 'Zone' + key;
+            const px = toPixelX(area.centerX);
+            const py = toPixelY(area.centerY);
+            ctx.fillText(label, px, py);
           }
         }
-        ctx.setLineDash([]);
-      }
 
-      // Draw zone names
-      if (multiMap.areaInfo) {
-        const fontSize = Math.max(8, Math.min(multiMap.width, multiMap.height) * 0.03);
-        ctx.font = `${fontSize}px sans-serif`;
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        for (const key in multiMap.areaInfo) {
-          const area = multiMap.areaInfo[key];
-          if (!area || area.centerX == null || area.centerY == null) continue;
-          const label = area.areaName || 'Zone' + key;
-          const px = toPixelX(area.centerX);
-          const py = toPixelY(area.centerY);
-          ctx.fillText(label, px, py);
+        // Draw charger position (green)
+        if (multiMap.chargerPos) {
+          const cx = toPixelX(multiMap.chargerPos.x);
+          const cy = toPixelY(multiMap.chargerPos.y);
+          const r = Math.max(3, Math.min(multiMap.width, multiMap.height) * 0.015);
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          ctx.fillStyle = '#00FF00';
+          ctx.fill();
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.stroke();
         }
-      }
 
-      // Draw charger position (green)
-      if (multiMap.chargerPos) {
-        const cx = toPixelX(multiMap.chargerPos.x);
-        const cy = toPixelY(multiMap.chargerPos.y);
-        const r = Math.max(3, Math.min(multiMap.width, multiMap.height) * 0.015);
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fillStyle = '#00FF00';
-        ctx.fill();
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.stroke();
-      }
+        // Draw robot position (blue)
+        if (multiMap.robotPos) {
+          const rx = toPixelX(multiMap.robotPos.x);
+          const ry = toPixelY(multiMap.robotPos.y);
+          const r = Math.max(3, Math.min(multiMap.width, multiMap.height) * 0.015);
+          ctx.beginPath();
+          ctx.arc(rx, ry, r, 0, Math.PI * 2);
+          ctx.fillStyle = '#00AAFF';
+          ctx.fill();
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.stroke();
+        }
 
-      // Draw robot position (blue)
-      if (multiMap.robotPos) {
-        const rx = toPixelX(multiMap.robotPos.x);
-        const ry = toPixelY(multiMap.robotPos.y);
-        const r = Math.max(3, Math.min(multiMap.width, multiMap.height) * 0.015);
-        ctx.beginPath();
-        ctx.arc(rx, ry, r, 0, Math.PI * 2);
-        ctx.fillStyle = '#00AAFF';
-        ctx.fill();
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.stroke();
-      }
+        const buffer = canvas.toBuffer('image/png');
+        let stateMapId = multiMap.map_id;
+        if (!fetchAllMaps) {
+          stateMapId = 'current';
+        }
+        await this.extendObject(device.did + '.map.maps', {
+          type: 'channel',
+          common: {
+            name: 'Maps extracted from Dreame',
+          },
+          native: {},
+        });
+        const _mapNamePath = device.did + '.map.maps.' + stateMapId + '.mapName';
+        const _existingMapName = await this.getStateAsync(_mapNamePath);
+        const _defaultMapName = 'Map ' + stateMapId;
+        const _mapDisplayName =
+          _existingMapName && _existingMapName.val ? String(_existingMapName.val) : _defaultMapName;
+        await this.extendObject(device.did + '.map.maps.' + stateMapId, {
+          type: 'channel',
+          common: {
+            name: _mapDisplayName,
+          },
+          native: {},
+        });
+        await this.extendObject(_mapNamePath, {
+          type: 'state',
+          common: {
+            name: 'Map Name',
+            type: 'string',
+            role: 'text',
+            read: true,
+            write: true,
+          },
+          native: {},
+        });
+        if (!_existingMapName || _existingMapName.val === null || _existingMapName.val === undefined) {
+          await this.setState(_mapNamePath, _defaultMapName, true);
+        }
+        await this._syncCustomRoomCleaningMapName(device.did, multiMap.map_id, _mapDisplayName);
+        delete multiMap.mapInfo;
+        delete multiMap.floorMapInfo;
+        delete multiMap.furniture;
+        this.json2iob.parse(device.did + '.map.maps.' + stateMapId + '.info', multiMap);
+        await this.extendObject(device.did + '.map.maps.' + stateMapId + '.image', {
+          type: 'state',
+          common: {
+            name: 'Map Image ' + stateMapId,
+            type: 'string',
+            role: 'state',
+            read: true,
+            write: false,
+          },
+          native: {},
+        });
+        await this.setState(
+          device.did + '.map.maps.' + stateMapId + '.image',
+          'data:image/png;base64,' + buffer.toString('base64'),
+          true,
+        );
 
-      const buffer = canvas.toBuffer('image/png');
-      let stateMapId = multiMap.map_id;
-      if (!fetchAllMaps) {
-        stateMapId = 'current';
+        // const uncompressedMap = this.uncompress(firstMap.thb || firstMap.map);
       }
-      await this.extendObject(device.did + '.map.maps', {
-        type: 'channel',
-        common: {
-          name: 'Maps extracted from Dreame',
-        },
-        native: {},
-      });
-      const _mapNamePath = device.did + '.map.maps.' + stateMapId + '.mapName';
-      const _existingMapName = await this.getStateAsync(_mapNamePath);
-      const _defaultMapName = 'Map ' + stateMapId;
-      const _mapDisplayName =
-        _existingMapName && _existingMapName.val ? String(_existingMapName.val) : _defaultMapName;
-      await this.extendObject(device.did + '.map.maps.' + stateMapId, {
-        type: 'channel',
-        common: {
-          name: _mapDisplayName,
-        },
-        native: {},
-      });
-      await this.extendObject(_mapNamePath, {
-        type: 'state',
-        common: {
-          name: 'Map Name',
-          type: 'string',
-          role: 'text',
-          read: true,
-          write: true,
-        },
-        native: {},
-      });
-      if (!_existingMapName || _existingMapName.val === null || _existingMapName.val === undefined) {
-        await this.setState(_mapNamePath, _defaultMapName, true);
-      }
-      await this._syncCustomRoomCleaningMapName(device.did, multiMap.map_id, _mapDisplayName);
-      delete multiMap.mapInfo;
-      delete multiMap.floorMapInfo;
-      delete multiMap.furniture;
-      this.json2iob.parse(device.did + '.map.maps.' + stateMapId + '.info', multiMap);
-      await this.extendObject(device.did + '.map.maps.' + stateMapId + '.image', {
-        type: 'state',
-        common: {
-          name: 'Map Image ' + stateMapId,
-          type: 'string',
-          role: 'state',
-          read: true,
-          write: false,
-        },
-        native: {},
-      });
-      await this.setState(
-        device.did + '.map.maps.' + stateMapId + '.image',
-        'data:image/png;base64,' + buffer.toString('base64'),
-        true,
-      );
-
-      // const uncompressedMap = this.uncompress(firstMap.thb || firstMap.map);
+    } catch (error) {
+      this.log.warn('Error fetching map data: ' + error.message);
+      this.log.debug(error.stack);
     }
   }
 
@@ -5217,12 +5273,15 @@ class Dreame extends utils.Adapter {
     return Object.assign({}, ...matches.map((m) => m)); //JSON.parse(m)));
   }
   async UpdateRoomSettings(RoomInd, ChangeType, ChangeVal) {
-    const RoomIdOb = await this.getStateAsync(RoomInd + '.RoomOrder');
     this.log.debug('Update Room Settings: ' + RoomInd + ' ' + ChangeType + ' ' + ChangeVal);
-    let stateSuctionLevel, stateWaterVolume, stateRepeats, stateCleaningMode, stateRoute, RoomId;
-    if (RoomIdOb) {
-      RoomId = RoomIdOb.val;
-    }
+    let stateSuctionLevel, stateWaterVolume, stateRepeats, stateCleaningMode, stateRoute;
+    // Raum-ID = echte Segment-ID (native.roomId, an der Anlage hinterlegt). Fallback: letztes
+    // Pfadsegment (ist derselbe cleanset-Schluessel). NICHT RoomOrder - die traf den falschen Raum.
+    const RoomObj = await this.getObjectAsync(RoomInd);
+    const RoomId =
+      RoomObj && RoomObj.native && RoomObj.native.roomId != null
+        ? Number(RoomObj.native.roomId)
+        : parseInt(RoomInd.split('.').pop(), 10);
 
     const getStateValues = async () => {
       const stateSuctionLevelOb = await this.getStateAsync(RoomInd + '.Level');
@@ -5656,6 +5715,13 @@ class Dreame extends utils.Adapter {
           const compoundKey = `${wSiid}-${wPiid}`;
           const compoundMeta = this.specMetaDict?.[deviceId]?.[compoundKey];
           let writeValue = state.val;
+          // Boolean-Schalter (type:boolean/role:switch) muessen als Zahl 1/0 gesendet werden,
+          // NICHT als true/false. Das Geraet lehnt einen rohen Boolean mit code:-1 ab
+          // (nachgewiesen an customized-cleaning 4-26: value:true -> code -1, value:1 -> code 0).
+          // Richtet sich nach der State-Definition, nicht nach dem Laufzeitwert.
+          if (stateObject.common && stateObject.common.type === 'boolean') {
+            writeValue = state.val ? 1 : 0;
+          }
           if (compoundMeta?.encode) {
             const rawCompound = this.compoundRaw?.[deviceId]?.[compoundKey];
             if (rawCompound === undefined) {
@@ -5668,7 +5734,12 @@ class Dreame extends utils.Adapter {
               );
               return;
             }
-            writeValue = compoundMeta.encode(Number(state.val), rawCompound);
+            const encodeDevice = this.deviceArray.find((d) => String(d.did) === String(deviceId));
+            writeValue = compoundMeta.encode(
+              Number(state.val),
+              rawCompound,
+              encodeDevice && this.deviceHasMopPadLifting(encodeDevice),
+            );
             this.log.info(`Compound encode ${compoundKey}: field=${state.val}, raw=${rawCompound} → ${writeValue}`);
           }
           // miIO/Dreame cloud expects an array of property objects, not a single object.
@@ -5764,14 +5835,23 @@ class Dreame extends utils.Adapter {
                     const RPath = idx.substring(0, RIdx);
                     //start-clean[{"piid": 1,"value": 18},{"piid": 10,"value": "{\"selects\": [[3,1,3,2,1]]}"}]
                     //Room ID, Repeats, Suction Level, Water Volume, Multi Room Id
-                    GetRoomIdOb = await this.getStateAsync(RPath + '.RoomOrder');
-                    GetRoomId = GetRoomIdOb.val;
+                    // Raum-ID = echte Segment-ID (native.roomId), NICHT RoomOrder - die traf den
+                    // falschen Raum. Fallback: letztes Pfadsegment (= cleanset-Schluessel).
+                    GetRoomIdOb = await this.getObjectAsync(RPath);
+                    GetRoomId =
+                      GetRoomIdOb && GetRoomIdOb.native && GetRoomIdOb.native.roomId != null
+                        ? Number(GetRoomIdOb.native.roomId)
+                        : parseInt(RPath.split('.').pop(), 10);
                     GetRepeatsOb = await this.getStateAsync(RPath + '.Repeat');
                     GetRepeats = GetRepeatsOb.val;
                     GetSuctionLevelOb = await this.getStateAsync(RPath + '.Level');
                     GetSuctionLevel = GetSuctionLevelOb ? GetSuctionLevelOb.val : 0;
                     GetWaterVolumeOb = await this.getStateAsync(RPath + '.WaterVolume');
                     GetWaterVolume = GetWaterVolumeOb ? GetWaterVolumeOb.val : 0;
+                    // 5. Feld muss fest 1 sein, NICHT die laufende Nummer GetMultiId - sonst
+                    // reinigt das Geraet (5th gen) nur den ersten ausgewaehlten Raum und
+                    // ueberspringt den Rest stillschweigend (siehe HA device.py: "Sending
+                    // index other than 1 breaks the operation of 5th gen devices").
                     ToGetString +=
                       GetRoomId +
                       ',' +
@@ -5781,7 +5861,7 @@ class Dreame extends utils.Adapter {
                       ',' +
                       GetWaterVolume +
                       ',' +
-                      GetMultiId +
+                      1 +
                       ']';
                   }
                 }
