@@ -427,6 +427,40 @@ class Dreame extends utils.Adapter {
     if (model.includes('hold')) return 'hold';
     return 'vacuum';
   }
+  // Praxis-Proxy fuer HA's "mop_pad_lifting" Capability (Tasshack dreame-vacuum types.py):
+  // die volle Formel ist eine OR-Verknuepfung von fuenf Flags, von denen drei (mop_pad_lifting,
+  // mop_pad_lifting_plus, mop_pad_unmounting) in ISSUES_FUER_TA2K.md nicht auf SIID/PIID
+  // zurueckgefuehrt werden. Die verbleibende, dort als "in der Praxis ausreichend" markierte
+  // Bedingung ist geraetespezifisch pruefbar: Waschstation (4-25) UND Absaugstation (15-5)
+  // im MIoT-Spec des KONKRETEN Geraets (nicht der statischen lib/specs-Tabelle, die fuer
+  // alle Staubsauger gleich ist und daher als Praesenz-Check untauglich waere).
+  deviceHasMopPadLifting(device) {
+    const specType = device && device.spec_type;
+    this._mopPadLiftingCache = this._mopPadLiftingCache || {};
+    if (Object.prototype.hasOwnProperty.call(this._mopPadLiftingCache, specType)) {
+      return this._mopPadLiftingCache[specType];
+    }
+    const spec = device && this.specs[specType];
+    let result = false;
+    if (spec && Array.isArray(spec.services)) {
+      let siid = 0;
+      let hasSelfWashBase = false;
+      let hasAutoEmptyBase = false;
+      for (const service of spec.services) {
+        siid = service.iid ? service.iid : siid + 1;
+        if (!service.properties) continue;
+        let piid = 0;
+        for (const property of service.properties) {
+          piid = property.iid ? property.iid : piid + 1;
+          if (siid === 4 && piid === 25) hasSelfWashBase = true;
+          if (siid === 15 && piid === 5) hasAutoEmptyBase = true;
+        }
+      }
+      result = hasSelfWashBase && hasAutoEmptyBase;
+    }
+    this._mopPadLiftingCache[specType] = result;
+    return result;
+  }
   // One-time migration: delete old phantom remote.<siid>-<piid> states created by the
   // pre-0664fd5 fallback, which incorrectly marked unknown properties as write:true.
   // Runs once per adapter instance, then marks itself done via a persistent state.
@@ -2844,7 +2878,8 @@ class Dreame extends utils.Adapter {
       if (meta?.decode) {
         this.compoundRaw[did] = this.compoundRaw[did] || {};
         this.compoundRaw[did][key] = value;
-        val = meta.decode(value);
+        const decodeDevice = this.deviceArray.find((d) => String(d.did) === String(did));
+        val = meta.decode(value, decodeDevice && this.deviceHasMopPadLifting(decodeDevice));
       }
       // Manche Properties (z.B. stream-status 10001-1) liefern einen rein numerischen
       // String statt einer Zahl, obwohl der Datenpunkt als type:number definiert ist.
@@ -5699,7 +5734,12 @@ class Dreame extends utils.Adapter {
               );
               return;
             }
-            writeValue = compoundMeta.encode(Number(state.val), rawCompound);
+            const encodeDevice = this.deviceArray.find((d) => String(d.did) === String(deviceId));
+            writeValue = compoundMeta.encode(
+              Number(state.val),
+              rawCompound,
+              encodeDevice && this.deviceHasMopPadLifting(encodeDevice),
+            );
             this.log.info(`Compound encode ${compoundKey}: field=${state.val}, raw=${rawCompound} → ${writeValue}`);
           }
           // miIO/Dreame cloud expects an array of property objects, not a single object.
