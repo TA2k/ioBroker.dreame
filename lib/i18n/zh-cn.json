@@ -413,5 +413,18 @@
   "vacuum.water-temperature.warm": "温暖的",
   "vacuum.wider-corner.high-freq": "高频",
   "vacuum.wider-corner.low-freq": "低频",
-  "vacuum.wider-corner.off": "离开"
+  "vacuum.wider-corner.off": "离开",
+  "vacuum.status.mop-pad-left": "拖布剩余寿命",
+  "vacuum.status.mop-pad-time-left": "拖布剩余时间",
+  "vacuum.status.dirty-water-tank-left": "脏水箱剩余寿命",
+  "vacuum.status.dirty-water-tank-time-left": "脏水箱剩余时间",
+  "vacuum.status.firmware-version": "固件版本",
+  "vacuum.status.mcu-version": "MCU 版本",
+  "vacuum.status.y-clean": "Y 字形清洁",
+  "vacuum.status.save-water-tips": "节水提示",
+  "vacuum.status.dry-stop-remainder": "烘干停止提醒",
+  "vacuum.status.back-clean-mode": "返程清洁模式",
+  "vacuum.status.current-city": "当前城市",
+  "vacuum.status.camera-light": "相机灯光",
+  "vacuum.status.mode": "模式"
 }
