@@ -14,6 +14,7 @@ const Json2iob = require('json2iob');
 const crypto = require('node:crypto');
 const mqtt = require('mqtt');
 const zlib = require('node:zlib');
+const { parseShortcutList } = require('./lib/shortcuts');
 //check if canvas is available because is optional dependency
 let createCanvas;
 let ImageData;
@@ -2693,6 +2694,15 @@ class Dreame extends utils.Adapter {
       native: {},
     });
 
+    // Shortcuts only arrive through MQTT (siid 4 does not answer get_properties),
+    // and the device pushes the list only when it changes. Without this the
+    // buttons would stay missing after a restart until that happens by chance,
+    // so rebuild them from the value already persisted in status.shortcuts.
+    const _scPersisted = await this.getStateAsync(`${did}.status.shortcuts`);
+    if (_scPersisted && _scPersisted.val) {
+      await this.parseShortcuts(did, _scPersisted.val);
+    }
+
     this.log.info(
       `Vacuum states created: ${statusStates.length} status, ${remoteStates.length} remote, ${autoSwitchRemotes.length} autoSwitch, ${actionStates.length} actions`,
     );
@@ -3687,9 +3697,13 @@ class Dreame extends utils.Adapter {
           if (this.isVacuum(device) && element.siid === 4 && element.piid === 50) {
             this.parseVacuumAutoSwitch(did, element.value);
           }
-          // Shortcuts (4-48): parse base64 names and running state
-          if (this.isMower(device) && element.siid === 4 && element.piid === 48) {
-            this.parseShortcuts(did, element.value);
+          // Shortcuts (4-48): parse base64 names and running state.
+          // Not restricted to mowers — vacuums report their app shortcuts on the
+          // same property and start them with the same action. parseShortcuts()
+          // ignores anything that is not a shortcut list, so devices that use
+          // 4-48 differently are unaffected.
+          if (element.siid === 4 && element.piid === 48) {
+            await this.parseShortcuts(did, element.value);
           }
           // Lazy create + setState für Properties mit bekannter Metadaten-Definition
           const lazyPath = await this._lazyCreateState(did, element.siid, element.piid, element.value);
@@ -5077,30 +5091,30 @@ class Dreame extends utils.Adapter {
     }
   }
 
-  parseShortcuts(did, value) {
+  async parseShortcuts(did, value) {
     try {
-      const shortcuts = typeof value === 'string' ? JSON.parse(value) : value;
-      if (!Array.isArray(shortcuts)) return;
-      for (const sc of shortcuts) {
-        const name = Buffer.from(sc.name, 'base64').toString('utf-8');
-        const running = sc.state === '0' || sc.state === '1';
+      for (const sc of parseShortcutList(value)) {
         const path = `${did}.shortcuts.${sc.id}`;
-        this.extendObject(path, { type: 'channel', common: { name: name }, native: {} });
-        this.extendObject(path + '.name', {
+        await this.extendObject(path, { type: 'channel', common: { name: sc.name }, native: {} });
+        await this.extendObject(path + '.name', {
           type: 'state',
           common: { name: 'Shortcut Name', type: 'string', role: 'text', read: true, write: false },
           native: {},
         });
-        this.setState(path + '.name', name, true);
-        this.extendObject(path + '.running', {
+        this.setState(path + '.name', sc.name, true);
+        // Only devices that actually report sc.state get the indicator — otherwise
+        // it would be stuck at false and lie about the shortcut being idle.
+        if (sc.running !== undefined) {
+          await this.extendObject(path + '.running', {
+            type: 'state',
+            common: { name: 'Running', type: 'boolean', role: 'indicator', read: true, write: false },
+            native: {},
+          });
+          this.setState(path + '.running', sc.running, true);
+        }
+        await this.extendObject(path + '.start', {
           type: 'state',
-          common: { name: 'Running', type: 'boolean', role: 'indicator', read: true, write: false },
-          native: {},
-        });
-        this.setState(path + '.running', running, true);
-        this.extendObject(path + '.start', {
-          type: 'state',
-          common: { name: `Start "${name}"`, type: 'boolean', role: 'button', read: false, write: true },
+          common: { name: `Start "${sc.name}"`, type: 'boolean', role: 'button', read: false, write: true },
           native: { shortcutId: sc.id, did: did },
         });
       }
@@ -5437,7 +5451,10 @@ class Dreame extends utils.Adapter {
           const stateObjSc = await this.getObjectAsync(id);
           if (stateObjSc && stateObjSc.native && stateObjSc.native.shortcutId !== undefined) {
             const device = this.deviceArray.find((obj) => obj.did === deviceId);
-            if (!device || !this.isMower(device)) return;
+            // No device-class check: this button only exists where parseShortcuts()
+            // created it, so reaching this point already means the device reported
+            // a shortcut list. Action 4-1 with mode 25 is the same on both classes.
+            if (!device) return;
             const scId = String(stateObjSc.native.shortcutId);
             this.log.info(`Starting shortcut ${scId} for ${device.model}`);
             await this.sendCommand({
