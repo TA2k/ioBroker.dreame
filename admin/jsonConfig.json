@@ -2,6 +2,19 @@
   "type": "panel",
   "i18n": false,
   "items": {
+    "_kartenHinweis": {
+      "type": "staticText",
+      "newLine": true,
+      "sm": 12,
+      "xs": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12,
+      "text": {
+        "en": "The map widget is served by this adapter at /dreame/ on your web adapter — usually http://<your-iobroker>:8082/dreame/ . A ready-made link with the correct address is on the ioBroker start page and next to this instance in the adapter list.",
+        "de": "Die Karte liefert dieser Adapter unter /dreame/ über den web-Adapter aus — meist http://<deine-ioBroker-Adresse>:8082/dreame/ . Einen fertigen Link mit der richtigen Adresse gibt es auf der ioBroker-Startseite und neben dieser Instanz in der Adapterliste."
+      }
+    },
     "cloudService": {
       "type": "select",
       "options": [
@@ -125,6 +138,83 @@
         "pl": "Pobierz mapę",
         "uk": "Отримати карту",
         "zh-cn": "获取地图"
+      },
+      "help": {
+        "en": "Required for the map. Without it the map freezes after the first packet: no travel path, no cleaned areas, no moving robot. Leave enabled unless you do not use the map at all.",
+        "de": "Wird für die Karte benötigt. Ohne diese Option bleibt die Karte nach dem ersten Paket stehen: keine Fahrspur, keine gereinigten Flächen, kein mitlaufender Roboter. Nur abschalten, wenn die Karte gar nicht genutzt wird."
+      }
+    },
+
+    "_kartenGruppe": {
+      "type": "header",
+      "newLine": true,
+      "size": 4,
+      "text": {
+        "en": "Map",
+        "de": "Karte",
+        "ru": "Карта",
+        "pt": "Mapa",
+        "nl": "Kaart",
+        "fr": "Carte",
+        "it": "Mappa",
+        "es": "Mapa",
+        "pl": "Mapa",
+        "uk": "Карта",
+        "zh-cn": "地图"
+      }
+    },
+    "liveMapEnabled": {
+      "type": "checkbox",
+      "newLine": true,
+      "sm": 12,
+      "xs": 12,
+      "md": 6,
+      "lg": 3,
+      "xl": 3,
+      "label": {
+        "en": "Show live map during cleaning",
+        "de": "Live-Karte während der Reinigung anzeigen",
+        "ru": "Живая карта во время уборки",
+        "pt": "Mapa em tempo real durante a limpeza",
+        "nl": "Live kaart tijdens het schoonmaken",
+        "fr": "Carte en direct pendant le nettoyage",
+        "it": "Mappa dal vivo durante la pulizia",
+        "es": "Mapa en vivo durante la limpieza",
+        "pl": "Mapa na żywo podczas sprzątania",
+        "uk": "Жива карта під час прибирання",
+        "zh-cn": "清扫时显示实时地图"
+      },
+      "help": {
+        "en": "Live-Karte während der Reinigung anzeigen. Wenn aktiv, verfolgt die Karte die Fahrspur des Roboters in Echtzeit. Ohne diese Option aktualisiert sich die Karte nur beim manuellen Kartenabruf.",
+        "de": "Live-Karte während der Reinigung anzeigen. Wenn aktiv, verfolgt die Karte die Fahrspur des Roboters in Echtzeit. Ohne diese Option aktualisiert sich die Karte nur beim manuellen Kartenabruf."
+      }
+    },
+    "liveMapUpdateSeconds": {
+      "type": "number",
+      "min": 1,
+      "max": 600,
+      "sm": 12,
+      "xs": 12,
+      "md": 6,
+      "lg": 3,
+      "xl": 3,
+      "hidden": "!data.liveMapEnabled",
+      "label": {
+        "en": "Live map update interval (seconds)",
+        "de": "Aktualisierungsintervall Live-Karte (Sekunden)",
+        "ru": "Интервал обновления карты (сек)",
+        "pt": "Intervalo de atualização do mapa (segundos)",
+        "nl": "Update-interval live kaart (seconden)",
+        "fr": "Intervalle de mise à jour de la carte (secondes)",
+        "it": "Intervallo di aggiornamento mappa (secondi)",
+        "es": "Intervalo de actualización del mapa (segundos)",
+        "pl": "Interwał aktualizacji mapy (sekundy)",
+        "uk": "Інтервал оновлення карти (секунди)",
+        "zh-cn": "实时地图更新间隔(秒)"
+      },
+      "help": {
+        "en": "Update interval of the live map in seconds. 5 seconds is a good default. Higher values (up to 600 = 10 minutes) save resources when the map is only viewed occasionally.",
+        "de": "Aktualisierungsintervall der Live-Karte in Sekunden. 5 Sekunden sind ein guter Standard. Höhere Werte (bis 600 = 10 Minuten) sparen Ressourcen, wenn die Karte nur gelegentlich betrachtet wird."
       }
     },
 
