@@ -522,12 +522,6 @@ class Dreame extends utils.Adapter {
       this.log.warn('Canvas not available. Map will not be available');
     }
     this.brand = BRAND_CONFIG[this.config.cloudService || 'dreame'];
-    // P-Frame-Live-Merge: standardmäßig AUS (bewusst opt-in, siehe Admin-Hilfetext
-    // "liveMapEnabled"). getMap() holt per force-I ohnehin die frische Komplett-Karte;
-    // das Live-Overlay der MQTT-P-Frames ist nur bei aktivierter Live-Karte nötig.
-    // Hier (statt im Konstruktor) gesetzt, weil this.config erst ab onReady existiert.
-    this.mergePFrames = !!this.config.liveMapEnabled;
-    this._liveMapDebounceMs = (this.config.liveMapUpdateSeconds || 5) * 1000;
     this.rlcHeader = this.computeRlc();
     this.updateInterval = null;
     this.mowerMapInterval = null;

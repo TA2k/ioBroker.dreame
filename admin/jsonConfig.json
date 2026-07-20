@@ -140,81 +140,8 @@
         "zh-cn": "获取地图"
       },
       "help": {
-        "en": "Required for the map. Without it the map freezes after the first packet: no travel path, no cleaned areas, no moving robot. Leave enabled unless you do not use the map at all.",
-        "de": "Wird für die Karte benötigt. Ohne diese Option bleibt die Karte nach dem ersten Paket stehen: keine Fahrspur, keine gereinigten Flächen, kein mitlaufender Roboter. Nur abschalten, wenn die Karte gar nicht genutzt wird."
-      }
-    },
-
-    "_kartenGruppe": {
-      "type": "header",
-      "newLine": true,
-      "size": 4,
-      "text": {
-        "en": "Map",
-        "de": "Karte",
-        "ru": "Карта",
-        "pt": "Mapa",
-        "nl": "Kaart",
-        "fr": "Carte",
-        "it": "Mappa",
-        "es": "Mapa",
-        "pl": "Mapa",
-        "uk": "Карта",
-        "zh-cn": "地图"
-      }
-    },
-    "liveMapEnabled": {
-      "type": "checkbox",
-      "newLine": true,
-      "sm": 12,
-      "xs": 12,
-      "md": 6,
-      "lg": 3,
-      "xl": 3,
-      "label": {
-        "en": "Show live map during cleaning",
-        "de": "Live-Karte während der Reinigung anzeigen",
-        "ru": "Живая карта во время уборки",
-        "pt": "Mapa em tempo real durante a limpeza",
-        "nl": "Live kaart tijdens het schoonmaken",
-        "fr": "Carte en direct pendant le nettoyage",
-        "it": "Mappa dal vivo durante la pulizia",
-        "es": "Mapa en vivo durante la limpieza",
-        "pl": "Mapa na żywo podczas sprzątania",
-        "uk": "Жива карта під час прибирання",
-        "zh-cn": "清扫时显示实时地图"
-      },
-      "help": {
-        "en": "Live-Karte während der Reinigung anzeigen. Wenn aktiv, verfolgt die Karte die Fahrspur des Roboters in Echtzeit. Ohne diese Option aktualisiert sich die Karte nur beim manuellen Kartenabruf.",
-        "de": "Live-Karte während der Reinigung anzeigen. Wenn aktiv, verfolgt die Karte die Fahrspur des Roboters in Echtzeit. Ohne diese Option aktualisiert sich die Karte nur beim manuellen Kartenabruf."
-      }
-    },
-    "liveMapUpdateSeconds": {
-      "type": "number",
-      "min": 1,
-      "max": 600,
-      "sm": 12,
-      "xs": 12,
-      "md": 6,
-      "lg": 3,
-      "xl": 3,
-      "hidden": "!data.liveMapEnabled",
-      "label": {
-        "en": "Live map update interval (seconds)",
-        "de": "Aktualisierungsintervall Live-Karte (Sekunden)",
-        "ru": "Интервал обновления карты (сек)",
-        "pt": "Intervalo de atualização do mapa (segundos)",
-        "nl": "Update-interval live kaart (seconden)",
-        "fr": "Intervalle de mise à jour de la carte (secondes)",
-        "it": "Intervallo di aggiornamento mappa (secondi)",
-        "es": "Intervalo de actualización del mapa (segundos)",
-        "pl": "Interwał aktualizacji mapy (sekundy)",
-        "uk": "Інтервал оновлення карти (секунди)",
-        "zh-cn": "实时地图更新间隔(秒)"
-      },
-      "help": {
-        "en": "Update interval of the live map in seconds. 5 seconds is a good default. Higher values (up to 600 = 10 minutes) save resources when the map is only viewed occasionally.",
-        "de": "Aktualisierungsintervall der Live-Karte in Sekunden. 5 Sekunden sind ein guter Standard. Höhere Werte (bis 600 = 10 Minuten) sparen Ressourcen, wenn die Karte nur gelegentlich betrachtet wird."
+        "en": "Map fetch: loads the current map from the cloud on adapter start and every X minutes, and maintains room names and image data of the stored maps. Without this option, no map display.",
+        "de": "Kartenabruf: lädt beim Adapterstart und alle X Minuten die aktuelle Karte aus der Cloud, pflegt Raumnamen und Bilddaten der gespeicherten Karten. Ohne diese Option keine Kartenanzeige."
       }
     },
 
@@ -228,8 +155,8 @@
       "lg": 3,
       "xl": 3,
       "label": {
-        "en": "Update interval (in minutes)",
-        "de": "Aktualisierungsintervall (in Minuten)",
+        "en": "Update interval (minutes)",
+        "de": "Aktualisierungsintervall (Minuten)",
         "ru": "Интервал обновления (в минутах)",
         "pt": "Intervalo de atualização (em minutos)",
         "nl": "Update-interval (in minuten)",
@@ -239,6 +166,10 @@
         "pl": "Interwał aktualizacji (w minutach)",
         "uk": "Інтервал оновлення (в хвилинах)",
         "zh-cn": "更新间隔（分钟）"
+      },
+      "help": {
+        "en": "Controls the cycle in which the adapter actively fetches data from the Dreame cloud — map image AND general device status (battery, cleaning status, etc.). Higher values reduce cloud requests but also delay normal status updates.",
+        "de": "Steuert den Zyklus, in dem der Adapter aktiv Daten aus der Dreame-Cloud abruft — Kartenbild UND allgemeiner Gerätestatus (Akku, Reinigungsstatus usw.). Höhere Werte reduzieren Cloud-Requests, verzögern aber auch normale Status-Updates."
       }
     }
   }
