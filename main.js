@@ -2844,9 +2844,15 @@ class Dreame extends utils.Adapter {
         this.compoundRaw[did][key] = value;
         val = meta.decode(value);
       }
+      // Manche Properties (z.B. stream-status 10001-1) liefern einen rein numerischen
+      // String statt einer Zahl, obwohl der Datenpunkt als type:number definiert ist.
+      // Nur konvertieren, wenn der Wert tatsaechlich ein reiner Ziffernstring ist - sonst
+      // unveraendert durchreichen (kein Raten bei anderen Formaten).
       const finalVal = typeof val === 'object'
         ? JSON.stringify(val)
-        : (meta?.type === 'boolean' && (val === 0 || val === 1)) ? val !== 0 : val;
+        : (meta?.type === 'boolean' && (val === 0 || val === 1)) ? val !== 0
+          : (meta?.type === 'number' && typeof val === 'string' && /^-?\d+$/.test(val)) ? Number(val)
+            : val;
       this.setState(path, finalVal, true);
     }
     return path;
