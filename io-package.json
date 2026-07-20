@@ -1,21 +1,8 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.3.25",
+    "version": "0.3.26",
     "news": {
-      "0.3.19": {
-        "en": "Documentation fix: 0.3.18 changelog entry was missing from README.md due to a release script bug. No functional changes.",
-        "de": "Dokumentations-Fix: Der 0.3.18-Changelog-Eintrag fehlte in der README.md wegen eines Release-Script-Bugs. Keine funktionalen Änderungen.",
-        "ru": "Исправление документации: запись changelog для версии 0.3.18 отсутствовала в README.md из-за ошибки в скрипте релиза. Функциональных изменений нет.",
-        "pt": "Correção de documentação: a entrada do changelog da versão 0.3.18 estava ausente do README.md devido a um bug no script de release. Sem alterações funcionais.",
-        "nl": "Documentatiefix: de changelog-vermelding voor 0.3.18 ontbrak in README.md door een bug in het release-script. Geen functionele wijzigingen.",
-        "fr": "Correction de documentation : l'entrée du changelog de la version 0.3.18 manquait dans le README.md en raison d'un bug du script de release. Aucun changement fonctionnel.",
-        "it": "Correzione alla documentazione: la voce del changelog della versione 0.3.18 mancava nel README.md a causa di un bug nello script di release. Nessuna modifica funzionale.",
-        "es": "Corrección de documentación: la entrada del changelog de la versión 0.3.18 faltaba en README.md debido a un error del script de release. Sin cambios funcionales.",
-        "pl": "Poprawka dokumentacji: wpis changeloga dla wersji 0.3.18 był nieobecny w pliku README.md z powodu błędu w skrypcie release. Brak zmian funkcjonalnych.",
-        "uk": "Виправлення документації: запис changelog для версії 0.3.18 був відсутній у README.md через помилку в скрипті релізу. Функціональних змін немає.",
-        "zh-cn": "Documentation fix: 0.3.18 changelog entry was missing from README.md due to a release script bug. No functional changes."
-      },
       "0.3.20": {
         "en": "Added lazy-created, translated states for mower position, battery, position/DND, schedule and statistics data (mower SIID 2/3/4/5/8/12). Fixed state ordering bug where settings (rain protection, child lock, etc.) appeared empty on first adapter start. Added translations for all mower config/AutoSwitch/preference states in 11 languages. Fixed boolean states incorrectly storing numeric 0/1 instead of true/false (affects auto-dust-collecting, dnd-enable, resume-cleaning and 15 other states). Improved fallback handling for unknown properties: registered 3 previously-unmapped properties (camera stream status, map object name, robot-cleaner property 2-6) and stopped creating misleading writable states for properties we cannot confirm are writable. Added a one-time cleanup for leftover phantom states from the old fallback mechanism. Updated installation instructions in README (the adapter is now available directly via ioBroker Admin from the Latest repository).",
         "de": "Übersetzte, lazy angelegte States für Mäher-Position, Akku, Position/Bitte-nicht-stören, Zeitplan und Statistikdaten ergänzt (Mäher SIID 2/3/4/5/8/12). Reihenfolge-Bug behoben, durch den Einstellungen (Regenschutz, Kindersicherung etc.) beim ersten Adapterstart leer erschienen. Übersetzungen für alle Mäher-Konfigurations-/AutoSwitch-/Präferenz-States in 11 Sprachen ergänzt. Boolean-States, die fälschlich numerisch 0/1 statt true/false speicherten, korrigiert (betrifft auto-dust-collecting, dnd-enable, resume-cleaning und 15 weitere States). Fallback-Behandlung für unbekannte Properties verbessert: 3 bisher nicht zugeordnete Properties registriert (Kamera-Stream-Status, Kartenobjekt-Name, robot-cleaner-Property 2-6) und keine irreführenden schreibbaren States mehr für Properties angelegt, deren Schreibbarkeit nicht bestätigt ist. Einmaliger Cleanup für übrig gebliebene Phantom-States aus dem alten Fallback-Mechanismus ergänzt. Installationsanleitung in der README aktualisiert (der Adapter ist jetzt direkt über die ioBroker-Admin-Oberfläche aus dem Latest-Repository installierbar).",
@@ -84,6 +71,19 @@
       "0.3.25": {
         "en": "Fixed room-specific cleaning settings being written to the wrong room (cleanset used RoomOrder instead of the real room id) (#95). Fixed boolean switches being rejected by the device - values are now sent as 1/0 (#94). Fixed adapter reboot loop on devices without a generated map, e.g. MOVA Z70 (#83). Fixed multi-room cleaning only cleaning the first selected room on 5th gen devices. Fixed swapped cleaning modes (vacuum/vacuum+mop) on devices with liftable mop pads. Fixed stream-status type warning (#82). German translation: renamed dining hall segment from Speisesaal to Esszimmer. Thanks to RicardoHipp for reporting and analyzing several of these issues.",
         "de": "Behoben: raumspezifische Reinigungseinstellungen wurden in den falschen Raum geschrieben (cleanset nutzte RoomOrder statt der echten Raum-ID) (#95). Behoben: Boolean-Schalter wurden vom Gerät abgelehnt - Werte werden jetzt als 1/0 gesendet (#94). Behoben: Adapter-Neustartschleife bei Geräten ohne erzeugte Karte, z.B. MOVA Z70 (#83). Behoben: Mehrraum-Reinigung reinigte auf Geräten der 5. Generation nur den ersten gewählten Raum. Behoben: vertauschte Reinigungsmodi (Saugen/Saugen+Wischen) bei Geräten mit anhebbarem Wischmopp. Behoben: Typ-Warnung bei stream-status (#82). Deutsche Übersetzung: Speisesaal in Esszimmer umbenannt. Danke an RicardoHipp für Meldung und Analyse mehrerer dieser Fehler.",
+        "ru": "Исправления и улучшения",
+        "pt": "Correções e melhorias",
+        "nl": "Fixes en verbeteringen",
+        "fr": "Corrections et améliorations",
+        "it": "Correzioni e miglioramenti",
+        "es": "Correcciones y mejoras",
+        "pl": "Poprawki i usprawnienia",
+        "uk": "Виправлення та покращення",
+        "zh-cn": "修复和改进"
+      },
+      "0.3.26": {
+        "en": "Fixed stream-status (siid 10001 piid 1) type warning: the value is a streaming-session object, not a number - state declaration corrected to type string / role json, matching the convention used for dnd-task, task-info and zone-status (#82). The boolean type mismatch reported by flapman on remote.auto-dust-collecting, mopping-with-detergent, hair-compression, silent-drying, auto-lds-coverage and clean-carpets-first is already covered by the boolean coercion added in 0.3.25 - please update. Thanks to krobipd for reporting the exact device payload and preparing the fix.",
+        "de": "Behoben: Typ-Warnung bei stream-status (siid 10001 piid 1) - der Wert ist ein Streaming-Session-Objekt, keine Zahl. State-Deklaration auf type string / role json korrigiert, analog zu dnd-task, task-info und zone-status (#82). Die von flapman gemeldeten Boolean-Typ-Warnungen an remote.auto-dust-collecting, mopping-with-detergent, hair-compression, silent-drying, auto-lds-coverage und clean-carpets-first sind bereits durch die Boolean-Konvertierung aus 0.3.25 abgedeckt - bitte aktualisieren. Danke an krobipd fuer die Analyse und den vorbereiteten Fix.",
         "ru": "Исправления и улучшения",
         "pt": "Correções e melhorias",
         "nl": "Fixes en verbeteringen",
