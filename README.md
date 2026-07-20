@@ -62,8 +62,8 @@ npm link
 | Cloud Service   | Select **Dreame** or **MOVA** depending on your app |
 | App Email       | Your Dreame/MOVA app login email                    |
 | App Password    | Your Dreame/MOVA app password                       |
-| Get Map         | Enable map rendering (higher CPU usage)             |
-| Update interval | Polling interval in minutes                         |
+| Get Map         | Fetches the map from the cloud on adapter start and every *Update interval* minutes; also maintains room names and the stored map images. Required for the map widget below. |
+| Update interval | Cycle (minutes) in which the adapter actively polls the cloud — map fetch **and** general device status (battery, cleaning status, etc.). Higher values reduce cloud requests but delay both. |
 
 > MOVA devices (600, 1000) use the same cloud backend as Dreame but with different domains. Select **MOVA** if you use the MOVA app.
 
@@ -317,6 +317,55 @@ The `customCommand` and the room checkboxes are **bidirectionally synchronized**
 - **Global suction/water only** — suction level and water volume are set identically for all selected rooms. Per-room settings (as shown in `map.cleanset.*`) are not supported by this feature.
 - **`customized-cleaning` prerequisite** — `remote.customized-cleaning` must be enabled manually before triggering `start`. The adapter does not activate it automatically.
 - **Multi-floor tested with one map** — the multi-map structure (one channel group per map) is fully implemented, but only single-map operation has been tested extensively on real hardware. Multi-floor households with two or more maps should work but are not yet verified end-to-end.
+
+---
+
+### Live Map
+
+The adapter includes a browser-based live map widget: robot position, cleaning trail and cleaned rooms, updating in real time while the robot cleans. It is served directly by this adapter — no vis widget or extra adapter needed.
+
+#### Setup
+
+- Requires the ioBroker **web** adapter (any instance) to serve the page.
+- Open it at `%web_protocol%://%ip%:%web_port%/dreame/` — e.g. `http://<your-iobroker>:8082/dreame/`. A ready-made link ("Dreame-Map") is on the ioBroker start page and next to this instance in the adapter list.
+- **Get Map** must be enabled (see [Configuration](#configuration)) — without it the widget has no data.
+- If no map is shown yet, start the adapter once while the robot sits in its dock so the first full map can load.
+- Multiple robots on the same instance: pick one with `?did=<did>` in the address. The widget otherwise uses the first device it finds.
+
+> **Camera/VSLAM robots are not supported.** Devices that navigate by camera instead of lidar (e.g. Mijia 1C/1T, Dreame F9) are not covered by the map widget — it is built and tested for lidar robots only. The adapter logs a warning and the map stays empty for these devices.
+
+#### Customizing appearance
+
+The settings panel (gear icon in the widget) covers the common preferences: light/dark theme, background color, sidebar position, map rotation and display size. Everything else is controlled through CSS custom properties on the page's root element, for anyone embedding the widget with their own stylesheet (e.g. in vis):
+
+| Variable                    | Default (dark theme)   | Meaning                                                                                 |
+| ---------------------------- | ----------------------- | ---------------------------------------------------------------------------------------- |
+| `--bg`                       | `#0f1420`               | Page background                                                                          |
+| `--panel` / `--panel2`       | `#171e2e` / `#1d2740`   | Panel and card backgrounds                                                               |
+| `--flaeche` / `--flaeche2`   | = `--panel` / `--panel2`| Large-area backgrounds behind the map; kept separate from `--panel` so "transparent" mode (see `data-hintergrund` below) only affects these, not dialogs and cards |
+| `--line`                     | `#2a3550`               | Borders, dividers                                                                        |
+| `--txt`                      | `#e6ecf7`               | Primary text                                                                             |
+| `--muted`                    | `#8ea0c0`                | Secondary text                                                                           |
+| `--accent`                   | `#2bb4e2`               | Highlights, active states, buttons                                                       |
+| `--robot`                    | `#ff5c7a`               | Robot marker                                                                             |
+| `--charger`                  | `#38e29b`               | Charger marker                                                                           |
+| `--ok` / `--warn` / `--bad`  | `#38e29b` / `#e0a33a` / `#ff5c7a` | Status colors (consumables, warnings, errors)                                 |
+| `--hauch`                    | `rgba(255,255,255,.08)` | Subtle lift for the sidebar in transparent mode                                          |
+| `--kante`                    | `rgba(255,255,255,.16)` | Subtle edge/divider color in transparent mode                                            |
+| `--schleier`                 | radial gradient          | Faint accent glow behind the map                                                         |
+
+The light theme uses its own values for all of the above (see `:root[data-farben="hell"]` in `www/index.html`).
+
+State toggles, set as attributes on the page root and readable in your own CSS:
+
+| Attribute          | Values                                    | Meaning                                                                 |
+| ------------------ | ------------------------------------------ | ------------------------------------------------------------------------ |
+| `data-farben`       | `hell` \| `dunkel` (absent = follows OS)   | Forces light/dark theme                                                 |
+| `data-hintergrund`  | `transparent` (absent = filled)            | Page background see-through, for embedding over another background (e.g. vis) |
+| `data-bg`           | any hex color (absent = theme default)     | Custom background color chosen in the settings panel; intentionally overrides `data-hintergrund="transparent"` when both are set |
+| `data-leiste`       | `links` \| `oben` \| `unten` (absent = `rechts`) | Sidebar position                                                   |
+
+All of the above (plus display size and map rotation) can also be set via URL parameters, e.g. `?farben=dunkel&hintergrund=transparent&bg=%23112233&leiste=links` — useful when embedding the same widget multiple times with different settings. The settings panel has an "address with these settings" section that builds this URL for you.
 
 ---
 
