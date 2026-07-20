@@ -2790,13 +2790,15 @@ class Dreame extends utils.Adapter {
     // wetness-level SIID 28-1 instead); 0 means the device applies its own global setting.
     const waterVolume = waterSt ? Number(waterSt.val) : 0;
     const selects = [];
-    let selectIdx = 1;
     for (const cbId of Object.keys(cbStates)) {
       if (cbStates[cbId] && cbStates[cbId].val === true) {
         const cbObj = await this.getObjectAsync(cbId);
         if (cbObj && cbObj.native && cbObj.native.roomId !== undefined) {
-          selects.push([cbObj.native.roomId, 1, suctionLevel, waterVolume, selectIdx]);
-          selectIdx++;
+          // 5. Feld muss bei Multi-Raum-Reinigung fest 1 sein, NICHT hochzaehlen - sonst
+          // reinigt das Geraet (5th gen) nur den ersten ausgewaehlten Raum und ueberspringt
+          // den Rest stillschweigend (siehe HA device.py: "Sending index other than 1
+          // breaks the operation of 5th gen devices").
+          selects.push([cbObj.native.roomId, 1, suctionLevel, waterVolume, 1]);
         }
       }
     }
@@ -5806,6 +5808,10 @@ class Dreame extends utils.Adapter {
                     GetSuctionLevel = GetSuctionLevelOb ? GetSuctionLevelOb.val : 0;
                     GetWaterVolumeOb = await this.getStateAsync(RPath + '.WaterVolume');
                     GetWaterVolume = GetWaterVolumeOb ? GetWaterVolumeOb.val : 0;
+                    // 5. Feld muss fest 1 sein, NICHT die laufende Nummer GetMultiId - sonst
+                    // reinigt das Geraet (5th gen) nur den ersten ausgewaehlten Raum und
+                    // ueberspringt den Rest stillschweigend (siehe HA device.py: "Sending
+                    // index other than 1 breaks the operation of 5th gen devices").
                     ToGetString +=
                       GetRoomId +
                       ',' +
@@ -5815,7 +5821,7 @@ class Dreame extends utils.Adapter {
                       ',' +
                       GetWaterVolume +
                       ',' +
-                      GetMultiId +
+                      1 +
                       ']';
                   }
                 }
