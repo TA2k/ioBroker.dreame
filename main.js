@@ -14,6 +14,7 @@ const Json2iob = require('json2iob');
 const crypto = require('node:crypto');
 const mqtt = require('mqtt');
 const zlib = require('node:zlib');
+const { buildGoToPointIn, parsePositionPair } = require('./lib/go-to-point');
 //check if canvas is available because is optional dependency
 let createCanvas;
 let ImageData;
@@ -2690,6 +2691,40 @@ class Dreame extends utils.Adapter {
     await this.extendObject(`${did}.remote.custom-room-cleaning.start`, {
       type: 'state',
       common: { name: 'Start Custom Room Cleaning', type: 'boolean', role: 'button', read: false, write: true },
+      native: {},
+    });
+
+    // go-to-point: send the robot to a map coordinate without cleaning (cruise mode).
+    // Coordinates use the same system as map.robot / map.charger.
+    await this.extendObject(`${did}.remote.go-to-point`, {
+      type: 'channel',
+      common: { name: 'Go To Point' },
+      native: {},
+    });
+    await this.extendObject(`${did}.remote.go-to-point.x`, {
+      type: 'state',
+      common: { name: 'Target X', type: 'number', role: 'value', read: true, write: true },
+      native: {},
+    });
+    await this.extendObject(`${did}.remote.go-to-point.y`, {
+      type: 'state',
+      common: { name: 'Target Y', type: 'number', role: 'value', read: true, write: true },
+      native: {},
+    });
+    await this.extendObject(`${did}.remote.go-to-point.use-current-position`, {
+      type: 'state',
+      common: {
+        name: 'Copy Current Robot Position Into X/Y',
+        type: 'boolean',
+        role: 'button',
+        read: false,
+        write: true,
+      },
+      native: {},
+    });
+    await this.extendObject(`${did}.remote.go-to-point.start`, {
+      type: 'state',
+      common: { name: 'Go To Point', type: 'boolean', role: 'button', read: false, write: true },
       native: {},
     });
 
@@ -5455,6 +5490,47 @@ class Dreame extends utils.Adapter {
             });
             return;
           }
+        }
+        // go-to-point: drive to a map coordinate without cleaning
+        if (id.includes('.remote.go-to-point.')) {
+          const _gtpBase = `${deviceId}.remote.go-to-point`;
+          if (id.endsWith('.use-current-position')) {
+            const _robot = await this.getStateAsync(`${deviceId}.map.robot`);
+            const _pos = _robot ? parsePositionPair(_robot.val) : null;
+            if (!_pos) {
+              this.log.warn(
+                'go-to-point: no usable robot position available. Map data is needed for this — enable "getMap" or wait for the robot to report a map.',
+              );
+            } else {
+              await this.setState(`${_gtpBase}.x`, _pos.x, true);
+              await this.setState(`${_gtpBase}.y`, _pos.y, true);
+              this.log.info(`go-to-point: took current position ${_pos.x}/${_pos.y}`);
+            }
+            await this.setStateAsync(id, false, true);
+            return;
+          }
+          if (id.endsWith('.start')) {
+            const _xs = await this.getStateAsync(`${_gtpBase}.x`);
+            const _ys = await this.getStateAsync(`${_gtpBase}.y`);
+            const _x = Number(_xs && _xs.val);
+            const _y = Number(_ys && _ys.val);
+            const _in = buildGoToPointIn(_x, _y);
+            if (!_in) {
+              this.log.warn('go-to-point: x and y must both be set to a number before starting');
+              await this.setStateAsync(id, false, true);
+              return;
+            }
+            this.log.info(`go-to-point start: ${_x}/${_y}`);
+            await this.sendCommand({
+              did: deviceId,
+              method: 'action',
+              params: { did: deviceId, siid: 4, aiid: 1, in: _in },
+            });
+            await this.setStateAsync(id, false, true);
+            return;
+          }
+          // x / y themselves carry no device command
+          return;
         }
         // custom-room-cleaning: bidirectional sync between checkboxes and customCommand
         if (id.includes('.remote.custom-room-cleaning.')) {
