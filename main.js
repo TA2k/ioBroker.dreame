@@ -5663,6 +5663,13 @@ class Dreame extends utils.Adapter {
           const compoundKey = `${wSiid}-${wPiid}`;
           const compoundMeta = this.specMetaDict?.[deviceId]?.[compoundKey];
           let writeValue = state.val;
+          // Boolean-Schalter (type:boolean/role:switch) muessen als Zahl 1/0 gesendet werden,
+          // NICHT als true/false. Das Geraet lehnt einen rohen Boolean mit code:-1 ab
+          // (nachgewiesen an customized-cleaning 4-26: value:true -> code -1, value:1 -> code 0).
+          // Richtet sich nach der State-Definition, nicht nach dem Laufzeitwert.
+          if (stateObject.common && stateObject.common.type === 'boolean') {
+            writeValue = state.val ? 1 : 0;
+          }
           if (compoundMeta?.encode) {
             const rawCompound = this.compoundRaw?.[deviceId]?.[compoundKey];
             if (rawCompound === undefined) {
