@@ -24,6 +24,13 @@ try {
 }
 
 const { decodeMultiMapData } = require('./lib/dreame');
+// Karten-Steuerung dieses Forks. Liegt bewusst in einer eigenen Datei, damit main.js so
+// nah wie moeglich am Original von TA2k bleibt und ein Abgleich mit neuen Versionen
+// moeglichst konfliktfrei laeuft. Die Methoden werden unten an die Adapter-Klasse
+// geheftet und verhalten sich dadurch exakt wie zuvor.
+
+const mapController = require('./lib/mapController');
+
 const { getRoomDisplayName, buildSegmentTypeMap } = require('./lib/cleanset');
 
 const BRAND_CONFIG = {
@@ -515,6 +522,12 @@ class Dreame extends utils.Adapter {
       this.log.warn('Canvas not available. Map will not be available');
     }
     this.brand = BRAND_CONFIG[this.config.cloudService || 'dreame'];
+    // P-Frame-Live-Merge: standardmäßig AUS (bewusst opt-in, siehe Admin-Hilfetext
+    // "liveMapEnabled"). getMap() holt per force-I ohnehin die frische Komplett-Karte;
+    // das Live-Overlay der MQTT-P-Frames ist nur bei aktivierter Live-Karte nötig.
+    // Hier (statt im Konstruktor) gesetzt, weil this.config erst ab onReady existiert.
+    this.mergePFrames = !!this.config.liveMapEnabled;
+    this._liveMapDebounceMs = (this.config.liveMapUpdateSeconds || 5) * 1000;
     this.rlcHeader = this.computeRlc();
     this.updateInterval = null;
     this.mowerMapInterval = null;
@@ -2549,6 +2562,21 @@ class Dreame extends utils.Adapter {
       { id: 'stop', name: 'Stop Cleaning (4-2)', siid: 4, aiid: 2, in: [] },
       { id: 'clear-warning', name: 'Clear Warning (4-3)', siid: 4, aiid: 3, in: [] },
       { id: 'start-washing', name: 'Start Mop Washing (4-4)', siid: 4, aiid: 4, in: [] },
+      // Trocknen hat KEINE eigene Aktion am Geraet: HA schickt dieselbe Aktion 4-4 und
+      // unterscheidet ueber ein Code-Paar in piid 10 (device.py 5133-5146,
+      // start_self_wash_base): "2,1" waschen, "3,1" trocknen an, "3,0" trocknen aus.
+      // Ohne diese Objekte laesst sich das Code-Paar nicht senden — 4-4 ist als Button
+      // (boolean) angelegt, und dann geht immer "in: []" raus, also Waschen.
+      { id: 'start-drying', name: 'Start Mop Drying (4-4)', siid: 4, aiid: 4, in: [{ piid: 10, value: '3,1' }] },
+      { id: 'stop-drying', name: 'Stop Mop Drying (4-4)', siid: 4, aiid: 4, in: [{ piid: 10, value: '3,0' }] },
+      // Angehaltenen Waschgang fortsetzen. HA behandelt das getrennt vom Starten
+      // (device.py 5156-5166): bei washing_paused geht "1,1" raus, sonst "2,1".
+      // Ohne dieses Objekt bleibt ein pausierter Waschgang haengen — der Button
+      // start-washing sendet "in: []" und das Geraet nimmt es nicht als Fortsetzen.
+      { id: 'resume-washing', name: 'Resume Mop Washing (4-4)', siid: 4, aiid: 4, in: [{ piid: 10, value: '1,1' }] },
+      // Laufenden Waschgang anhalten (HA pause_washing, device.py 5193-5216: "1,0").
+      // NICHT dasselbe wie stop (4-2) — der beendet den ganzen Auftrag.
+      { id: 'pause-washing', name: 'Pause Mop Washing (4-4)', siid: 4, aiid: 4, in: [{ piid: 10, value: '1,0' }] },
       { id: 'locate', name: 'Locate Robot (7-1)', siid: 7, aiid: 1, in: [] },
       { id: 'start-auto-empty', name: 'Start Auto Empty (15-1)', siid: 15, aiid: 1, in: [] },
       // Consumable resets
@@ -3380,6 +3408,11 @@ class Dreame extends utils.Adapter {
         const messageDid = String(message.did || message.data.did || '');
         for (const element of message.data.params) {
           const did = String(element.did || messageDid);
+          // Eigenschaftsspeicher fuellen + Listener feuern — 1:1 die Stelle, an der HA
+          // seine self.listen(...)-Callbacks ausloest: sobald der Wert per MQTT ankommt,
+          // synchron, mit altem UND neuem Wert. Bewusst VOR der spec-Pruefung, damit der
+          // Speicher unabhaengig davon ist, ob fuer die Eigenschaft ein State existiert.
+          this._propertyChanged(did, element.siid, element.piid, element.value);
           if (!this.specPropsToIdDict[did]) {
             this.log.debug(`No spec found for ${did}`);
             continue;
@@ -3391,10 +3424,15 @@ class Dreame extends utils.Adapter {
               // value is normally a base64-url string; only stringify if it isn't
               const encode = typeof element.value === 'string' ? element.value : JSON.stringify(element.value);
               const mappath = `${did}` + '.map.';
+              // Kartenpaket in den Zusammenbau geben (Rumpf in lib/mapController.js).
+              await this._kartenPaketEmpfangen(did, encode);
               this.setMapInfos(encode, mappath).catch((err) => this.log.warn('setMapInfos failed: ' + err.message));
             }
           }
           const device = this.deviceArray.find((d) => String(d.did) === did);
+          // Raum-Einstellungen nachladen, wenn die App etwas geaendert hat (6-3).
+          // Rumpf in lib/mapController.js.
+          this._cleansetNachladenPruefen(did, device, element);
           if (this.isMower(device) && element.siid === 1 && element.piid === 4) {
             if (Array.isArray(element.value) && element.value.length >= 7) {
               const buf = Buffer.from(element.value);
@@ -3752,12 +3790,22 @@ class Dreame extends utils.Adapter {
     }
     return decode.toString().match(/[{\[]{1}([,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]|".*?")+[}\]]{1}/gis);
   }
-  async setMapInfos(In_Compressed, In_path) {
-    const jsondecode = this.uncompress(In_Compressed);
+  // An dieser Stelle standen bis zum Umbau die Karten-Hilfsmethoden dieses Forks
+  // (_diagFrame, _propertyChanged, _deviceStatus, _mapPropertyChanged, _taskStatusChanged,
+  // _refreshMap, _writeMerged, _downloadMapB64, _checkVslamSupport). Sie kommen im Original
+  // nicht vor, hier ist also nichts ersetzt worden. Sie liegen jetzt in
+  // lib/mapController.js und werden am Dateiende an diese Klasse geheftet — aufrufbar
+  // unveraendert als this._diagFrame(...) usw.
+  async setMapInfos(In_Compressed, In_path, vorgeparst) {
+    // vorgeparst: bereits entpacktes und geparstes Karten-Objekt. Damit benutzt der
+    // Nachladeweg dieses Forks (lib/mapController.js -> _applyCleansetFromInflated) diese
+    // Funktion ein zweites Mal, statt ihren Inhalt zu kopieren. Reicht man nur
+    // { cleanset: … } herein, schreibt die Schleife unten auch nur die Raum-Einstellungen.
+    const jsondecode = vorgeparst ? true : this.uncompress(In_Compressed);
     if (!jsondecode) {
       return;
     }
-    const jsonread = ((_) => {
+    const jsonread = vorgeparst || ((_) => {
       try {
         return JSON.parse(jsondecode);
       } catch (err) {
@@ -3959,6 +4007,12 @@ class Dreame extends utils.Adapter {
 
   async getMap(device, fetchAllMaps) {
     try {
+      // Vollbild-Abruf (force-I) dieses Forks — der Rumpf steht in lib/mapController.js,
+      // damit getMap() so nah wie moeglich am Original von TA2k bleibt.
+      await this._holeFrischeKarte(device);
+
+      // --- Gespeicherte Karte (MAP_LIST/recovery) weiter laden: liefert Raumnamen/areaInfo/
+      //     Segmentstruktur (in der Live-Karte NICHT enthalten) und dient als Fallback-Basis. ---
       let mapFileName;
       const mapFileNameResponse = await this.sendCommand({
         did: device.did,
@@ -4022,6 +4076,11 @@ class Dreame extends utils.Adapter {
             firstMap = map;
           }
         }
+        this._diagFrame('getMap-Poll', firstMap.thb || firstMap.map);
+        // WICHTIG: Die gespeicherte Karte (piid 8 = evtl. uralt) wird NICHT nach mergedCloud
+        // geschrieben. Sonst würde während der Reinigung (force-I scheitert) die veraltete
+        // Karte die Live-Karte überschreiben. mergedCloud kommt NUR aus force-I (idle) oder
+        // den P-Frames (Reinigung). Die gespeicherte Karte dient nur Raumnamen/areaInfo.
         const multiMap = decodeMultiMapData(firstMap.thb || firstMap.map, 0);
         if (multiMap && multiMap.areaInfo) {
           this._areaInfoByDid[device.did] = multiMap.areaInfo;
@@ -6097,6 +6156,10 @@ class Dreame extends utils.Adapter {
     }
   }
 }
+// Karten-Methoden dieses Forks an die Klasse heften. Muss NACH der Klassendefinition
+// stehen und VOR der ersten Erzeugung einer Instanz.
+mapController.einhaengen(Dreame);
+
 if (require.main !== module) {
   // Export the constructor in compact mode
   /**
