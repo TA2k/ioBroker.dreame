@@ -462,5 +462,18 @@
   "segment.type.office":                  "Office",
   "segment.type.fitness-area":            "Fitness Area",
   "segment.type.recreation-area":         "Recreation Area",
-  "segment.type.secondary-bedroom":       "Secondary Bedroom"
+  "segment.type.secondary-bedroom":       "Secondary Bedroom",
+  "vacuum.status.mop-pad-left": "Mop Pad Life Left",
+  "vacuum.status.mop-pad-time-left": "Mop Pad Time Left",
+  "vacuum.status.dirty-water-tank-left": "Dirty Water Tank Life Left",
+  "vacuum.status.dirty-water-tank-time-left": "Dirty Water Tank Time Left",
+  "vacuum.status.firmware-version": "Firmware Version",
+  "vacuum.status.mcu-version": "MCU Version",
+  "vacuum.status.y-clean": "Y-Clean",
+  "vacuum.status.save-water-tips": "Save Water Tips",
+  "vacuum.status.dry-stop-remainder": "Dry Stop Reminder",
+  "vacuum.status.back-clean-mode": "Back Clean Mode",
+  "vacuum.status.current-city": "Current City",
+  "vacuum.status.camera-light": "Camera Light",
+  "vacuum.status.mode": "Mode"
 }

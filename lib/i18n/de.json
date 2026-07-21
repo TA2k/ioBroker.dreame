@@ -413,5 +413,18 @@
   "vacuum.water-temperature.warm": "Warm",
   "vacuum.wider-corner.high-freq": "Hochfreq",
   "vacuum.wider-corner.low-freq": "LowFreq",
-  "vacuum.wider-corner.off": "Aus"
+  "vacuum.wider-corner.off": "Aus",
+  "vacuum.status.mop-pad-left": "Verbleibende Lebensdauer des Wischpads",
+  "vacuum.status.mop-pad-time-left": "Verbleibende Wischpad-Zeit",
+  "vacuum.status.dirty-water-tank-left": "Verbleibende Lebensdauer des Schmutzwassertanks",
+  "vacuum.status.dirty-water-tank-time-left": "Verbleibende Schmutzwassertank-Zeit",
+  "vacuum.status.firmware-version": "Firmware-Version",
+  "vacuum.status.mcu-version": "MCU-Version",
+  "vacuum.status.y-clean": "Y-Clean",
+  "vacuum.status.save-water-tips": "Wasserspar-Tipps",
+  "vacuum.status.dry-stop-remainder": "Trockenstopp-Erinnerung",
+  "vacuum.status.back-clean-mode": "Rückweg-Reinigungsmodus",
+  "vacuum.status.current-city": "Aktuelle Stadt",
+  "vacuum.status.camera-light": "Kameralicht",
+  "vacuum.status.mode": "Modus"
 }
