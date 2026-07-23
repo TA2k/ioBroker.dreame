@@ -838,6 +838,12 @@ class Dreame extends utils.Adapter {
               await this.getMap(device, true);
             }
           }
+          const deviceInfoList = this.deviceArray.map((d) => ({
+            did: String(d.did),
+            name: d.customName || (d.deviceInfo && d.deviceInfo.displayName) || d.model,
+            typ: this.isMower(d) ? 'mower' : 'vacuum',
+          }));
+          await this.setStateAsync('info.devices', JSON.stringify(deviceInfoList), true);
         } else {
           this.log.error('No Devices found: ' + JSON.stringify(response.data));
         }
