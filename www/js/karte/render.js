@@ -469,3 +469,50 @@ function glStep(){
 }
 function stopGlide(){ if(glReq){ cancelAnimationFrame(glReq); glReq=null; } glFrom=null; glTo=null; }
 
+
+// ===== Nachtrag (Commit B5): weitere Kartenlogik-Fragmente, die B2 nicht erfasst hatte =====
+// Bei der main.js-Integration (Etappe B, Commit B5) stellte sich heraus, dass diese Funktionen
+// zwar inhaltlich zur Kartenanzeige gehoeren, in legacy.html aber unter anderen Bereichen
+// standen ("Reinigungs-Panel", "Raum-Einstellungen (cleanset)", "Raumnamen", Ende von
+// "Konfiguration") — B2 hat sich an WIDGET_ARCHITEKTUR.md Tabelle 7 orientiert, die diese
+// Funktionen dort nicht auflistete. Verbatim uebernommen wie der Rest dieser Datei, siehe
+// WIDGET_SESSION_STATUS.md fuer die vollstaendige Herleitung.
+
+// Klick-Koordinaten -> Raum-ID (Canvas ist Y-gespiegelt; wrap ist per translate/scale transformiert)
+function hitRoom(clientX, clientY){
+  const r=stage.getBoundingClientRect();
+  // Bildschirmpunkt zurueck in Kartenpixel: erst Verschiebung und Zoom herausrechnen,
+  // dann die Drehung ZURUECK (deshalb das Minus) — sonst waehlt man bei gedrehter
+  // Karte den Raum aus, der ungedreht an dieser Stelle laege.
+  let cxp=(clientX-r.left-tx)/scale, cyp=(clientY-r.top-ty)/scale; // Canvas-Pixel (MAPW×MAPH)
+  if (kartenDrehung) [cxp,cyp] = drehePunkt(cxp, cyp, -kartenDrehung);
+  const ox=Math.floor(cxp/cell), oy=Math.floor(cyp/cell);
+  if (ox<0||oy<0||ox>=W||oy>=He) return null;
+  const t=raw[mapStart + (He-1-oy)*W + ox];
+  if (isRoom(t) && !hidden.has(t) && !haHidden.has(t) && knownRoom(t)) return t;
+  return null;
+}
+
+
+// Füllfarbe eines Raums je nach Auswahlzustand:
+//  keine Auswahl -> normal; gewählt -> dunkler; nicht gewählt -> blasser
+function roomFill(id){
+  const g = segGrp(id);
+  if (selectedRooms.size===0) return g[0];               // keine Auswahl -> normal (helle HA-Farbe)
+  if (selectedRooms.has(id))  return g[1];               // gewählt: kräftige HA-Schattierung
+  return mix(g[0],WHITE,0.5);                            // andere: blasser
+}
+// Label-Farbe/Stärke – bleibt immer gut lesbar (dunkle Schrift + weißer Schatten via CSS)
+function labelStyle(id){
+  const dark = mix(segGrp(id)[1],BLACK,0.5); // dunkle Raumfarbe = gut lesbar
+  // Schriftgewicht IMMER gleich (800) — nur Farbe/Deckkraft zeigen die Auswahl an.
+  // (Vorher wechselte es auf 700, wenn ein anderer Raum markiert war -> stoerendes Zappeln.)
+  if (selectedRooms.has(id))  return { fill:rgbCss(mix(segGrp(id)[1],BLACK,0.6)), weight:'800', opacity:'1' };
+  if (selectedRooms.size>0)   return { fill:rgbCss(dark), weight:'800', opacity:'0.65' };
+  return { fill:rgbCss(dark), weight:'800', opacity:'1' };
+}
+function updateLabels(){
+  for (const id of Object.keys(labelEls)){ const s=labelStyle(+id), el=labelEls[id];
+    el.setAttribute('fill', s.fill); el.style.fontWeight=s.weight; el.style.opacity=s.opacity; }
+  for (const id in rowEls){ rowEls[id].classList.toggle('sel', selectedRooms.has(+id)); }
+}

@@ -1,4 +1,422 @@
-/* layout.css — App-Layout (Sidebar-Positionen, Kartenflaeche, Grundgeruest-Grid).
- * Wird gefuellt, sobald das Layout aus legacy.html extrahiert wird (Etappe B5/C,
- * siehe WIDGET_UMBAU_PLAN.md Abschnitt 3/4). Bis dahin leer.
+/* layout.css — App-Layout (Grundgeruest, Kartenflaeche, Raummarken, Zoom-Knoepfe).
+ * Verbatim aus www/legacy.html uebernommen (Zeilen 68-482 im Original, direkt nach den
+ * :root-Bloecken aus theme.css). Enthaelt auch Regeln fuer DOM, das erst in spaeteren
+ * Etappen entsteht (Zahnrad-Overlay, Bedienspalte) — siehe theme.css-Kommentarkopf, warum
+ * das fuer CSS unkritisch ist.
  */
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg); color:var(--txt);}
+/* Kein eigener Rahmen, keine Breitenbegrenzung: laeuft im iframe bzw. im HTML-Widget,
+   dessen Rahmen sonst doppelt waere. Immer die volle Flaeche nutzen — auch in der Hoehe.
+   Es gibt bewusst KEINE Kopfzeile mehr: sie kostete Hoehe fuer eine Zeile, die nichts
+   Bedienbares enthielt. Geraetename und Verbindung stehen jetzt auf der Karte, das
+   Zahnrad neben der Ueberschrift der Bedienspalte. */
+.app{width:100%; height:100%; background:var(--flaeche); overflow:hidden;
+  display:flex; flex-direction:column;}
+/* Beschriftung ueber der Karte (Geraetename links, Verbindung rechts). Schwebt ueber
+   dem Bild, nimmt also keine Hoehe weg. */
+.maptag{position:absolute; top:10px; z-index:5; zoom:var(--ui);
+  font-size:11.5px; line-height:1; padding:6px 11px; border-radius:999px;
+  background:var(--panel); border:1px solid var(--line); color:var(--muted);
+  box-shadow:0 2px 8px rgba(0,0,0,.18); pointer-events:none; max-width:60%;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.maptag.links{left:10px; color:var(--txt); font-weight:700}
+.maptag.rechts{right:10px}
+/* Ueberschrift der Bedienspalte mit dem Zahnrad rechts daneben */
+/* Zahnrad. Das Menue dahinter ist ein normaler Dialog (#gearOvl), kein Ausklappmenue —
+   dadurch gibt es im Widget nur ein Muster fuer Dialoge, und nichts kann von der
+   rollenden Spalte abgeschnitten werden. */
+.gear{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);
+  background:var(--panel);color:var(--txt);line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:.12s;flex:none}
+.gear:hover{background:var(--panel2)}
+.gear:active{transform:scale(.92)}
+.gear.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+#gearOvl h2{margin-top:16px}
+#gearOvl h2:first-of-type{margin-top:0}
+/* Aufklappbare Abschnitte im Einstellungs-Dialog. Zugeklappt, weil sie selten gebraucht
+   werden — die Raumliste kann lang sein, die Adresse braucht man nur beim Einbetten. */
+.klapp{margin-top:12px}
+.klapp summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+.klapp summary::-webkit-details-marker{display:none}
+.klapp summary .sumtext{flex:1}
+.klapp[open] summary .ico.chev{transform:rotate(180deg)}
+.klapp summary .ico{transition:transform .15s}
+.klapp > .roomlist{margin-top:10px}
+.adrtext{font-size:12px;line-height:1.45;color:var(--muted);margin:8px 0}
+.adresse input{width:100%;padding:9px 10px;border-radius:9px;border:1px solid var(--line);
+  background:var(--panel2);color:var(--txt);font:inherit;font-size:12px;margin-bottom:8px}
+/* Karte und Bedienspalte nebeneinander, beide auf voller Hoehe.
+   KEINE Prozenthoehen hier drin: die brauchen einen bestimmten Bezugswert, und den gab
+   es nicht — daher endete die Spalte mitten im Bild. Stattdessen streckt der Flexaufbau
+   beide Kinder von selbst auf die Hoehe der Zeile (align-items:stretch ist Standard),
+   ganz ohne Prozentrechnung.
+   Die Breite der Spalte muss mit --ui wachsen, weil ihr Inhalt gezoomt ist. */
+.body{flex:1; min-height:0; display:flex; align-items:stretch}
+.stage{flex:1; min-width:0; position:relative; overflow:hidden;
+  background:var(--schleier);
+  touch-action:none;}
+/* KEIN will-change:transform hier! Das sagt dem Browser "dieses Element wird bewegt,
+   leg es in eine GPU-Ebene und behalte das gerasterte Bild". Beim Zoomen skaliert er dann
+   das ZWISCHENGESPEICHERTE Bild hoch, statt den Inhalt neu zu zeichnen — und der Roboter
+   (im SVG nur ~18 px gross) wird matschig. Erklaert alle Symptome: unscharf in manchen
+   Zoomstufen und eine weiter wieder scharf (je nachdem, wann der Browser neu rastert),
+   unscharf waehrend der Fahrt, und unscharf nach einem Raum-Klick (der zeichnet die Karte
+   neu und friert die Ebene damit auf der alten Aufloesung ein). */
+.mapwrap{position:absolute; top:0; left:0; line-height:0;
+  transform-origin:0 0; cursor:grab;}
+.mapwrap.drag{cursor:grabbing}
+#map{display:block; image-rendering:pixelated;}
+/* user-select: sonst markiert ein Zieh-Geste ueber die Karte die Raumbeschriftungen */
+#overlay{position:absolute; inset:0; width:100%; height:100%; overflow:visible;
+  user-select:none; -webkit-user-select:none;}
+/* Raummarke = Name + Badge. Die Gruppe wird gegen den Zoom skaliert (skaliereMarken),
+   innen wird deshalb in BILDSCHIRMPIXELN gerechnet, nicht in Karteneinheiten. */
+.rlabel{font-weight:800; letter-spacing:.2px; text-anchor:middle; dominant-baseline:middle;
+  font-size:13px; filter:drop-shadow(0 1px 1px rgba(255,255,255,.7)); pointer-events:none;}
+.rbadge{cursor:pointer; color:var(--txt)}
+/* Einheitlich-Betrieb: das Badge zeigt nur noch an. pointer-events:none laesst den Tipp
+   zur Raumflaeche darunter durch — antippen waehlt den Raum ab, statt ins Leere zu
+   greifen. Ohne das faenge die Trefferflaeche (.hit) den Tipp ab. */
+.rbadge.starr{cursor:inherit; pointer-events:none}
+.rbadge .pille{fill:var(--panel); stroke:var(--line); stroke-width:1; opacity:.96}
+.rbadge .hit{fill:transparent}          /* deckungsgleich mit der Pille, s. baueBadge */
+/* central statt middle: middle zentriert auf der halben x-Hoehe (Hoehe eines kleinen
+   "x", ohne Oberlaengen). Ziffern sind so hoch wie Grossbuchstaben, ihr oberer Teil
+   zaehlt dabei nicht mit — sie sassen dadurch sichtbar zu hoch neben dem Icon.
+   central zentriert auf der Mitte des Schriftkegels und passt fuer Ziffern. */
+.rbadge text{font-size:12px; font-weight:800; dominant-baseline:central;
+  fill:var(--txt); text-anchor:start; user-select:none}
+.rbadge .zr{opacity:.55}                /* Zahnrad nur andeuten */
+.stationhit{cursor:pointer}
+.trail{fill:none; stroke:#ffffff; stroke-width:1.1; stroke-linejoin:round;
+  stroke-linecap:round; opacity:.85; pointer-events:none;}
+/* Wischspur: dieselbe Farbe wie die Saugspur, aber breit und halbtransparent
+   (HA map.py 10803, mop_path-Farbe mit Alpha 100 gegen 255). Keine runden Kappen:
+   HA setzt sie nur an der Saugspur. Die Maske (#spurmaske) beschneidet sie auf die
+   Raumflaechen.
+   Breite in Kartenzellen. HAs Faktor 10.5 gilt fuer DESSEN Saugspur von 0,375 Zellen,
+   ergibt dort also ~3,9. Unsere Saugspur ist mit 1,1 dreimal so dick (sonst kaum
+   sichtbar) — den Faktor darauf anzuwenden ergab 11,5 Zellen, bei 50 mm Raster fast
+   60 cm. Hier steht deshalb ein fester Wert statt einer Multiplikation. */
+.mopspur{fill:none; stroke:#ffffff; stroke-width:8; stroke-linejoin:round;
+  stroke-linecap:butt; opacity:.33; pointer-events:none;}
+body.trail-off .trail, body.trail-off .mopspur{display:none}
+/* BEWUSST KEINE CSS-Transition auf dem Roboter-Icon: ein Uebergang auf `transform` schiebt
+   das Icon in eine eigene GPU-Ebene. Die wird in Icon-Groesse (~4,5 SVG-Einheiten) gerastert
+   und vom Karten-Zoom hochskaliert -> es wird waehrend der Fahrt sichtbar unscharf.
+   Position und Drehung setzt der Abspielkopf ohnehin Bild fuer Bild selbst (stepAnim),
+   inklusive der Schlussdrehung — eine Transition waere doppelt gemoppelt. */
+
+.zoom{position:absolute; right:14px; bottom:14px; display:flex; flex-direction:column;
+  gap:6px; z-index:5; zoom:var(--ui)}
+.zoom button{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);
+  background:var(--panel);color:var(--txt);font-size:18px;line-height:1;cursor:pointer;
+  display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.22)}
+.zoom button:hover{border-color:var(--accent)}
+.zoom button:active{transform:scale(.92);background:var(--panel2)}
+
+/* Der Kasten selbst wird NICHT gezoomt — er bekommt seine Hoehe vom Flexaufbau und
+   soll sie behalten. Gezoomt wird nur der Inhalt darin (.sidein). Dadurch bleiben
+   Hoehe und Zoom voneinander unabhaengig; wird der Inhalt zu lang, rollt er im Kasten. */
+.side{flex:none; width:calc(var(--leiste-breite) * var(--ui)); min-height:0; overflow-y:auto;
+  border-left:1px solid var(--trennlinie, var(--line)); background:var(--flaeche2)}
+.sidein{zoom:var(--ui); padding:16px}
+/* Lage der Bedienleiste. Der Flexaufbau macht die Anordnung, die Trennlinie muss auf
+   die Seite wandern, die zur Karte zeigt — sonst sitzt der Strich am Aussenrand. */
+:root[data-leiste="links"] .body{flex-direction:row-reverse}
+:root[data-leiste="links"] .side{border-left:none;
+  border-right:1px solid var(--trennlinie, var(--line))}
+/* Waagerecht: die Leiste bekommt die volle Breite und eine feste Hoehe. Fest ist hier
+   richtig, weil der Inhalt feststeht — wem es zu klein ist, der dreht an der
+   Anzeigegroesse, und die Hoehe waechst mit (.side ist nicht gezoomt, deshalb steht
+   var(--ui) im Rechenausdruck).
+   Die Gruppen stehen nebeneinander statt untereinander; reicht die Breite nicht, rollt
+   die Leiste waagerecht, statt Inhalt abzuschneiden. */
+:root[data-leiste="unten"] .body{flex-direction:column}
+:root[data-leiste="oben"]  .body{flex-direction:column-reverse}
+:root[data-leiste="oben"] .side,
+:root[data-leiste="unten"] .side{
+  width:auto; height:calc(var(--leiste-hoehe) * var(--ui)); overflow-x:auto; overflow-y:hidden;
+  border-left:none; border-right:none}
+:root[data-leiste="unten"] .side{border-top:1px solid var(--trennlinie, var(--line))}
+:root[data-leiste="oben"]  .side{border-bottom:1px solid var(--trennlinie, var(--line))}
+/* KEINE Hoehenangabe hier: .sidein ist gezoomt, eine Prozenthoehe wuerde ein zweites
+   Mal mit --ui multipliziert (derselbe Fehler wie frueher bei der Spalte). Die Hoehe
+   kommt vom Inhalt, begrenzt wird sie von .side. */
+/* Waagerecht in zwei Ebenen: oben die Kopfzeile ueber die volle Breite, darunter
+   Reinigung und Verbrauchsmaterial nebeneinander. */
+:root[data-leiste="oben"] .sidein,
+:root[data-leiste="unten"] .sidein{
+  display:flex; flex-direction:column; padding:12px 16px}
+:root[data-leiste="oben"] .g-kopf,
+:root[data-leiste="unten"] .g-kopf{
+  display:flex; align-items:center; gap:14px;
+  padding-bottom:12px; border-bottom:1px solid var(--line)}
+/* Zurueck auf die Reihen-Form: kein Raster, Aktionen rechts, Knoepfe in Eigenbreite.
+   Das Zahnrad steht hier wieder links (Markup-Reihenfolge) und mittig — die
+   Rasterangaben oben greifen im Flexaufbau nicht mehr, align-self aber schon. */
+:root[data-leiste="oben"] .g-kopf .gear,
+:root[data-leiste="unten"] .g-kopf .gear{align-self:center}
+:root[data-leiste="oben"] .g-kopf .actbtns,
+:root[data-leiste="unten"] .g-kopf .actbtns{margin-left:auto}
+:root[data-leiste="oben"] .g-kopf .abtn,
+:root[data-leiste="unten"] .g-kopf .abtn{flex:none}
+:root[data-leiste="oben"] .untenrum,
+:root[data-leiste="unten"] .untenrum{
+  display:flex; align-items:flex-start; gap:26px; margin-top:12px}
+:root[data-leiste="oben"] .untenrum .gruppe,
+:root[data-leiste="unten"] .untenrum .gruppe{margin-top:0}
+/* Etwas breiter als frueher (400px): in der oberen Zeile stehen jetzt drei Kacheln
+   statt zwei, sonst wird "Saugen und Wischen" auf ein Drittel gequetscht. */
+:root[data-leiste="oben"] .g-wahl,
+:root[data-leiste="unten"] .g-wahl{flex:none; width:470px}
+/* Waagerecht ist Breite da: obere Zeile Reinigung | Modus | Route, darunter die beiden
+   Kompaktkacheln. Dafuer ein 6er-Raster — 3x2 Spalten oben, 2x3 unten geht glatt auf,
+   mit "1fr 1fr" liesse sich die Dreierzeile nicht gleichmaessig teilen. */
+:root[data-leiste="oben"] .wraster,
+:root[data-leiste="unten"] .wraster{grid-template-columns:repeat(6,1fr)}
+:root[data-leiste="oben"] .wraster > :nth-child(1),
+:root[data-leiste="oben"] .wraster > :nth-child(2),
+:root[data-leiste="oben"] .wraster > :nth-child(3),
+:root[data-leiste="unten"] .wraster > :nth-child(1),
+:root[data-leiste="unten"] .wraster > :nth-child(2),
+:root[data-leiste="unten"] .wraster > :nth-child(3){grid-column:span 2}
+:root[data-leiste="oben"] .wraster > :nth-child(4),
+:root[data-leiste="oben"] .wraster > :nth-child(5),
+:root[data-leiste="unten"] .wraster > :nth-child(4),
+:root[data-leiste="unten"] .wraster > :nth-child(5){grid-column:span 3}
+:root[data-leiste="oben"] .g-verbrauch,
+:root[data-leiste="unten"] .g-verbrauch{flex:1; min-width:260px}
+/* Der Zustandstext darf sich die freie Breite nehmen, die Meldungen sitzen in der
+   Mitte, die Aktionen ganz rechts (margin-left:auto an .actbtns). */
+:root[data-leiste="oben"] .kopfstatus,
+:root[data-leiste="unten"] .kopfstatus{flex:none; max-width:34%}
+:root[data-leiste="oben"] .warnbox,
+:root[data-leiste="unten"] .warnbox{flex:1; min-width:0}
+/* Schmal (Handy): Karte oben, Bedienung darunter — dann darf die Seite rollen, statt
+   alles in die Fensterhoehe zu quetschen. */
+@media (max-width:720px){
+  /* Die Lage-Einstellung wird hier bewusst ueberschrieben: eine Spalte neben der Karte
+     waere auf dem Handy unbrauchbar schmal, eine Leiste mit fester Hoehe wuerde ihren
+     Inhalt abschneiden. Deshalb immer stapeln. Die Auswahlliste bleibt sichtbar, der
+     Hinweis dazu steht im Einstellungs-Dialog.
+     Die Selektoren tragen [data-leiste], damit sie dieselbe Gewichtung haben wie die
+     Regeln oben — bei Gleichstand gewinnt die spaetere, also diese hier. */
+  .app{height:auto; min-height:100%}
+  .body, :root[data-leiste] .body{display:block}
+  .stage, :root[data-leiste] .stage{height:60vh; min-height:320px}
+  .side, :root[data-leiste] .side{
+    width:auto; height:auto; overflow:visible;
+    border:none; border-top:1px solid var(--trennlinie, var(--line))}
+  :root[data-leiste] .sidein{display:block; height:auto; padding:16px}
+  :root[data-leiste] .untenrum{display:block; margin-top:18px}
+  :root[data-leiste] .gruppe{width:auto; min-width:0}
+  :root[data-leiste] .gruppe + .gruppe{margin-top:18px}
+  :root[data-leiste] .g-kopf{border-bottom:none; padding-bottom:0}
+  :root[data-leiste] .kopfstatus{max-width:none}
+}
+.side h2{font-size:11px;text-transform:uppercase;letter-spacing:1px;
+  color:var(--muted);margin:0 0 12px}
+.toggles{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.tgl{font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;
+  border:1px solid var(--line);background:var(--panel);color:var(--txt);
+  cursor:pointer;user-select:none;transition:opacity .15s;
+  display:inline-flex;align-items:center;gap:6px}
+/* An/Aus tragen beide Icons; die bestehende .off-Logik blendet nur um — so bleibt
+   der Zustand auch ohne Farbe erkennbar (Haken gegen leerer Kreis). */
+.tgl .ic-an{color:var(--accent)}
+.tgl .ic-aus,.tgl.off .ic-an{display:none}
+.tgl.off .ic-aus{display:inline-block;color:var(--muted)}
+.tgl.off{opacity:.45}
+.roomlist{margin-bottom:18px}
+.rrow{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:9px;
+  cursor:pointer;user-select:none;transition:background .12s}
+.rrow:hover{background:var(--panel)}
+.rrow .sw{width:13px;height:13px;border-radius:4px;flex:none;border:1px solid rgba(0,0,0,.15)}
+.rrow span:last-child{font-size:13px;font-weight:600}
+.rrow.off{opacity:.4}
+.rrow.off .sw{filter:grayscale(1)}
+.rrow.sel{background:var(--panel);box-shadow:inset 0 0 0 2px var(--accent,#4a78e0)}
+.rrow.sel span:last-child{font-weight:800}
+/* ===== Kopfzeile: Zahnrad, Zustand, Meldungen, Aktionen =====
+   Grundform ist die GESTAPELTE (fuer die schmale Spalte links/rechts): oben Zahnrad und
+   Zustand, darunter Meldungen, darunter die Aktionen ueber die volle Breite. Waagerecht
+   wird daraus weiter unten eine Reihe — dort ist Breite im Ueberfluss. */
+.g-kopf{display:grid; grid-template-columns:1fr auto; gap:10px 12px; align-items:center}
+/* Das Zahnrad sitzt oben rechts in der Ecke, obwohl es im Markup zuerst kommt — dort
+   steht es waagerecht ganz links (wie im Entwurf), hier waere links vor dem Zustand
+   unruhig. Die Reihenfolge im Markup bleibt, das Raster setzt es um. */
+.g-kopf .gear{grid-column:2; grid-row:1; align-self:start}
+.g-kopf .kopfstatus{grid-column:1; grid-row:1}
+.g-kopf .warnbox, .g-kopf .actbtns{grid-column:1 / -1}
+.g-kopf .actbtns{margin-left:0}
+.g-kopf .abtn{flex:1}
+.g-kopf .abtn.start{flex:2}          /* Start bekommt den doppelten Anteil */
+.kopfstatus{min-width:0}
+.kopfstatus .stext{font-size:16px;font-weight:800;line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kopfstatus .ssub{font-size:12px;opacity:.75;margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kopfstatus .ssub .ico{vertical-align:-3px;margin-right:3px}
+/* Ueberschrift eines Abschnitts mit rechtsbuendigem Zusatz ("Raum antippen zum Wählen",
+   "Statistik"). Nutzt Platz, der sonst leer bliebe. */
+/* flex-wrap + flex:none am Zusatz: passt er neben die Ueberschrift, steht er dort;
+   wird es zu eng, rutscht er komplett in die naechste Zeile. Ohne das schrumpfte er
+   und wurde mit "…" abgeschnitten — in der schmalen Spalte schon nach drei Woertern. */
+.abschnitt{display:flex;align-items:baseline;gap:4px 10px;margin-bottom:10px;flex-wrap:wrap}
+.abschnitt h2{margin:0;flex:1}
+.abschnitt > :not(h2){flex:none}
+/* Die vier Auswahlkarten. Alle gleich aufgebaut, damit sie als eine Gruppe lesbar sind:
+   Beschriftung oben klein, Wert darunter fett, Pfeil rechts. */
+/* Grundform (schmale Spalte): Reinigung und Modus je ueber die volle Breite — ihre Werte
+   sind Woerter wie "Wischen nach Saugen" und brauchen Platz. Saugstufe und Wassermenge
+   teilen sich eine Zeile, da stehen nur kurze Angaben.
+   Waagerecht wird daraus weiter unten ein volles 2x2-Raster. */
+.wraster{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* Senkrecht (Leiste links/rechts): Reinigung, Modus und Route jeweils ueber die volle
+   Breite untereinander — nur die beiden Kompaktkacheln teilen sich eine Zeile. */
+.wraster > :nth-child(1), .wraster > :nth-child(2), .wraster > :nth-child(3){grid-column:1 / -1}
+.wkarte{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:3px;
+  padding:9px 26px 9px 12px;border-radius:10px;border:1.5px solid var(--line);
+  background:var(--panel);color:var(--txt);font:inherit;text-align:left;
+  cursor:pointer;user-select:none;transition:.12s}
+.wkarte:hover:not(:disabled){border-color:var(--accent,#4a78e0)}
+.wkarte:active:not(:disabled){transform:scale(.98)}
+.wkarte .wk{font-size:11.5px;opacity:.7;display:flex;align-items:center;gap:5px}
+.wkarte .wv{font-size:13.5px;font-weight:800;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.wkarte .chev{position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  opacity:.5;color:var(--accent,#4a78e0)}
+/* Gesperrt = der eingestellte Modus nutzt den Wert gar nicht (z. B. Wasser beim
+   reinen Saugen). Sichtbar bleiben, damit klar ist, dass es ihn gibt. */
+.wkarte:disabled{opacity:.4;cursor:not-allowed}
+/* Kompaktform (Saugstufe, Wassermenge): Symbol und Zahl in einer Zeile, ohne
+   Beschriftung. Das Symbol sagt, worum es geht; die Langfassung steht im Dialog. */
+/* Linksbuendig wie die Karten darueber: die vier stehen als Gruppe untereinander, und
+   eine gemeinsame senkrechte Kante liest sich ruhiger als je eigene Ausrichtung. */
+.wkarte.kompakt{flex-direction:row;align-items:center;justify-content:flex-start;gap:22px}
+.wkarte.kompakt .wv{font-size:15px;font-variant-numeric:tabular-nums}
+.wkarte.kompakt .wk{opacity:.8}
+/* Meldungen (volle Tanks, Fehler ...). Der Kasten ist leer und ausgeblendet, solange
+   nichts anliegt — keine Liste gruener Haken, die man erst lesen muss. */
+.warnbox{background:var(--panel);border:1px solid var(--warn,#e0a33a);border-radius:10px;
+  padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.warnbox .wrow{display:flex;align-items:center;gap:8px;font-size:12.5px;line-height:1.35}
+.warnbox .wrow .ico{flex:none;color:var(--warn,#e0a33a)}
+.warnbox .wrow.bad .ico{color:var(--bad,#ff5c7a)}
+/* Verbrauchsmaterial: Icon, Name, Balken. Prozent steht im Balken, keine Stunden. */
+.verbrauch{display:flex;flex-direction:column;gap:8px}
+.vrow{display:flex;align-items:center;gap:9px;font-size:12.5px}
+.vrow .ico{flex:none;opacity:.8}
+.vrow .vname{flex:none;width:88px}
+.vbar{flex:1;height:8px;border-radius:5px;background:var(--line);overflow:hidden}
+.vbar i{display:block;height:100%;border-radius:5px;background:var(--ok,#38e29b)}
+.vrow.warn .vbar i{background:var(--warn,#e0a33a)}
+.vrow.bad  .vbar i{background:var(--bad,#ff5c7a)}
+.vpct{flex:none;width:34px;text-align:right;font-variant-numeric:tabular-nums;opacity:.8}
+/* Statistik als unaufdringlicher Verweis in der Abschnitts-Ueberschrift statt als
+   eigener Knopf — so kostet sie keine Zeile Hoehe. */
+.statsbtn{background:none;border:none;padding:0;cursor:pointer;font:inherit;font-size:12px;
+  font-weight:700;color:var(--accent,#4a78e0);display:flex;align-items:center;gap:3px}
+.statsbtn:hover{text-decoration:underline}
+.statsbtn .chev{opacity:.7}
+.statlist{display:flex;flex-direction:column;gap:5px;margin-top:8px;font-size:12.5px}
+.statlist div{display:flex;justify-content:space-between;gap:10px}
+.statlist span:last-child{font-variant-numeric:tabular-nums;font-weight:600}
+/* Abstand zwischen den Gruppen. Der Wert von 10 px zwischen Auswahl und Steuerung
+   bildet den frueheren Zustand nach, als beide noch in einem Block mit gap:10 lagen. */
+.gruppe + .gruppe{margin-top:18px}
+.untenrum{margin-top:18px}
+.untenrum .gruppe + .gruppe{margin-top:18px}
+.selroom{font-weight:700;font-size:12px;color:var(--accent,#4a78e0);white-space:nowrap}
+/* Auswahl-Zeile: tippt man drauf, oeffnet sich ein Overlay mit den Optionen.
+   Touch-freundlich (grosses Tap-Ziel) und platzsparend; dasselbe Muster soll spaeter
+   auch fuer die Einstellungen je Raum dienen. */
+.pickrow{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:11px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);
+  cursor:pointer;user-select:none;transition:.12s}
+.pickrow:hover{border-color:var(--accent,#4a78e0)}
+.pickrow .pk{font-size:12px;opacity:.75}
+.pickrow .pv{font-size:13px;font-weight:800;color:var(--accent,#4a78e0);
+  display:flex;align-items:center;gap:4px}
+.pickrow .pv .chev{opacity:.6}
+/* Overlay */
+.ovl{position:fixed;inset:0;z-index:200;display:none;align-items:flex-end;justify-content:center;
+  background:rgba(0,0,0,.45)}
+.ovl.open{display:flex}
+@media (min-width:600px){ .ovl{align-items:center} }
+/* nur der Kasten wird gezoomt, nicht .ovl selbst: das liegt mit inset:0 am Viewport,
+   ein Zoom darauf wuerde die Abdunklung verschieben statt den Inhalt zu vergroessern */
+.ovlbox{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);
+  border-radius:16px 16px 0 0;padding:16px;box-shadow:0 -8px 40px rgba(0,0,0,.35);
+  zoom:var(--ui); max-height:calc(90vh / var(--ui)); overflow-y:auto}
+@media (min-width:600px){ .ovlbox{border-radius:16px} }
+.ovlbox h3{margin:0 0 12px;font-size:15px;font-weight:800}
+.opt{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;
+  padding:13px 14px;margin-bottom:8px;border-radius:11px;cursor:pointer;
+  border:1.5px solid var(--line);background:var(--panel2);color:var(--txt);transition:.12s}
+.opt:hover{border-color:var(--accent,#4a78e0)}
+.opt:active{transform:scale(.985)}
+.opt.on{border-color:var(--accent,#4a78e0);box-shadow:inset 0 0 0 1px var(--accent,#4a78e0)}
+/* gerade nicht moeglich: lesbar bleiben (der Grund steht darunter), aber nicht bedienbar */
+.opt.aus{opacity:.45;cursor:default}
+.opt.aus:hover{border-color:var(--line)}
+.opt.aus:active{transform:none}
+.opt .ot{font-size:14px;font-weight:800}
+.opt .od{font-size:11.5px;opacity:.7}
+.ovlclose{width:100%;padding:11px;border-radius:11px;border:none;background:var(--panel2);
+  color:var(--txt);font-size:13px;font-weight:700;cursor:pointer;margin-top:4px}
+/* Eigene Hintergrundfarbe: natives Farbfeld statt Overlay-Auswahl (keine feste
+   Werteliste). Zuruecksetzen-Knopf daneben, nur sichtbar wenn eine Farbe gewaehlt ist. */
+.farbSwatch{width:34px;height:28px;padding:0;border:1.5px solid var(--line);border-radius:7px;
+  background:none;cursor:pointer}
+.farbSwatch::-webkit-color-swatch-wrapper{padding:2px}
+.farbSwatch::-webkit-color-swatch{border:none;border-radius:4px}
+.farbReset{padding:5px 10px;border-radius:8px;border:1.5px solid var(--line);
+  background:var(--panel2);color:var(--txt);font-size:11px;font-weight:700;cursor:pointer}
+.farbReset:hover{border-color:var(--accent,#4a78e0)}
+.ovlsave{width:100%;padding:12px;border-radius:11px;border:none;background:var(--accent,#4a78e0);
+  color:#fff;font-size:13px;font-weight:800;cursor:pointer;margin-top:4px;transition:.12s}
+.ovlsave:disabled{opacity:.35;cursor:default}
+.slabel{font-size:12px;opacity:.8}
+/* Regler bewusst gross: muss am Tablet/Handy mit dem Finger treffbar sein. Einen
+   nativen Slider vergroessert Chrome nicht mit, deshalb Track und Daumen selbst.
+   Der gefuellte Teil links kommt dabei nicht mehr von allein -> --fill, gesetzt
+   von reglerFuellung(). pan-y: senkrecht darf gescrollt werden, waagrecht zieht. */
+input[type=range]{-webkit-appearance:none;appearance:none;
+  width:100%;height:34px;margin:0;background:transparent;cursor:pointer;touch-action:pan-y}
+input[type=range]::-webkit-slider-runnable-track{height:10px;border-radius:99px;
+  background:linear-gradient(to right,var(--accent) var(--fill,0%),var(--line) var(--fill,0%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+  width:28px;height:28px;margin-top:-9px;border-radius:50%;
+  background:var(--accent);border:3px solid var(--panel);box-shadow:0 1px 5px rgba(0,0,0,.45)}
+input[type=range]::-moz-range-track{height:10px;border-radius:99px;background:var(--line)}
+input[type=range]::-moz-range-progress{height:10px;border-radius:99px;background:var(--accent)}
+input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;
+  background:var(--accent);border:3px solid var(--panel);box-shadow:0 1px 5px rgba(0,0,0,.45)}
+.actbtns{display:flex;gap:8px;flex:none;margin-left:auto}
+/* 44px Hoehe, damit der Knopf am Tablet sicher mit dem Finger zu treffen ist.
+   Start traegt als einziger eine Beschriftung und ist breiter: er ist die Aktion, die
+   man fast immer will — Stopp und Home sind Ausnahmen und kommen mit dem Symbol aus. */
+.abtn{flex:none;min-width:44px;height:44px;border-radius:9px;border:none;gap:7px;
+  padding:0 12px;font:inherit;font-size:13.5px;font-weight:700;
+  cursor:pointer;color:#fff;transition:transform .08s,opacity .12s,filter .12s;opacity:.92;
+  display:inline-flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.abtn:not(.start){padding:0}
+/* Sichtbare Rueckmeldung beim Druecken: am Tablet gibt es sonst gar keine — man weiss
+   nicht, ob der Tipp angekommen ist, und tippt ein zweites Mal. */
+.abtn:active{transform:scale(.93);filter:brightness(.85);opacity:1}
+.abtn:disabled{opacity:.4;cursor:default}
+.abtn:disabled:active{transform:none;filter:none}
+.abtn:hover{opacity:1}
+.abtn.start{background:#2fae5c}
+.abtn.stop{background:#e0554a}
+.abtn.home{background:#4a78e0}
+.abtn:disabled{opacity:.35;cursor:not-allowed}
+#err{color:#ff8098;font-size:12px;white-space:pre-wrap}

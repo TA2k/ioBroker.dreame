@@ -529,3 +529,93 @@ function baueSpurMaske(){
   m.appendChild(im);
 }
 
+
+// ===== Nachtrag (Commit B5): weitere Kartenlogik-Fragmente, die B2 nicht erfasst hatte =====
+// Bei der main.js-Integration (Etappe B, Commit B5) stellte sich heraus, dass diese Funktionen
+// zwar inhaltlich zur Kartenanzeige gehoeren, in legacy.html aber unter anderen Bereichen
+// standen ("Reinigungs-Panel", "Raum-Einstellungen (cleanset)", "Raumnamen", Ende von
+// "Konfiguration") — B2 hat sich an WIDGET_ARCHITEKTUR.md Tabelle 7 orientiert, die diese
+// Funktionen dort nicht auflistete. Verbatim uebernommen wie der Rest dieser Datei, siehe
+// WIDGET_SESSION_STATUS.md fuer die vollstaendige Herleitung.
+
+// Marker mit HAs Original-Icons (aus icons.js, Dreame-Set hell)
+const ICON = window.HA_ICONS || {};
+// Icon-Groessen in Karten-Zellen — HA berechnet sie aus der Kartengroesse (map.py
+// 9664-9684), damit der Roboter auf jeder Karte gleich gross WIRKT:
+//   robot = 3,7 % der Kartenseite (bei Drehung 0/180 Breite, sonst Hoehe), Grenzen 7..14
+//   charger = robot * 1,2 (map.py 10246 -- bei uns war es bisher umgekehrt: 9 zu 7)
+// HAs Zusatz `if scale <= 2: robot *= 0.7` greift hier nicht: unsere Zellgroesse ist
+// cell = 4 px, also > 2.
+// ICON_SCALE = 1: exakt HAs Groesse (Nutzerwunsch 2026-07-17; der fruehere 0.64-Faktor
+// "halb so gross" ist damit zurueckgenommen). Zum Nachjustieren NUR diesen Wert aendern,
+// das Groessenverhaeltnis zur Karte und zur Station bleibt dann HA-konform erhalten.
+const ICON_SCALE = 1;
+let ICON_SIZE = { robot: 9 * ICON_SCALE, charger: 9 * 1.2 * ICON_SCALE }; // bis zur 1. Karte
+function computeIconSizes(){
+  // HA: rotation 0/180 -> Breite, sonst Hoehe. Unser Widget dreht die Karte nicht (eigene
+  // Luecke, in PORT_STATUS vermerkt); die Wahl der Basisseite folgt trotzdem HA.
+  const rot = (META && META.mra) || 0;
+  const base = (rot === 0 || rot === 180) ? W : He;
+  const robot = Math.max(7, Math.min(14, base * 0.037));
+  ICON_SIZE = { robot: robot * ICON_SCALE, charger: robot * 1.2 * ICON_SCALE };
+}
+// Icon = Gruppe (Position) + Icon-Inhalt darin (Drehung ums eigene Zentrum).
+// Getrennt, damit die Fahrt sauber gleitet und die Rotation nicht den Drehpunkt verschiebt.
+//
+// Liegt fuer das Icon ein VEKTOR vor (icons_vec.js), wird der als <path> direkt in die
+// Karte gezeichnet — nicht als <image>. Grund: ein Bild rastert der Browser einmal in der
+// angezeigten Groesse (~18 px) und skaliert es beim Zoomen hoch. Genau daher kam die
+// Unschaerfe. Als Pfad wird es bei jeder Zoomstufe frisch gezeichnet.
+const VEC = window.HA_ICONS_VEC || {};
+function iconMarker(wx,wy,href,size,cls,vecKey){
+  const g=document.createElementNS(NS,'g');
+  if(cls) g.setAttribute('class',cls);
+  const vec = vecKey && VEC[vecKey];
+  let node;
+  if (vec){
+    // Zwei Ebenen: aussen die Drehung (die setzt moveIcon), innen die Skalierung.
+    // Beides auf demselben Element wuerde sich gegenseitig ueberschreiben.
+    node=document.createElementNS(NS,'g');
+    const inner=document.createElementNS(NS,'g');
+    const s=size/vec.viewBox; // Pfade liegen im Koordinatensystem des Originals (0..viewBox)
+    inner.setAttribute('transform',`scale(${s}) translate(${-vec.viewBox/2},${-vec.viewBox/2})`);
+    for(const p of vec.paths){
+      const el=document.createElementNS(NS,'path');
+      el.setAttribute('d',p.d); el.setAttribute('fill',p.fill); el.setAttribute('fill-rule','evenodd');
+      inner.appendChild(el);
+    }
+    node.appendChild(inner);
+  } else {
+    node=document.createElementNS(NS,'image');
+    node.setAttribute('href',href);
+    node.setAttributeNS('http://www.w3.org/1999/xlink','href',href); // Fallback ältere Renderer
+    node.setAttribute('x',-size/2); node.setAttribute('y',-size/2);  // zentriert um (0,0)
+    node.setAttribute('width',size); node.setAttribute('height',size);
+  }
+  node.setAttribute('data-icon','1'); // markiert das eigentliche Icon (s. moveIcon)
+  g.appendChild(node); ov.appendChild(g); moveIcon(g,wx,wy,size); return g;
+}
+function moveIcon(el,wx,wy,size,angle){
+  const [sx,sy]=wS(wx,wy);
+  // SVG-Attribut statt style.transform: Letzteres schiebt das Icon in eine eigene
+  // GPU-Ebene, die beim Zoomen hochskaliert wird -> unscharf. Das Attribut wird vom
+  // SVG-Renderer bei jeder Aenderung sauber neu gezeichnet.
+  el.setAttribute('transform',`translate(${sx.toFixed(2)},${sy.toFixed(2)})`);
+  // HA dreht das Roboter-Icon nach Blickrichtung (PIL rotate = gegen Uhrzeiger -> SVG negativ)
+  // Gezielt das Icon-Bild drehen, NICHT firstChild: setBadge schiebt den Zustands-Kreis
+  // per insertBefore davor ('behind'), dadurch waere firstChild der Kreis — der Roboter
+  // hat sich deshalb waehrend der Reinigung ueberhaupt nicht mehr ausgerichtet.
+  const img = el.querySelector('[data-icon]'); // <image> ODER <g> (Vektor)
+  if (angle!==undefined && angle!==null && img){
+    // Winkel FORTLAUFEND halten. Sonst: faehrt der Roboter nach links, liegt die Richtung
+    // bei ~180° — und die Rechnung springt dort staendig zwischen +178° und -178°. Real
+    // sind das 4°, das Icon nimmt aber den langen Weg und dreht sich fast einmal komplett.
+    // An echten Spurdaten nachgemessen: 6° echte Drehung -> 354° Icon-Drehung.
+    let a = angle;
+    if (el._ang !== undefined){ let d=a-el._ang; while(d>180)d-=360; while(d<-180)d+=360; a=el._ang+d; }
+    el._ang = a;
+    img.setAttribute('transform',`rotate(${-a})`);
+  }
+}
+const robotAngle=()=> (META && META.ha && META.ha.robotAngle!=null) ? META.ha.robotAngle : null;
+

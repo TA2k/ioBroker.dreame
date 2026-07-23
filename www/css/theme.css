@@ -1,4 +1,71 @@
-/* theme.css — CSS-Variablen (--bg, --panel, --txt, --accent, Farbschema hell/dunkel, ...)
- * Wird gefuellt, sobald die entsprechenden :root-Bloecke aus legacy.html extrahiert werden
- * (Etappe C, siehe WIDGET_UMBAU_PLAN.md Abschnitt 4). Bis dahin leer.
+/* theme.css — CSS-Variablen (--bg, --panel, --txt, --accent, Farbschema hell/dunkel).
+ *
+ * Frueher als "Etappe C" geplant (siehe Kommentar-Historie), aber vorgezogen in Etappe B,
+ * Commit B5: die Karte braucht diese Variablen bereits fuer Marken/Trefferflaechen/Zoom-
+ * Knoepfe, sonst waere sie nicht sinnvoll sichtbar. Anders als bei den JS-Dateien ist eine
+ * verfrühte CSS-Uebernahme unkritisch — ungenutzte Selektoren (z.B. fuer das Zahnrad-Overlay,
+ * das erst in Etappe E kommt) werten einfach nichts aus, es gibt keine "ReferenceError"-
+ * Entsprechung in CSS.
+ *
+ * Verbatim aus www/legacy.html uebernommen (:root-Bloecke, Zeilen 9-67 im Original).
  */
+
+/* ===== Farben =====
+   Dunkel ist die Grundlage. Hell gilt in zwei Faellen: ausdruecklich gewaehlt
+   (data-farben="hell") oder vom Geraet gemeldet, solange nichts gewaehlt ist. Deshalb
+   steht der helle Satz zweimal — reines CSS kann ihn nicht wiederverwenden.
+   data-farben="dunkel" braucht keinen eigenen Block: dann greift die Geraeteabfrage
+   unten nicht mehr, und die Grundlage hier steht. */
+:root{
+  --bg:#0f1420; --panel:#171e2e; --panel2:#1d2740; --line:#2a3550;
+  --txt:#e6ecf7; --muted:#8ea0c0; --accent:#2bb4e2;
+  --robot:#ff5c7a; --charger:#38e29b;
+  /* Ampel fuer Verbrauchsmaterial und Meldungen */
+  --ok:#38e29b; --warn:#e0a33a; --bad:#ff5c7a;
+  /* Grossflaechiger Untergrund — getrennt von --panel, damit "transparent" NUR die
+     Flaeche durchsichtig macht und nicht auch Dialoge, Kacheln und Kartenmarken. */
+  --flaeche:var(--panel); --flaeche2:var(--panel2);
+  --schleier:radial-gradient(circle at 50% 40%, rgba(43,180,226,.06), transparent 60%);
+  /* Hauch + Kante fuer die Bedienspalte im transparenten Betrieb: sie soll sich leicht
+     absetzen, ohne den VIS-Hintergrund zu verdecken.
+     GEGEN das Farbschema, nicht mit ihm: wer dunkel waehlt, hat ringsum eine dunkle
+     Flaeche — ein dunkler Hauch waere darauf unsichtbar. Deshalb im dunklen Satz ein
+     heller Hauch (wirkt wie angehoben), im hellen ein dunkler (wirkt wie Schatten). */
+  --hauch:rgba(255,255,255,.08);
+  --kante:rgba(255,255,255,.16);
+  /* Anzeigegroesse der Bedienflaechen (Zahnrad-Menue). Bewusst NICHT auf die Karte:
+     die zoomt man selbst, und sie soll beim Laden ganz zu sehen sein. */
+  --ui:1;
+  /* Groesse der Bedienleiste. Zwei Werte, weil sie nicht dasselbe meinen: senkrecht
+     zaehlt die Breite, waagerecht die Hoehe. Beide werden mit --ui multipliziert. */
+  --leiste-breite:275px; --leiste-hoehe:230px;
+}
+:root[data-farben="hell"]{
+  --bg:#eef2f8; --panel:#ffffff; --panel2:#f4f7fc; --line:#dbe3ef;
+  --txt:#1a2436; --muted:#5a6b88;
+  --ok:#1a9e6b; --warn:#b57611; --bad:#d92f52;
+  --hauch:rgba(0,0,0,.05); --kante:rgba(0,0,0,.14);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-farben]){ --bg:#eef2f8; --panel:#ffffff; --panel2:#f4f7fc; --line:#dbe3ef;
+         --txt:#1a2436; --muted:#5a6b88;
+         --ok:#1a9e6b; --warn:#b57611; --bad:#d92f52;
+         --hauch:rgba(0,0,0,.05); --kante:rgba(0,0,0,.14); }
+}
+/* Durchsichtig: der VIS-Hintergrund scheint durch. Bauteile bleiben deckend, sonst
+   laege fremder Inhalt unter dem Text. Der Schleier hinter der Karte muss weg, sonst
+   bleibt ein blauer Schimmer stehen.
+   Die Bedienspalte bekommt statt voller Durchsicht den Hauch von oben — sie soll sich
+   wie bisher leicht abheben, sonst schwimmen die Bedienelemente frei im VIS. */
+:root[data-hintergrund="transparent"]{
+  --bg:transparent; --flaeche:transparent; --flaeche2:var(--hauch); --schleier:none;
+  /* Auch die Trennlinie braucht die Gegenrichtung: --line stammt aus dem Farbschema
+     und geht auf einem schwarzen VIS-Hintergrund genauso unter wie ein dunkler Hauch. */
+  --trennlinie:var(--kante);
+}
+/* Milchglas: verwischt, was dahinterliegt, und erzeugt dadurch eine Kante, selbst wenn
+   Farbe und Helligkeit fast gleich sind. Auf einer voellig einfarbigen Flaeche bringt
+   es nichts — dafuer ist der Hauch da. Beides zusammen deckt beide Faelle ab. */
+:root[data-hintergrund="transparent"] .side{
+  backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
+}

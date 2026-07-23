@@ -7,23 +7,37 @@
 <link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="css/panels.css">
-<style>
-  /* Grundgeruest-Minimal-Styling, solange layout.css/theme.css noch leer sind
-     (werden in Etappe C aus legacy.html befuellt, siehe WIDGET_UMBAU_PLAN.md Abschnitt 4). */
-  html,body{margin:0;height:100%;background:#0f1420;color:#e6ecf7;
-    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  #umbau{display:flex;align-items:center;justify-content:center;height:100%;
-    text-align:center;padding:20px}
-</style>
 </head>
 <body>
 
-<!-- Wird ab Etappe B, Commit B5 durch die Karte ersetzt, ab Etappe C durch alle Panels. -->
-<div id="app">
-  <div id="umbau">Widget wird umgebaut &mdash; naechste Version kommt.</div>
+<!-- Kartengeruest (Etappe B, Commit B5). DOM-IDs entsprechen www/legacy.html, damit
+     www/js/karte/*.js unveraendert darauf zugreifen kann (document.getElementById('map')
+     usw., siehe Zustand-Setup in js/main.js). Panels (Etappe C/D) kommen als eigene
+     .side-Spalte hinzu, existiert hier noch nicht — "keine Steuerung" laut Plan. -->
+<div class="app">
+  <div class="body">
+    <div class="stage" id="stage">
+      <div class="mapwrap" id="mapwrap">
+        <canvas id="map"></canvas>
+        <svg id="overlay"></svg>
+      </div>
+      <div class="maptag links" id="devName"></div>
+      <div class="maptag rechts" id="conn">…</div>
+      <div class="zoom">
+        <button id="z-in" title="Zoom +" aria-label="Vergrößern">+</button>
+        <button id="z-out" title="Zoom −" aria-label="Verkleinern">−</button>
+        <button id="z-reset" title="Zurücksetzen" aria-label="Ansicht zurücksetzen">⤢</button>
+      </div>
+    </div>
+  </div>
 </div>
+<div id="err" style="position:fixed;bottom:8px;left:8px;color:#ff8098;font-size:12px;white-space:pre-wrap"></div>
 
-<!-- Karten-Kern, Ricardos Portierung 1:1 uebernommen (Etappe B, Commit B2). -->
+<!-- Icon-Sets, von legacy.html unveraendert uebernommen (siehe Commit B1). -->
+<script src="icons.js"></script>
+<script src="icons_ui.js"></script>
+
+<!-- Karten-Kern, Ricardos Portierung 1:1 uebernommen (Etappe B, Commit B2 + B5-Nachtrag). -->
 <script src="js/karte/merger.js"></script>
 <script src="js/karte/render.js"></script>
 <script src="js/karte/overlays.js"></script>
