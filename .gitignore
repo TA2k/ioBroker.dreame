@@ -35,3 +35,9 @@ PROJEKTSTAND.md
 scripts/
 *.pyc
 __pycache__/
+
+# Lokale Planungs- und Analysedateien (nicht ins Repo)
+WIDGET_ARCHITEKTUR.md
+WIDGET_UMBAU_PLAN.md
+MAP_ANALYSE.md
+WIDGET_SESSION_STATUS.md
