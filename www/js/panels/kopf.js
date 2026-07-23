@@ -29,7 +29,7 @@
  * KopfPanel-Instanz zeigen (es gibt zu jedem Zeitpunkt hoechstens eine).
  */
 
-/* global Trigger, Panel, uiIcon, NS, ICON, ICON_SIZE, robotMk, chargerMk */
+/* global Trigger, Panel, uiIcon, NS, ICON, ICON_SIZE, robotMk, chargerMk, selectedRooms, drawFills, updateLabels, updateCleanPanel */
 
 // ===== Roboter-Status (HA device.robot_status / station_status, 1:1 geportet) =====
 
@@ -406,16 +406,18 @@ class KopfPanel extends Panel {
   }
 
   /**
-   * Start/Stop/Home. Bewusst EINFACHER als Ricardos Original: dort ist der Start-Knopf ein
-   * Umschalter (Start/Fortsetzen/Pause, mit optimistischer Sofort-Anzeige nach dem Tippen)
-   * und startet die per Kartenklick gewaehlten Raeume ueber remote.start-custom-clean direkt.
-   * Trigger.js (Commit B3) kennt aber nur startCleaning (Komplettreinigung) — kein
-   * pause-Trigger, keine raumbasierte Variante. Das deckt sich mit WIDGET_UMBAU_PLAN.md
-   * Commit C1 ("Sende-Wege: startCleaning, stopCleaning, chargeHome") und C5 ("Start-Button-
-   * Semantik: bei Auswahl -> startCustomRoomCleaning, bei 'alles' -> startCleaning") — die
-   * raumbasierte/Pause-Semantik ist also ausdruecklich C5-Arbeit, hier noch nicht vorgezogen.
-   * Card-Auswahl per Kartenklick (selectedRooms, seit B2/B5 aktiv) wirkt deshalb bis Etappe C5
-   * NICHT auf den Start-Knopf — siehe WIDGET_SESSION_STATUS.md.
+   * Start/Stop/Home. Bewusst EINFACHER als Ricardos Original: dort ist der Start-Knopf
+   * zusaetzlich ein Umschalter (Start/Fortsetzen/Pause, mit optimistischer Sofort-Anzeige
+   * nach dem Tippen) — Trigger.js kennt keinen Pause-Trigger, diese optimistische Anzeige
+   * wurde bewusst nicht uebernommen (siehe C1-Kommentar in WIDGET_SESSION_STATUS.md).
+   *
+   * Raumbasierte Start-Semantik (Etappe C, Commit C5, WIDGET_UMBAU_PLAN.md "Start-Button-
+   * Semantik: bei Auswahl -> startCustomRoomCleaning, bei 'alles' -> startCleaning") jetzt
+   * umgesetzt: `selectedRooms` (main.js, per Kartenklick befuellt seit B2/B5) entscheidet.
+   * Nach einem erfolgreichen raumbasierten Start wird die Auswahl geleert (1:1 wie Ricardos
+   * Original: "Auswahl nach dem Start leeren, damit sie nicht beim naechsten Mal 'vergessen'
+   * mitlaeuft") — `drawFills()`/`updateLabels()` (Karten-Layer) und `updateCleanPanel()`
+   * (Reinigungs-Panel-Bruecke, Commit C5) zeichnen die Aenderung nach.
    */
   _renderButtons() {
     const start = document.getElementById('c-start');
@@ -423,7 +425,11 @@ class KopfPanel extends Panel {
     const home = document.getElementById('c-home');
     if (!start || !stop || !home) return;
     start.innerHTML = uiIcon('start', 18) + '<span class="abtext">Start</span>';
-    start.onclick = () => Trigger.startCleaning(this.did);
+    start.onclick = async () => {
+      if (selectedRooms.size === 0) { Trigger.startCleaning(this.did); return; }
+      const ok = await Trigger.startCustomRoomCleaning(this.did, [...selectedRooms]);
+      if (ok) { selectedRooms.clear(); drawFills(); updateLabels(); updateCleanPanel(); }
+    };
     stop.innerHTML = uiIcon('stop', 20);
     stop.onclick = () => Trigger.stopCleaning(this.did);
     home.innerHTML = uiIcon('home', 20);

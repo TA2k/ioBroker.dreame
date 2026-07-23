@@ -18,15 +18,15 @@
  * das customizedCleaning/raumSaugt/raumWischt/raumWdh/globalSaug/globalWasser/
  * geraetGestartet() braucht. Diese Namen waren bis Etappe C als Platzhalter deklariert
  * (sichere Default-Werte, keine Funktion) — Commit C1 (kopf.js) hat geraetGestartet() und
- * updateBadges() bereits durch echte Implementierungen ERSETZT (siehe kopf.js-Kommentarkopf,
- * Bruecken-Funktionen dort). Die restlichen fuenf (customizedCleaning, raumSaugt/raumWischt/
- * raumWdh, raumSaug/raumWasser, globalSaug/globalWasser, updateCleanPanel) bleiben bis
- * Etappe C5 (reinigung.js) unten als Platzhalter stehen — ERSETZEN, nicht daneben neu anlegen.
+ * updateBadges() bereits durch echte Implementierungen ERSETZT, Commit C5 (reinigung.js) die
+ * restlichen fuenf (customizedCleaning, raumSaugt/raumWischt/raumWdh, raumSaug/raumWasser,
+ * globalSaug/globalWasser, updateCleanPanel) — main.js deklariert sie seitdem nicht mehr
+ * selbst, siehe reinigung.js-Kommentarkopf.
  *
  * Siehe WIDGET_SESSION_STATUS.md fuer die vollstaendige Herleitung dieser Entscheidung.
  */
 
-/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel */
+/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel, ReinigungPanel */
 
 // ===== Zustand (verbatim aus www/legacy.html "Zustand"-Bereich uebernommen, minus SOCK —
 // die alte direkte Socket.io-Sendefunktion cmd() wird nicht mehr gebraucht, Trigger/Daten
@@ -50,27 +50,9 @@ const selectedRooms = new Set(); // per Klick gewaehlte Raeume (kommt erst mit E
 let uiFaktor = 1;
 let kartenDrehung = 0; // wird nach Config.laden() aus config.aussehen.drehung gesetzt
 
-// ===== Platzhalter fuer die Reinigungs-Domäne (Etappe C5) =====
-// updateRoomBadges() (render.js) braucht diese Namen, weil buildOverlay() sie unbedingt
-// aufruft. Sichere Defaults: keine Auswahl, einheitlicher Modus — die Badges zeigen dadurch
-// schlicht nichts an, solange reinigung.js noch nicht existiert. geraetGestartet() und
-// updateBadges() waren hier ebenfalls Platzhalter (Etappe C1) — kopf.js (Commit C1) hat sie
-// ERSETZT, siehe dortigen Kommentarkopf. Etappe C5 ERSETZT die verbleibenden fuenf Namen durch
-// echte Implementierungen aus remote.customized-cleaning/-suction-level/-wetness-level/
-// map.cleanset.*.RoomSettings, keine Doppel-Deklaration daneben anlegen.
-let customizedCleaning = false;
-let globalSaug = 1, globalWasser = 3;
-const raumSaugt = () => false;
-const raumWischt = () => false;
-const raumWdh = () => 1;
-const raumSaug = () => globalSaug;
-const raumWasser = () => globalWasser;
-// updateCleanPanel(): Reinigungs-Panel-DOM (Etappe C5) existiert noch nicht, wird von
-// render.js' selectRoom() bei jedem Kartenklick aufgerufen. No-op bis Etappe C5.
-function updateCleanPanel() {}
-
 // ===== Panels (Etappe C). Weitere Panel-Klassen kommen mit ihren Commits dazu. =====
 PanelRegistry.registriere('kopf', KopfPanel);
+PanelRegistry.registriere('reinigung', ReinigungPanel);
 PanelRegistry.registriere('wartung', WartungPanel);
 PanelRegistry.registriere('statistik', StatistikPanel);
 PanelRegistry.registriere('station', StationPanel);

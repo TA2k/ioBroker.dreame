@@ -363,6 +363,17 @@ body.trail-off .trail, body.trail-off .mopspur{display:none}
 .saktion:active{filter:brightness(.9)}
 .saktion:disabled{opacity:.4;cursor:not-allowed}
 .saktion:disabled:hover{border-color:var(--line)}
+/* Reinigungs-Panel Kachel-Grid (Etappe C, Commit C5): direkte <select>-Elemente statt
+   Ricardos Auswahl-Overlay (openPicker/openSlider existieren im modularen Widget noch
+   nicht -- siehe reinigung.js-Kommentarkopf). */
+.rraum{font-size:12.5px;opacity:.75;margin-bottom:8px}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.rkarte{display:flex;flex-direction:column;gap:3px;font-size:11.5px;opacity:.85;min-width:0}
+.rkarte select{font:inherit;font-size:12.5px;font-weight:700;padding:6px 8px;border-radius:8px;
+  border:1px solid var(--line);background:var(--panel2);color:var(--txt);min-width:0}
+.rkarte select:disabled{opacity:.4;cursor:not-allowed}
+.rtoggle{display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer}
+.rtoggle input:disabled + span{opacity:.5}
 /* Abstand zwischen den Gruppen. Der Wert von 10 px zwischen Auswahl und Steuerung
    bildet den frueheren Zustand nach, als beide noch in einem Block mit gap:10 lagen. */
 .gruppe + .gruppe{margin-top:18px}

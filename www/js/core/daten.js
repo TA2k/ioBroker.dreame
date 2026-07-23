@@ -95,6 +95,13 @@ const Daten = (() => {
     return new Promise(r => sock ? sock.emit('getObject', id, (e, o) => r(o)) : r(null));
   }
 
+  /** Objekte per Muster (z.B. 'dreame.0.<did>.remote.custom-room-cleaning.map-5.*') --
+   * gebraucht, um an native.roomId je Checkbox-State zu kommen (Etappe C, Commit C5),
+   * das getState/getStates nicht liefert. Gleiches Aufruf-Muster wie getStates(). */
+  function getObjects(muster) {
+    return new Promise(r => sock ? sock.emit('getObjects', muster, (e, o) => r(o || {})) : r({}));
+  }
+
   function setState(id, wert) {
     return new Promise(r => sock ? sock.emit('setState', id, wert, () => r(true)) : r(false));
   }
@@ -129,7 +136,7 @@ const Daten = (() => {
   }
 
   return {
-    IOB, verbinden, getState, getStates, getObject, setState, subscribe, unsubscribe, auf, abAuf,
+    IOB, verbinden, getState, getStates, getObject, getObjects, setState, subscribe, unsubscribe, auf, abAuf,
     get verbunden() { return verbunden; },
   };
 })();
