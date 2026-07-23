@@ -347,6 +347,22 @@ body.trail-off .trail, body.trail-off .mopspur{display:none}
 .statlist{display:flex;flex-direction:column;gap:5px;margin-top:8px;font-size:12.5px}
 .statlist div{display:flex;justify-content:space-between;gap:10px}
 .statlist span:last-child{font-variant-numeric:tabular-nums;font-weight:600}
+/* Station-Aktionsknoepfe (Etappe C, Commit C4): eigene, neutrale Knopf-Optik statt .abtn
+   -- .abtn ist auf die drei Kopf-Aktionen zugeschnitten (feste Farben je Klasse, padding:0
+   fuer Icon-only, siehe dortiger Kommentar), passt nicht zu variabel beschrifteten,
+   gleichberechtigten Aktionsknoepfen hier. Ausgegraut/deaktiviert wie ueberall per :disabled,
+   Grund steht im title-Tooltip (kein Overlay-Text moeglich, siehe station.js-Kommentarkopf). */
+.saktionen{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.saktion{flex:1;min-width:84px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:4px;padding:8px 6px;border-radius:9px;border:1px solid var(--line);
+  background:var(--panel2);color:var(--txt);font:inherit;font-size:12px;font-weight:600;
+  cursor:pointer;text-align:center;transition:opacity .12s,filter .12s,border-color .12s;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.saktion .ico{opacity:.85}
+.saktion:hover{border-color:var(--accent)}
+.saktion:active{filter:brightness(.9)}
+.saktion:disabled{opacity:.4;cursor:not-allowed}
+.saktion:disabled:hover{border-color:var(--line)}
 /* Abstand zwischen den Gruppen. Der Wert von 10 px zwischen Auswahl und Steuerung
    bildet den frueheren Zustand nach, als beide noch in einem Block mit gap:10 lagen. */
 .gruppe + .gruppe{margin-top:18px}
