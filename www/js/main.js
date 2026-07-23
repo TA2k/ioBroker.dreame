@@ -16,14 +16,17 @@
  *
  * Ausserdem ruft buildOverlay() bereits jetzt updateRoomBadges() auf (www/js/karte/render.js),
  * das customizedCleaning/raumSaugt/raumWischt/raumWdh/globalSaug/globalWasser/
- * geraetGestartet() braucht. Diese sieben Namen sind unten als Platzhalter deklariert
- * (sichere Default-Werte, keine Funktion) — Etappe C muss sie durch echte Implementierungen
- * ERSETZEN (nicht daneben neu anlegen), sonst gibt es doppelte Deklarationen.
+ * geraetGestartet() braucht. Diese Namen waren bis Etappe C als Platzhalter deklariert
+ * (sichere Default-Werte, keine Funktion) — Commit C1 (kopf.js) hat geraetGestartet() und
+ * updateBadges() bereits durch echte Implementierungen ERSETZT (siehe kopf.js-Kommentarkopf,
+ * Bruecken-Funktionen dort). Die restlichen fuenf (customizedCleaning, raumSaugt/raumWischt/
+ * raumWdh, raumSaug/raumWasser, globalSaug/globalWasser, updateCleanPanel) bleiben bis
+ * Etappe C5 (reinigung.js) unten als Platzhalter stehen — ERSETZEN, nicht daneben neu anlegen.
  *
  * Siehe WIDGET_SESSION_STATUS.md fuer die vollstaendige Herleitung dieser Entscheidung.
  */
 
-/* global Daten, Geraete, Config */
+/* global Daten, Geraete, Config, PanelRegistry, KopfPanel */
 
 // ===== Zustand (verbatim aus www/legacy.html "Zustand"-Bereich uebernommen, minus SOCK —
 // die alte direkte Socket.io-Sendefunktion cmd() wird nicht mehr gebraucht, Trigger/Daten
@@ -47,13 +50,14 @@ const selectedRooms = new Set(); // per Klick gewaehlte Raeume (kommt erst mit E
 let uiFaktor = 1;
 let kartenDrehung = 0; // wird nach Config.laden() aus config.aussehen.drehung gesetzt
 
-// ===== Platzhalter fuer die Reinigungs-/Status-Domäne (Etappe C1/C5) =====
+// ===== Platzhalter fuer die Reinigungs-Domäne (Etappe C5) =====
 // updateRoomBadges() (render.js) braucht diese Namen, weil buildOverlay() sie unbedingt
-// aufruft. Sichere Defaults: keine Auswahl, "Geraet steht", einheitlicher Modus — die
-// Badges zeigen dadurch schlicht nichts an, was fuer eine steuerungslose Karte korrekt ist.
-// Etappe C ERSETZT diese Deklarationen durch echte Implementierungen (kopf.js: geraetGestartet
-// aus Status-States; reinigung.js: den Rest aus remote.customized-cleaning/-suction-level/
-// -wetness-level/map.cleanset.*.RoomSettings), keine Doppel-Deklaration danaben anlegen.
+// aufruft. Sichere Defaults: keine Auswahl, einheitlicher Modus — die Badges zeigen dadurch
+// schlicht nichts an, solange reinigung.js noch nicht existiert. geraetGestartet() und
+// updateBadges() waren hier ebenfalls Platzhalter (Etappe C1) — kopf.js (Commit C1) hat sie
+// ERSETZT, siehe dortigen Kommentarkopf. Etappe C5 ERSETZT die verbleibenden fuenf Namen durch
+// echte Implementierungen aus remote.customized-cleaning/-suction-level/-wetness-level/
+// map.cleanset.*.RoomSettings, keine Doppel-Deklaration daneben anlegen.
 let customizedCleaning = false;
 let globalSaug = 1, globalWasser = 3;
 const raumSaugt = () => false;
@@ -61,13 +65,12 @@ const raumWischt = () => false;
 const raumWdh = () => 1;
 const raumSaug = () => globalSaug;
 const raumWasser = () => globalWasser;
-function geraetGestartet() { return false; }
 // updateCleanPanel(): Reinigungs-Panel-DOM (Etappe C5) existiert noch nicht, wird von
-// render.js' selectRoom() bei jedem Kartenklick aufgerufen. updateBadges(): Status-Warn-Icon
-// auf dem Robotermarker (Etappe C1, haengt an robotStatusCode()/setVst()), wird von
-// overlays.js' buildOverlay() aufgerufen. Beides no-op bis zur jeweiligen Etappe.
+// render.js' selectRoom() bei jedem Kartenklick aufgerufen. No-op bis Etappe C5.
 function updateCleanPanel() {}
-function updateBadges() {}
+
+// ===== Panels (Etappe C). Weitere Panel-Klassen kommen mit ihren Commits dazu. =====
+PanelRegistry.registriere('kopf', KopfPanel);
 
 // ===== Verbindungsstatus + Geraetename in der Kopfzeile =====
 const errEl = document.getElementById('err');
@@ -152,6 +155,12 @@ async function kartenPaketVerarbeiten(cloudStr) {
 
     const config = await Config.laden(did);
     kartenDrehung = (config.aussehen && Number(config.aussehen.drehung)) || 0;
+
+    for (const { id, klasse } of PanelRegistry.aktive(config, geraet.typ)) {
+      const panel = new klasse(id, document.getElementById('panel-' + id));
+      panel.zeige();
+      await panel.init(did);
+    }
 
     const cloudId = `dreame.0.${did}.map.mergedCloud`;
     const robotId = `dreame.0.${did}.map.robot`;

@@ -12,8 +12,9 @@
 
 <!-- Kartengeruest (Etappe B, Commit B5). DOM-IDs entsprechen www/legacy.html, damit
      www/js/karte/*.js unveraendert darauf zugreifen kann (document.getElementById('map')
-     usw., siehe Zustand-Setup in js/main.js). Panels (Etappe C/D) kommen als eigene
-     .side-Spalte hinzu, existiert hier noch nicht — "keine Steuerung" laut Plan. -->
+     usw., siehe Zustand-Setup in js/main.js). Seitenleiste (.side/.sidein) kommt mit den
+     Panels aus Etappe C dazu — jede section.gruppe traegt id="panel-<id>", damit main.js
+     sie ueber PanelRegistry.aktive() dem passenden Panel als Container zuordnen kann. -->
 <div class="app">
   <div class="body">
     <div class="stage" id="stage">
@@ -29,6 +30,24 @@
         <button id="z-reset" title="Zurücksetzen" aria-label="Ansicht zurücksetzen">⤢</button>
       </div>
     </div>
+    <div class="side"><div class="sidein">
+      <!-- Kopf-Panel (Etappe C, Commit C1). Zahnrad fehlt bewusst noch — das Einstellungs-
+           Overlay, das es oeffnet, kommt erst in Etappe E. -->
+      <section class="gruppe g-kopf" id="panel-kopf">
+        <div class="kopfstatus">
+          <div class="stext" id="stateText">–</div>
+          <div class="ssub" id="stateSub">–</div>
+        </div>
+        <div class="warnbox" id="warnBox" hidden></div>
+        <div class="actbtns">
+          <button class="abtn start" id="c-start" title="Start" aria-label="Reinigung starten">
+            <span class="abtext">Start</span>
+          </button>
+          <button class="abtn stop" id="c-stop" title="Stop" aria-label="Reinigung anhalten"></button>
+          <button class="abtn home" id="c-home" title="Home" aria-label="Zurück zur Ladestation"></button>
+        </div>
+      </section>
+    </div></div>
   </div>
 </div>
 <div id="err" style="position:fixed;bottom:8px;left:8px;color:#ff8098;font-size:12px;white-space:pre-wrap"></div>

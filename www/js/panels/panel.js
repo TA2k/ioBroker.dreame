@@ -15,6 +15,24 @@
 
 /* global Daten */
 
+/**
+ * SVG-Icon aus UI_ICONS (www/icons_ui.js) als Markup-String, faerbt sich ueber currentColor
+ * wie Text. Aus www/legacy.html Bereich "Reinigungs-Panel" (Etappe C, Commit C1) hierher
+ * uebernommen: mehrere Panels brauchen dieselbe Funktion (Kopf-Panel-Buttons, spaeter
+ * Verbrauchsmaterial-/Warnzeilen anderer Panels) — deshalb hier in der gemeinsamen
+ * Panel-Basisdatei statt in einem einzelnen Panel dupliziert.
+ * @param name   Schluessel in UI_ICONS
+ * @param px     Kantenlaenge
+ * @param extra  zusaetzliche CSS-Klasse (z.B. 'chev', 'ic-an')
+ */
+function uiIcon(name, px = 16, extra = '') {
+  const d = (window.UI_ICONS || {})[name];
+  if (!d) return '';
+  return `<svg class="ico ${extra}" width="${px}" height="${px}" viewBox="0 0 24 24" fill="none"`
+    + ` stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`
+    + ` aria-hidden="true">${d}</svg>`;
+}
+
 class Panel {
   /** Roboter-Typen, zu denen dieses Panel passt (WIDGET_ARCHITEKTUR.md Abschnitt 15.2).
    * In Unterklassen ueberschreiben, z.B. `static passtZuTyp = ['vacuum'];` fuer
@@ -40,10 +58,19 @@ class Panel {
 
   /** Fuer ein Geraet aufbauen: States abonnieren, erstes Rendern. Wird von main.js beim
    * ersten Aufbau und nach jedem Roboter-Wechsel aufgerufen (nach vorherigem dispose()
-   * des alten Zustands, siehe WIDGET_ARCHITEKTUR.md Abschnitt 8.5). */
-  init(did) {
+   * des alten Zustands, siehe WIDGET_ARCHITEKTUR.md Abschnitt 8.5).
+   *
+   * Holt fuer jeden benoetigten State per Daten.getState() zuerst den AKTUELLEN Wert, bevor
+   * abonniert wird — reines Abonnieren liefert nur KUENFTIGE Aenderungen, das erste Rendern
+   * zeigte sonst nichts an, bis sich zufaellig etwas aendert (in Commit C1 beim Bauen des
+   * Kopf-Panels aufgefallen, das als erstes Panel den vollen Lifecycle durchlaeuft — betrifft
+   * die Basisklasse und damit alle Panels gleichermassen). */
+  async init(did) {
     this.did = did;
-    for (const stateId of this.benoetigteStates(did)) this.abonniereState(stateId);
+    const stateIds = this.benoetigteStates(did);
+    for (const stateId of stateIds) this.abonniereState(stateId);
+    const werte = await Promise.all(stateIds.map(id => Daten.getState(id)));
+    stateIds.forEach((stateId, i) => { if (werte[i] != null) this.neueDaten(stateId, werte[i]); });
     this.render();
   }
 
