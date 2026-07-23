@@ -62,4 +62,12 @@ module.exports = [
       semi: ['error', 'always'],
     },
   },
+  {
+    files: ['www/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
+    },
+  },
 ];

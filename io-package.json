@@ -122,7 +122,8 @@
       "zh-cn": "Dreame 家用设备适配器"
     },
     "authors": [
-      "TA2k <tombox2020@gmail.com>"
+      "TA2k <tombox2020@gmail.com>",
+      "Ricardo Hipp"
     ],
     "keywords": [
       "dreame",
@@ -133,6 +134,13 @@
       "license": "MIT"
     },
     "platform": "Javascript/Node.js",
+    "localLinks": {
+      "_default": {
+        "link": "%web_protocol%://%ip%:%web_port%/dreame/",
+        "name": "Dreame-Map",
+        "intro": true
+      }
+    },
     "icon": "dreame.png",
     "enabled": true,
     "extIcon": "https://raw.githubusercontent.com/TA2k/ioBroker.dreame/main/admin/dreame.png",

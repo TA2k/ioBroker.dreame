@@ -2,6 +2,19 @@
   "type": "panel",
   "i18n": false,
   "items": {
+    "_kartenHinweis": {
+      "type": "staticText",
+      "newLine": true,
+      "sm": 12,
+      "xs": 12,
+      "md": 12,
+      "lg": 12,
+      "xl": 12,
+      "text": {
+        "en": "The map widget is served by this adapter at /dreame/ on your web adapter — usually http://<your-iobroker>:8082/dreame/ . A ready-made link with the correct address is on the ioBroker start page and next to this instance in the adapter list.",
+        "de": "Die Karte liefert dieser Adapter unter /dreame/ über den web-Adapter aus — meist http://<deine-ioBroker-Adresse>:8082/dreame/ . Einen fertigen Link mit der richtigen Adresse gibt es auf der ioBroker-Startseite und neben dieser Instanz in der Adapterliste."
+      }
+    },
     "cloudService": {
       "type": "select",
       "options": [
@@ -125,6 +138,10 @@
         "pl": "Pobierz mapę",
         "uk": "Отримати карту",
         "zh-cn": "获取地图"
+      },
+      "help": {
+        "en": "Map fetch: loads the current map from the cloud on adapter start and every X minutes, and maintains room names and image data of the stored maps. Without this option, no map display.",
+        "de": "Kartenabruf: lädt beim Adapterstart und alle X Minuten die aktuelle Karte aus der Cloud, pflegt Raumnamen und Bilddaten der gespeicherten Karten. Ohne diese Option keine Kartenanzeige."
       }
     },
 
@@ -138,8 +155,8 @@
       "lg": 3,
       "xl": 3,
       "label": {
-        "en": "Update interval (in minutes)",
-        "de": "Aktualisierungsintervall (in Minuten)",
+        "en": "Update interval (minutes)",
+        "de": "Aktualisierungsintervall (Minuten)",
         "ru": "Интервал обновления (в минутах)",
         "pt": "Intervalo de atualização (em minutos)",
         "nl": "Update-interval (in minuten)",
@@ -149,6 +166,10 @@
         "pl": "Interwał aktualizacji (w minutach)",
         "uk": "Інтервал оновлення (в хвилинах)",
         "zh-cn": "更新间隔（分钟）"
+      },
+      "help": {
+        "en": "Controls the cycle in which the adapter actively fetches data from the Dreame cloud — map image AND general device status (battery, cleaning status, etc.). Higher values reduce cloud requests but also delay normal status updates.",
+        "de": "Steuert den Zyklus, in dem der Adapter aktiv Daten aus der Dreame-Cloud abruft — Kartenbild UND allgemeiner Gerätestatus (Akku, Reinigungsstatus usw.). Höhere Werte reduzieren Cloud-Requests, verzögern aber auch normale Status-Updates."
       }
     }
   }
