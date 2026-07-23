@@ -354,7 +354,7 @@ The settings panel (gear icon in the widget) covers the common preferences: ligh
 | `--kante`                    | `rgba(255,255,255,.16)` | Subtle edge/divider color in transparent mode                                            |
 | `--schleier`                 | radial gradient          | Faint accent glow behind the map                                                         |
 
-The light theme uses its own values for all of the above (see `:root[data-farben="hell"]` in `www/index.html`).
+The light theme uses its own values for all of the above (see `:root[data-farben="hell"]` in `www/legacy.html`; this widget is currently being restructured into `www/js/` + `www/css/`, see `WIDGET_UMBAU_PLAN.md`).
 
 State toggles, set as attributes on the page root and readable in your own CSS:
 

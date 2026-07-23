@@ -1,0 +1,4 @@
+/* theme.css — CSS-Variablen (--bg, --panel, --txt, --accent, Farbschema hell/dunkel, ...)
+ * Wird gefuellt, sobald die entsprechenden :root-Bloecke aus legacy.html extrahiert werden
+ * (Etappe C, siehe WIDGET_UMBAU_PLAN.md Abschnitt 4). Bis dahin leer.
+ */
