@@ -328,6 +328,16 @@ body.trail-off .trail, body.trail-off .mopspur{display:none}
 .vrow.warn .vbar i{background:var(--warn,#e0a33a)}
 .vrow.bad  .vbar i{background:var(--bad,#ff5c7a)}
 .vpct{flex:none;width:34px;text-align:right;font-variant-numeric:tabular-nums;opacity:.8}
+/* Reset-Knopf je Verschleiss-Zeile (Etappe C, Commit C2 -- kein Vorbild in legacy.html, dort
+   gab es nur die Anzeige). Dezent, damit er die Balkenanzeige nicht dominiert -- wird erst auf
+   Hover/Fokus deutlicher, dieselbe Zurueckhaltung wie beim Zahnrad-Icon. */
+.vrow .vreset{flex:none;background:none;border:none;padding:2px;margin:0;line-height:0;
+  color:inherit;opacity:.55;cursor:pointer}
+.vrow .vreset:hover, .vrow .vreset:focus-visible{opacity:1}
+/* Saugbeutel-Statuszeile: kein Balken, nur Text -- ersetzt vbar+vpct in dieser einen Zeile. */
+.vstatus{flex:1;text-align:right;font-size:12px;opacity:.8}
+.vrow.warn .vstatus{color:var(--warn,#e0a33a);opacity:1}
+.vrow.bad .vstatus{color:var(--bad,#ff5c7a);opacity:1}
 /* Statistik als unaufdringlicher Verweis in der Abschnitts-Ueberschrift statt als
    eigener Knopf — so kostet sie keine Zeile Hoehe. */
 .statsbtn{background:none;border:none;padding:0;cursor:pointer;font:inherit;font-size:12px;

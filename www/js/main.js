@@ -26,7 +26,7 @@
  * Siehe WIDGET_SESSION_STATUS.md fuer die vollstaendige Herleitung dieser Entscheidung.
  */
 
-/* global Daten, Geraete, Config, PanelRegistry, KopfPanel */
+/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel */
 
 // ===== Zustand (verbatim aus www/legacy.html "Zustand"-Bereich uebernommen, minus SOCK —
 // die alte direkte Socket.io-Sendefunktion cmd() wird nicht mehr gebraucht, Trigger/Daten
@@ -71,6 +71,7 @@ function updateCleanPanel() {}
 
 // ===== Panels (Etappe C). Weitere Panel-Klassen kommen mit ihren Commits dazu. =====
 PanelRegistry.registriere('kopf', KopfPanel);
+PanelRegistry.registriere('wartung', WartungPanel);
 
 // ===== Verbindungsstatus (Karten-Overlay oben rechts) + Geraetename in der Kopfzeile =====
 const errEl = document.getElementById('err');
