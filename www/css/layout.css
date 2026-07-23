@@ -253,7 +253,7 @@ body.trail-off .trail, body.trail-off .mopspur{display:none}
    unruhig. Die Reihenfolge im Markup bleibt, das Raster setzt es um. */
 .g-kopf .gear{grid-column:2; grid-row:1; align-self:start}
 .g-kopf .kopfstatus{grid-column:1; grid-row:1}
-.g-kopf .warnbox, .g-kopf .actbtns{grid-column:1 / -1}
+.g-kopf .warnbox, .g-kopf .actbtns, .g-kopf .inforeihe{grid-column:1 / -1}
 .g-kopf .actbtns{margin-left:0}
 .g-kopf .abtn{flex:1}
 .g-kopf .abtn.start{flex:2}          /* Start bekommt den doppelten Anteil */
@@ -263,6 +263,15 @@ body.trail-off .trail, body.trail-off .mopspur{display:none}
 .kopfstatus .ssub{font-size:12px;opacity:.75;margin-top:3px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kopfstatus .ssub .ico{vertical-align:-3px;margin-right:3px}
+/* Info-Reihe (Akku/Reinigung/Flaeche): auto-fit statt fester Spaltenzahl, damit sie sich
+   selbst an jede Sidebar-Breite anpasst -- bei schmaler Spalte faellt sie auf eine Spalte
+   pro Zeile zurueck (untereinander), bei breiter stehen alle drei nebeneinander. */
+.inforeihe{display:grid; grid-template-columns:repeat(auto-fit, minmax(70px, 1fr));
+  gap:4px 12px; margin-top:6px}
+.infoitem{display:flex; flex-direction:column; min-width:0}
+.infoitem .info-val{font-size:14px;font-weight:700;line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.infoitem .info-lbl{font-size:11px;opacity:.65}
 /* Ueberschrift eines Abschnitts mit rechtsbuendigem Zusatz ("Raum antippen zum Wählen",
    "Statistik"). Nutzt Platz, der sonst leer bliebe. */
 /* flex-wrap + flex:none am Zusatz: passt er neben die Ueberschrift, steht er dort;

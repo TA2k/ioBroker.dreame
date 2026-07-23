@@ -72,10 +72,21 @@ function updateCleanPanel() {}
 // ===== Panels (Etappe C). Weitere Panel-Klassen kommen mit ihren Commits dazu. =====
 PanelRegistry.registriere('kopf', KopfPanel);
 
-// ===== Verbindungsstatus + Geraetename in der Kopfzeile =====
+// ===== Verbindungsstatus (Karten-Overlay oben rechts) + Geraetename in der Kopfzeile =====
 const errEl = document.getElementById('err');
 const connEl = document.getElementById('conn');
 function setConn(txt, col) { connEl.textContent = txt; connEl.style.color = col || ''; connEl.style.borderColor = col || ''; }
+setConn('🟡 Verbindet…', '#ffcc66');
+
+// Gebunden an den echten Adapter-State dreame.0.info.connection (Cloud-Verbindung des
+// Adapters zum Geraet-Hersteller-Backend) -- NICHT an das Socket.io-Verbindungsereignis zum
+// ioBroker-Server selbst, das nur sagt, ob unser Browser mit ioBroker spricht, nichts ueber
+// die Geraeteverbindung. Adapter-weiter State (kein DID-Anteil), siehe main.js dreame.0.
+const CONN_ID = 'dreame.0.info.connection';
+function zeigeVerbindung(wert) {
+  if (wert == null) setConn('🟡 Verbindet…', '#ffcc66');
+  else setConn(wert ? '🟢 Live' : '🔴 Offline', wert ? '#38e29b' : '#ff8098');
+}
 
 // ===== Minimaler Zoom/Pan (ERSETZT Ricardos setupZoom() aus overlays.js fuer diesen
 // Commit: setupZoom() verdrahtet zusaetzlich Zahnrad/Badge-Klick/Stations-Klick/UI-Regler,
@@ -134,7 +145,6 @@ async function kartenPaketVerarbeiten(cloudStr) {
 (async () => {
   try {
     const sock = await Daten.verbinden();
-    Daten.auf('verbindung', verbunden => setConn(verbunden ? '🟢 Live' : '🔴 getrennt', verbunden ? '#38e29b' : '#ff8098'));
     if (!sock) {
       errEl.textContent = Daten.IOB
         ? 'Keine Verbindung zu ' + Daten.IOB + '\n\nLäuft der web-Adapter? Ist die Adresse erreichbar?'
@@ -142,6 +152,8 @@ async function kartenPaketVerarbeiten(cloudStr) {
       setConn('🔴 keine Verbindung', '#ff8098');
       return;
     }
+    Daten.subscribe(CONN_ID, zeigeVerbindung);
+    zeigeVerbindung(await Daten.getState(CONN_ID));
 
     const geraet = await Geraete.starten();
     if (!geraet) {

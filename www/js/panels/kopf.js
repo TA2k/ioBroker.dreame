@@ -354,6 +354,7 @@ class KopfPanel extends Panel {
   render() {
     if (!this.container) return;
     this._renderStatus();
+    this._renderInfo();
     this._renderWarnungen();
     this._renderButtons();
     this.aktualisiereBadges();
@@ -364,16 +365,30 @@ class KopfPanel extends Panel {
     if (!t) return;
     const vst = this.vst;
     t.textContent = (vst.state != null && STATE_DE[vst.state]) ? STATE_DE[vst.state] : (vst.state != null ? 'Status ' + vst.state : '–');
+    // Akku/Reinigungsfortschritt/Flaeche stehen seit der Info-Reihe (_renderInfo) nicht
+    // mehr hier -- nur noch, was dort keinen Platz hat (Dauer, Trocknungsfortschritt).
     const teile = [];
-    if (vst.battery != null) teile.push(uiIcon(vst.charging === 1 ? 'akkuLaedt' : 'akku', 13) + vst.battery + ' %');
     const laeuftAehnlich = [1, 7, 12, 21, 25, 27, 37, 38, 101, 102].includes(vst.state);
-    if (laeuftAehnlich) {
-      if (vst.cprog > 0) teile.push(vst.cprog + ' %');
-      if (vst.carea > 0) teile.push(vst.carea + ' m²');
-      if (vst.ctime > 0) teile.push(vst.ctime + ' min');
-    }
+    if (laeuftAehnlich && vst.ctime > 0) teile.push(vst.ctime + ' min');
     if ((vst.state === 8 || vst.state === 35) && vst.dprog > 0) teile.push('Trocknung ' + vst.dprog + ' %');
     s.innerHTML = teile.length ? teile.join(' · ') : '–';
+  }
+
+  /** Info-Reihe: Akku, Reinigungsfortschritt, Flaeche (WIDGET_UMBAU_PLAN.md Etappe C,
+   * C1-Nachbesserung). Reinigung nutzt status.cleaning-progress direkt statt cleaned-area
+   * durch eine Gesamtflaeche zu teilen -- ein status.total-area gibt es beim Vacuum nicht
+   * (im Objektbaum nachgesehen), das Geraet liefert den Prozentwert bereits fertig.
+   * Akku zeigt immer den aktuellen Wert; Reinigung/Flaeche zeigen "–", solange Gina steht
+   * -- cleaned-area/cleaning-progress stehen dann bereits auf 0 (das Geraet haelt keinen
+   * "letzte Reinigung"-Wert vor), eine Zahl waere hier irrefuehrender als ein Platzhalter. */
+  _renderInfo() {
+    const elAkku = document.getElementById('info-akku');
+    if (!elAkku) return;
+    const vst = this.vst;
+    elAkku.textContent = vst.battery != null ? vst.battery + ' %' : '–';
+    const aktiv = istGestartet(vst);
+    document.getElementById('info-reinigung').textContent = (aktiv && vst.cprog != null) ? vst.cprog + ' %' : '–';
+    document.getElementById('info-flaeche').textContent = (aktiv && vst.carea != null) ? vst.carea + ' m²' : '–';
   }
 
   _renderWarnungen() {
