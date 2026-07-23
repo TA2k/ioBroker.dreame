@@ -2536,6 +2536,14 @@ class Dreame extends utils.Adapter {
 
     const actionStates = [
       { id: 'start-clean', name: 'Start Cleaning (2-1)', siid: 2, aiid: 1, in: [] },
+      {
+        id: 'startCleaning',
+        name: 'Start Cleaning (trigger)',
+        siid: 2,
+        aiid: 1,
+        in: [],
+        desc: 'Widget/script trigger for a full-room clean. Same MIoT action as start-clean, ignores custom-room-cleaning selection.',
+      },
       { id: 'pause', name: 'Pause Cleaning (2-2)', siid: 2, aiid: 2, in: [] },
       { id: 'return-to-dock', name: 'Return to Dock (3-1)', siid: 3, aiid: 1, in: [] },
       {
