@@ -28,18 +28,22 @@
  *    Widget einen Editor dafuer hat.
  *
  * 3. Kein Auswahl-Overlay (openPicker/openSlider existieren im modularen Widget noch nicht,
- *    siehe station.js-Kommentarkopf zu C4): Modus/Route/Saugstaerke/Wassermenge sind direkte
- *    <select>-Elemente im Panel selbst, kein Dialog. Fuer Saugstaerke (4 Stufen) und
- *    Wassermenge (s.u., 3 Stufen) passt das gut.
+ *    siehe station.js-Kommentarkopf zu C4): Modus/Route/Saugstaerke sind direkte
+ *    <select>-Elemente im Panel selbst, kein Dialog. Fuer Saugstaerke (4 Stufen) passt das
+ *    gut. Die Feuchtigkeits-Kachel (s.u.) bekam in der C5-Nachbesserung stattdessen einen
+ *    <input type=range> -- 32 Stufen sprengen eine Auswahlliste, ist aber ebenso ein
+ *    direktes Steuerelement im Panel, kein Dialog.
  *
- * Wasser-Kachel bindet an remote.water-volume (SIID 4-5, 3 Stufen: niedrig/mittel/hoch),
- * NICHT an Ricardos remote.wetness-level (SIID 28-1, 1-32 Stufen): der Adapter baut die
- * custom-room-cleaning-Befehlsliste selbst aus genau water-volume (main.js
- * _buildCustomRoomCleaningSelects) — wetness-level einzublenden wuerde eine Zahl zeigen, die
- * bei Raum-Reinigung gar nicht ankommt. Existiert water-volume fuer dieses Geraet nicht
- * (manche Modelle haben nur wetness-level, siehe main.js-Kommentar dort), bleibt die
- * Wasser-Kachel einfach aus — gleiches "kein State = keine Zeile"-Muster wie Wartung/
- * Statistik (C2/C3).
+ * Feuchtigkeits-Kachel bindet an remote.wetness-level (SIID 28-1, Range 1-32), NICHT mehr
+ * an remote.water-volume wie im urspruenglichen C5-Commit geplant: water-volume existiert
+ * am X40 nicht ("state not found", Live-Test 2026-07-23, siehe WIDGET_SESSION_STATUS.md
+ * Bug 1) — wetness-level ist der tatsaechlich vorhandene State, Ricardos Legacy nutzt genau
+ * den (cmd('remote.wetness-level', wert)). Die damit einhergehende Diskrepanz zur
+ * custom-room-cleaning-Befehlsliste (main.js _buildCustomRoomCleaningSelects baut dort
+ * weiterhin aus water-volume) ist bekannt und bewusst NICHT Teil dieser Nachbesserung — das
+ * haengt an der sendeRoomAuswahl-Strategieentscheidung, die noch aussteht.
+ * Existiert wetness-level fuer dieses Geraet nicht, bleibt die Kachel einfach aus — gleiches
+ * "kein State = keine Zeile"-Muster wie Wartung/Statistik (C2/C3).
  *
  * Ersetzt main.js' B5-Platzhalter (customizedCleaning/globalSaug/globalWasser/raumSaugt/
  * raumWischt/raumWdh/updateCleanPanel) durch echte Werte — siehe main.js-Diff. raumSaug()/
@@ -76,7 +80,6 @@ const CLEAN_ROUTES = [
 const routenFuer = m => ((m === 0 || m === 2) ? CLEAN_ROUTES.filter(r => r.id !== 2 && r.id !== 3) : CLEAN_ROUTES);
 
 const SUCT_NAMES = ['Leise', 'Standard', 'Stark', 'Turbo'];
-const WATER_NAMES = { 1: 'Niedrig', 2: 'Mittel', 3: 'Hoch' };
 
 // ===== Globale Bruecken-Werte fuer den Karten-Layer (render.js' baueBadge()/updateRoomBadges(),
 // seit B2/B5 unveraendert) — ERSETZEN main.js' B5-Platzhalter, siehe Kommentarkopf oben. =====
@@ -107,7 +110,7 @@ class ReinigungPanel extends Panel {
     this._idModus = `dreame.0.${did}.remote.cleaning-mode`;
     this._idRoute = `dreame.0.${did}.status.cleaning-route`;
     this._idSaug = `dreame.0.${did}.remote.suction-level`;
-    this._idWasser = `dreame.0.${did}.remote.water-volume`;
+    this._idWasser = `dreame.0.${did}.remote.wetness-level`;
     this._idCustom = `dreame.0.${did}.remote.customized-cleaning`;
     return [this._idModus, this._idRoute, this._idSaug, this._idWasser, this._idCustom];
   }
@@ -206,18 +209,30 @@ class ReinigungPanel extends Panel {
     el.disabled = customizedCleaning || !modeSaugt(cleanMode);
   }
 
+  /** Feuchtigkeits-Regler (remote.wetness-level, 1-32) -- Slider statt Dropdown, s.
+   * Kommentarkopf. oninput haelt nur Wert-Anzeige/Fuellstand waehrend des Ziehens nach,
+   * gesendet wird erst bei onchange (Loslassen) -- gleiches Muster wie overlays.js' uiRange/
+   * lgRange. --fill setzt den Slider hier selbst (reglerFuellung() aus legacy.html existiert
+   * im modularen Widget noch nicht). */
   _renderWasser() {
     const karte = document.getElementById('reinigungWasserKarte');
     const el = document.getElementById('reinigungWasser');
+    const wertEl = document.getElementById('reinigungWasserWert');
     if (!el || !karte) return;
     karte.hidden = !this.wasserDa;
     if (!this.wasserDa) return;
+    const fuellen = () => {
+      const pct = (Number(el.value) - Number(el.min)) / (Number(el.max) - Number(el.min)) * 100;
+      el.style.setProperty('--fill', pct + '%');
+      if (wertEl) wertEl.textContent = el.value;
+    };
     if (!el.dataset.gefuellt) {
-      el.innerHTML = Object.entries(WATER_NAMES).map(([wid, n]) => `<option value="${wid}">${n}</option>`).join('');
       el.dataset.gefuellt = '1';
-      el.onchange = () => Trigger.setWaterVolume(this.did, Number(el.value));
+      el.oninput = fuellen;
+      el.onchange = () => Trigger.setWetnessLevel(this.did, Number(el.value));
     }
-    if (this.wasser != null) el.value = String(this.wasser);
+    if (this.wasser != null && document.activeElement !== el) el.value = String(this.wasser);
+    fuellen();
     el.disabled = customizedCleaning || !modeWischt(cleanMode);
   }
 

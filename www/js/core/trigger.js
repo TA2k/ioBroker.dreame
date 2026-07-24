@@ -55,7 +55,7 @@ const Trigger = (() => {
   const setCleaningMode = (did, wert) => Daten.setState(pfad(did, 'cleaning-mode'), wert);
   const setCleaningRoute = (did, wert) => Daten.setState(pfad(did, 'set-cleaning-route'), wert);
   const setSuctionLevel = (did, wert) => Daten.setState(pfad(did, 'suction-level'), wert);
-  const setWaterVolume = (did, wert) => Daten.setState(pfad(did, 'water-volume'), wert);
+  const setWetnessLevel = (did, wert) => Daten.setState(pfad(did, 'wetness-level'), wert);
   const setCustomizedCleaning = (did, an) => Daten.setState(pfad(did, 'customized-cleaning'), !!an);
 
   /**
@@ -110,6 +110,6 @@ const Trigger = (() => {
     startCleaning, startCustomRoomCleaning, stopCleaning, chargeHome,
     resetMainBrush, resetSideBrush, resetFilter, resetSensor,
     startWashing, startAutoEmpty, resumeWashing, pauseWashing, startDrying, stopDrying,
-    setCleaningMode, setCleaningRoute, setSuctionLevel, setWaterVolume, setCustomizedCleaning,
+    setCleaningMode, setCleaningRoute, setSuctionLevel, setWetnessLevel, setCustomizedCleaning,
   };
 })();

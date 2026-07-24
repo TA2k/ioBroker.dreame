@@ -372,6 +372,8 @@ body.trail-off .trail, body.trail-off .mopspur{display:none}
 .rkarte select{font:inherit;font-size:12.5px;font-weight:700;padding:6px 8px;border-radius:8px;
   border:1px solid var(--line);background:var(--panel2);color:var(--txt);min-width:0}
 .rkarte select:disabled{opacity:.4;cursor:not-allowed}
+.rkarte input[type=range]:disabled{opacity:.4;cursor:not-allowed}
+.rk .rkwert{font-weight:800;color:var(--accent,#4a78e0)}
 .rtoggle{display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer}
 .rtoggle input:disabled + span{opacity:.5}
 /* Abstand zwischen den Gruppen. Der Wert von 10 px zwischen Auswahl und Steuerung
