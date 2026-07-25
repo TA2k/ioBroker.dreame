@@ -53,7 +53,7 @@
  * Betriebsart.
  */
 
-/* global Panel, Trigger, Daten, geraetGestartet, selectedRooms, updateRoomBadges, drawFills, updateLabels */
+/* global Panel, Trigger, Daten, geraetGestartet, updateRoomBadges, drawFills, updateLabels */
 
 // ===== Reinigungsmodus: EINE Auswahl aus vier, wie das Geraet es kennt (remote.cleaning-mode,
 // vom Adapter bereits auf 0-3 dekodiert — siehe lib/specs/cleaning.js CLEANING_MODE_DECODE). =====
@@ -83,6 +83,12 @@ const SUCT_NAMES = ['Leise', 'Standard', 'Stark', 'Turbo'];
 
 // ===== Globale Bruecken-Werte fuer den Karten-Layer (render.js' baueBadge()/updateRoomBadges(),
 // seit B2/B5 unveraendert) — ERSETZEN main.js' B5-Platzhalter, siehe Kommentarkopf oben. =====
+// selectedRooms zog mit Etappe C5.5 (Commit 3) von main.js hierher um: seit C5.5-2 ist es
+// kein per-Klick-Set mehr, sondern reiner Adapter-Spiegel (befuellt ausschliesslich durch
+// _aktualisiereRaumMuster()/neueDatenMuster() unten) — gehoert damit inhaltlich zu diesem
+// Panel, nicht mehr zur Karten-Grundgeruest-Datei main.js. render.js/overlays.js/kopf.js
+// lesen ihn weiterhin als gemeinsamen Skript-Global (kein Bundler, siehe eslint.config.cjs).
+const selectedRooms = new Set();
 let customizedCleaning = false;
 let globalSaug = 1;
 let globalWasser = 3;
@@ -199,6 +205,20 @@ class ReinigungPanel extends Panel {
     this.render();
   }
 
+  /** Kartenklick auf einen Raum (Etappe C5.5, Commit 3, Widget->Adapter-Richtung): schreibt
+   * sofort den passenden Checkbox-State um, statt ein lokales Set zu toggeln. Die
+   * eigentliche Anzeige-Aenderung kommt NICHT von hier, sondern erst ueber neueDatenMuster()
+   * zurueck, sobald der Adapter die Aenderung bestaetigt (echtes Round-Trip, kein optimistisches
+   * UI-Update) -- damit Widget und Adapter nie auseinanderlaufen koennen.
+   * Kein Effekt, wenn der Raum zu keiner gerade abonnierten Karte gehoert (z.B. Klick waehrend
+   * eines Kartenwechsels mitten im Um-Abonnieren) -- dann gibt es keinen Checkbox-State zum
+   * Schreiben. */
+  raumUmschalten(seg) {
+    const stateId = Object.keys(this._raumVonState).find(id => this._raumVonState[id] === seg);
+    if (!stateId) return;
+    Daten.setState(stateId, !selectedRooms.has(seg));
+  }
+
   /** Nach einem Moduswechsel kann die eingestellte Route wegfallen (Intensiv/Tief gibt es
    * beim Saugen nicht). HA setzt dann auf Standard zurueck — aber nur, solange KEIN Auftrag
    * laeuft: mitten in der Fahrt wuerde das die laufende Reinigung umstellen. 1:1 aus Ricardos
@@ -311,3 +331,8 @@ class ReinigungPanel extends Panel {
 // kopf.js' geraetGestartet()/updateBadges()).
 let reinigungInstanz = null;
 function updateCleanPanel() { if (reinigungInstanz) reinigungInstanz.render(); }
+
+// Bruecke zum Karten-Layer fuer den Widget->Adapter-Schreibweg (Etappe C5.5, Commit 3):
+// render.js' selectRoom() ruft das statt eines lokalen Set-Toggles auf, gleiches
+// Bruecken-Muster wie updateCleanPanel() direkt darueber.
+function raumUmschalten(seg) { if (reinigungInstanz) reinigungInstanz.raumUmschalten(seg); }

@@ -159,9 +159,13 @@ function skaliereMarken(erzwingen){
   }
   skaliereStationHit();
 }
+// Etappe C5.5, Commit 3 (WIDGET_UMBAU_PLAN.md Abschnitt 5.1): kein lokales Set-Toggle mehr
+// -- selectRoom() schreibt sofort den Adapter-Checkbox-State (raumUmschalten(), reinigung.js).
+// Die sichtbare Auswahl aendert sich NICHT hier, sondern erst wenn die Bestaetigung ueber
+// die C5.5-2-Muster-Subscription zurueckkommt (neueDatenMuster() ruft dann selbst
+// drawFills()/updateLabels()/render() auf) -- kein optimistisches UI-Update.
 function selectRoom(seg){
-  if (selectedRooms.has(seg)) selectedRooms.delete(seg); else selectedRooms.add(seg); // Klick toggelt
-  drawFills(); updateLabels(); updateCleanPanel();
+  raumUmschalten(seg);
 }
 
 // ===== Abspielkopf (🎨 bewusste Abweichung von HA) =====

@@ -413,11 +413,17 @@ class KopfPanel extends Panel {
    *
    * Raumbasierte Start-Semantik (Etappe C, Commit C5, WIDGET_UMBAU_PLAN.md "Start-Button-
    * Semantik: bei Auswahl -> startCustomRoomCleaning, bei 'alles' -> startCleaning") jetzt
-   * umgesetzt: `selectedRooms` (main.js, per Kartenklick befuellt seit B2/B5) entscheidet.
+   * umgesetzt: `selectedRooms` (seit Etappe C5.5/Commit 3 in reinigung.js, reiner
+   * Adapter-Spiegel statt lokalem Klick-Set) entscheidet.
    * Nach einem erfolgreichen raumbasierten Start wird die Auswahl geleert (1:1 wie Ricardos
    * Original: "Auswahl nach dem Start leeren, damit sie nicht beim naechsten Mal 'vergessen'
    * mitlaeuft") — `drawFills()`/`updateLabels()` (Karten-Layer) und `updateCleanPanel()`
    * (Reinigungs-Panel-Bruecke, Commit C5) zeichnen die Aenderung nach.
+   * ACHTUNG (seit C5.5-3, offen fuer C5.5-4): `selectedRooms.clear()` leert nur die lokale
+   * Spiegel-Menge, schreibt aber NICHT `false` in die Adapter-Checkboxen — die bleiben nach
+   * dem Start auf `true` stehen (Batch-Write in trigger.js setzt sie dorthin). Bis zur naechsten
+   * echten Aenderung zeigt das Widget "keine Auswahl", obwohl der Adapter noch alle Haken
+   * gesetzt hat. Vor C5.5-4 mit David klaeren, ob/wie das noch behoben wird.
    */
   _renderButtons() {
     const start = document.getElementById('c-start');

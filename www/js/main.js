@@ -42,7 +42,8 @@ let W, He, GS, H, META, rooms, raw, mapStart, MAPW, MAPH;
 let robotMk = null, chargerMk = null, robotPos = null, chargerPos = null;
 let trailEl = null, mopEl = null, trailPts = [];
 let scale = 1, tx = 0, ty = 0, minScale = 1, box = { x0: 0, y0: 0, x1: 1, y1: 1 }, firstFit = true;
-const selectedRooms = new Set(); // per Klick gewaehlte Raeume (kommt erst mit Etappe C zum Tragen)
+// selectedRooms lebt seit Etappe C5.5 (Commit 3) in reinigung.js -- dort Adapter-Spiegel
+// statt hier lokal deklariertes Klick-Set, siehe reinigung.js-Kommentarkopf.
 
 // ===== Aussehen: nur was die Karte selbst braucht. uiFaktor/kartenDrehung kommen aus
 // dem NEUEN Config-System (Commit B3), nicht mehr aus URL-Parametern/localStorage wie im
