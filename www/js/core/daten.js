@@ -30,7 +30,15 @@ const Daten = (() => {
   let sock = null;
   let verbunden = false;
   const stateAbonnenten = {};  // State-ID -> Set(callback(wert, state))
+  const musterAbonnenten = {}; // Muster -> { regex, cbs: Set(callback(id, wert, state)) }, fuer C5.5-1
   const themenAbonnenten = {}; // Thema (z.B. 'verbindung') -> Set(callback(wert)), fuer Pub/Sub ohne State-ID
+
+  /** Wildcard-Muster ('*' = beliebig viele Zeichen) in RegExp uebersetzen, alle anderen
+   * Regex-Sonderzeichen werden escaped. Fuer subscribeMuster()/unsubscribeMuster(). */
+  function musterZuRegex(muster) {
+    const escaped = muster.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+    return new RegExp('^' + escaped + '$');
+  }
 
   function ladeScript(src) {
     return new Promise((res, rej) => {
@@ -76,6 +84,13 @@ const Daten = (() => {
       (stateAbonnenten[id] || new Set()).forEach(cb => {
         try { cb(st.val, st); } catch (e) { console.error('[daten] Abonnent-Fehler bei', id, e); }
       });
+      for (const muster in musterAbonnenten) {
+        const eintrag = musterAbonnenten[muster];
+        if (!eintrag.regex.test(id)) continue;
+        eintrag.cbs.forEach(cb => {
+          try { cb(id, st.val, st); } catch (e) { console.error('[daten] Muster-Abonnent-Fehler bei', muster, id, e); }
+        });
+      }
     });
     sock.on('disconnect', () => meldeVerbindung(false));
     sock.on('connect', () => meldeVerbindung(true));
@@ -126,6 +141,30 @@ const Daten = (() => {
     }
   }
 
+  /** Muster abonnieren (z.B. 'dreame.0.<did>.remote.custom-room-cleaning.map-1.*') --
+   * fuer States, deren IDs erst zur Laufzeit bekannt sind (Etappe C5.5, WIDGET_UMBAU_PLAN.md
+   * Abschnitt 5.1). Callback bekommt anders als bei subscribe() die konkrete ID mit
+   * (cb(id, wert, state)), weil unter einem Muster mehrere States liegen koennen. Das
+   * ioBroker-Backend versteht Wildcard-Muster direkt im 'subscribe'-Emit (wie bei vis); die
+   * lokale musterAbonnenten-Regex dient nur dem Dispatch auf die richtigen Callbacks. */
+  function subscribeMuster(muster, cb) {
+    if (!musterAbonnenten[muster]) {
+      musterAbonnenten[muster] = { regex: musterZuRegex(muster), cbs: new Set() };
+      if (sock) sock.emit('subscribe', muster);
+    }
+    musterAbonnenten[muster].cbs.add(cb);
+  }
+
+  function unsubscribeMuster(muster, cb) {
+    const eintrag = musterAbonnenten[muster];
+    if (!eintrag) return;
+    eintrag.cbs.delete(cb);
+    if (!eintrag.cbs.size) {
+      delete musterAbonnenten[muster];
+      if (sock) sock.emit('unsubscribe', muster);
+    }
+  }
+
   /** Themen-Pub/Sub fuer Ereignisse ohne eigene State-ID (z.B. Verbindungsstatus). */
   function auf(thema, cb) {
     if (!themenAbonnenten[thema]) themenAbonnenten[thema] = new Set();
@@ -136,7 +175,8 @@ const Daten = (() => {
   }
 
   return {
-    IOB, verbinden, getState, getStates, getObject, getObjects, setState, subscribe, unsubscribe, auf, abAuf,
+    IOB, verbinden, getState, getStates, getObject, getObjects, setState, subscribe, unsubscribe,
+    subscribeMuster, unsubscribeMuster, auf, abAuf,
     get verbunden() { return verbunden; },
   };
 })();
