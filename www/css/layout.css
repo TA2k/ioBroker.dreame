@@ -253,7 +253,7 @@ body.trail-off .trail, body.trail-off .mopspur{display:none}
    unruhig. Die Reihenfolge im Markup bleibt, das Raster setzt es um. */
 .g-kopf .gear{grid-column:2; grid-row:1; align-self:start}
 .g-kopf .kopfstatus{grid-column:1; grid-row:1}
-.g-kopf .warnbox, .g-kopf .actbtns, .g-kopf .inforeihe{grid-column:1 / -1}
+.g-kopf .actbtns, .g-kopf .inforeihe{grid-column:1 / -1}
 .g-kopf .actbtns{margin-left:0}
 .g-kopf .abtn{flex:1}
 .g-kopf .abtn.start{flex:2}          /* Start bekommt den doppelten Anteil */

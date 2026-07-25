@@ -43,7 +43,6 @@
           <div class="infoitem"><span class="info-val" id="info-reinigung">–</span><span class="info-lbl">Reinigung</span></div>
           <div class="infoitem"><span class="info-val" id="info-flaeche">–</span><span class="info-lbl">Fläche</span></div>
         </div>
-        <div class="warnbox" id="warnBox" hidden></div>
         <div class="actbtns">
           <button class="abtn start" id="c-start" title="Start" aria-label="Reinigung starten">
             <span class="abtext">Start</span>
@@ -51,6 +50,12 @@
           <button class="abtn stop" id="c-stop" title="Stop" aria-label="Reinigung anhalten"></button>
           <button class="abtn home" id="c-home" title="Home" aria-label="Zurück zur Ladestation"></button>
         </div>
+      </section>
+      <!-- Fehler-Panel (Etappe C-Aufräumung, Commit C6-1): Fehler-/Warnmeldungen, aus dem
+           Kopf-Panel ausgekoppelt. Kein eigener Titel -- war vorher auch nur der Meldungs-
+           Kasten ohne Ueberschrift, bleibt inhaltlich unveraendert, jetzt nur eigenes Panel. -->
+      <section class="gruppe g-fehler" id="panel-fehler">
+        <div class="warnbox" id="warnBox" hidden></div>
       </section>
       <!-- Reinigungs-Panel (Etappe C, Commit C5): Kachel-Grid (Modus/Route/Saug/Wasser),
            Betriebsart, Raumauswahl-Anzeige. Bewusst ohne Auswahl-Overlay (siehe
