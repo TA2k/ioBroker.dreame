@@ -498,22 +498,25 @@ function hitRoom(clientX, clientY){
 }
 
 
-// Füllfarbe eines Raums je nach Auswahlzustand:
-//  keine Auswahl -> normal; gewählt -> dunkler; nicht gewählt -> blasser
+// Füllfarbe eines Raums je nach Auswahlzustand (Etappe C6-4, WIDGET_UMBAU_PLAN.md
+// Abschnitt 6.4, "Alles reinigen"-Standardverhalten): nur noch ZWEI Zustaende statt
+// vormals drei. Ohne Auswahl gilt "alle Raeume aktiv" (Start reinigt alle) -- das sieht
+// jetzt genauso aus wie ein einzeln angetippter Raum (volle Faerbung), nicht mehr wie ein
+// dritter, blasserer "normal"-Zustand. Nur ein Raum, der WAEHREND einer bestehenden
+// Teil-Auswahl NICHT mitgewaehlt ist, wird ausgegraut.
 function roomFill(id){
   const g = segGrp(id);
-  if (selectedRooms.size===0) return g[0];               // keine Auswahl -> normal (helle HA-Farbe)
-  if (selectedRooms.has(id))  return g[1];               // gewählt: kräftige HA-Schattierung
-  return mix(g[0],WHITE,0.5);                            // andere: blasser
+  if (selectedRooms.size===0 || selectedRooms.has(id)) return g[1]; // aktiv/gewaehlt: volle Faerbung
+  return mix(g[0],WHITE,0.5);                                       // nicht gewaehlt: ausgegraut
 }
 // Label-Farbe/Stärke – bleibt immer gut lesbar (dunkle Schrift + weißer Schatten via CSS)
 function labelStyle(id){
   const dark = mix(segGrp(id)[1],BLACK,0.5); // dunkle Raumfarbe = gut lesbar
   // Schriftgewicht IMMER gleich (800) — nur Farbe/Deckkraft zeigen die Auswahl an.
   // (Vorher wechselte es auf 700, wenn ein anderer Raum markiert war -> stoerendes Zappeln.)
-  if (selectedRooms.has(id))  return { fill:rgbCss(mix(segGrp(id)[1],BLACK,0.6)), weight:'800', opacity:'1' };
-  if (selectedRooms.size>0)   return { fill:rgbCss(dark), weight:'800', opacity:'0.65' };
-  return { fill:rgbCss(dark), weight:'800', opacity:'1' };
+  // Gleiches Zwei-Zustaende-Prinzip wie roomFill() (s.o.): keine Auswahl zaehlt wie gewaehlt.
+  if (selectedRooms.size===0 || selectedRooms.has(id)) return { fill:rgbCss(mix(segGrp(id)[1],BLACK,0.6)), weight:'800', opacity:'1' };
+  return { fill:rgbCss(dark), weight:'800', opacity:'0.65' };
 }
 function updateLabels(){
   for (const id of Object.keys(labelEls)){ const s=labelStyle(+id), el=labelEls[id];

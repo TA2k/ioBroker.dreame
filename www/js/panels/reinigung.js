@@ -245,11 +245,15 @@ class ReinigungPanel extends Panel {
     updateRoomBadges();
   }
 
+  // Etappe C6-4 (WIDGET_UMBAU_PLAN.md Abschnitt 6.4): "aktiv" vs. "gewählt" ist bewusst
+  // unterschiedlicher Wortlaut -- "aktiv" markiert den Standardzustand (alle Räume, Start
+  // reinigt alle), "gewählt" eine bewusste Auswahl (nur diese Räume). Gleiche Bedeutung wie
+  // die Zwei-Zustaende-Faerbung in render.js (roomFill()/labelStyle()).
   _renderRaum() {
     const el = document.getElementById('reinigungRaum');
     if (!el) return;
     const n = selectedRooms.size;
-    el.textContent = n === 0 ? 'Raum antippen zum Wählen' : (n === 1 ? '1 Raum gewählt' : n + ' Räume gewählt');
+    el.textContent = n === 0 ? 'Alle Räume aktiv' : (n === 1 ? '1 Raum gewählt' : n + ' Räume gewählt');
   }
 
   /** Bei Raum-Auswahl waehlt das X40 den Modus pro Raum selbst und ignoriert den globalen
