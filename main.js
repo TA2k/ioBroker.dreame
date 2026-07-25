@@ -5610,41 +5610,53 @@ class Dreame extends utils.Adapter {
           if (_crcParts[5] === 'start' && state.val) {
             // customized-cleaning-Vorbedingung entfernt am 25.07. Live-Test hat gezeigt, dass
             // das Geraet die Bedingung nicht braucht - Fall B in WIDGET_SESSION_STATUS.
-            const _startActiveMapSt = await this.getStateAsync(`${deviceId}.remote.custom-room-cleaning.active-map`);
-            const _startActiveMapId =
-              _startActiveMapSt && _startActiveMapSt.val ? String(_startActiveMapSt.val) : null;
-            if (!_startActiveMapId) {
-              this.log.warn('custom-room-cleaning: active-map not set, start aborted');
-              await this.setStateAsync(id, false, true);
+            this._crcStartInFlight = this._crcStartInFlight || new Set();
+            if (this._crcStartInFlight.has(deviceId)) {
+              this.log.warn('custom-room-cleaning: start already in progress, ignoring duplicate trigger');
               return;
             }
-            // Recompute fresh from the checkboxes of the active map instead of trusting the
-            // persisted customCommand value, which may still hold roomIds from a different map
-            // (e.g. left over from a checkbox click before active-map was switched).
-            const _selects = await this._buildCustomRoomCleaningSelects(deviceId, `map-${_startActiveMapId}`);
-            if (_selects.length === 0) {
-              this.log.warn('custom-room-cleaning: kein Raum ausgewählt für aktive Map, Start abgebrochen');
-              await this.setStateAsync(id, false, true);
-              return;
-            }
-            const _selectsJson = JSON.stringify({ selects: _selects });
-            // Keep customCommand in sync with what is actually sent.
-            await this.setState(`${deviceId}.remote.custom-room-cleaning.customCommand`, _selectsJson, true);
-            this.log.info(`custom-room-cleaning start: ${_selectsJson}`);
-            await this.sendCommand({
-              did: deviceId,
-              method: 'action',
-              params: {
+            this._crcStartInFlight.add(deviceId);
+            try {
+              const _startActiveMapSt = await this.getStateAsync(
+                `${deviceId}.remote.custom-room-cleaning.active-map`,
+              );
+              const _startActiveMapId =
+                _startActiveMapSt && _startActiveMapSt.val ? String(_startActiveMapSt.val) : null;
+              if (!_startActiveMapId) {
+                this.log.warn('custom-room-cleaning: active-map not set, start aborted');
+                await this.setStateAsync(id, false, true);
+                return;
+              }
+              // Recompute fresh from the checkboxes of the active map instead of trusting the
+              // persisted customCommand value, which may still hold roomIds from a different map
+              // (e.g. left over from a checkbox click before active-map was switched).
+              const _selects = await this._buildCustomRoomCleaningSelects(deviceId, `map-${_startActiveMapId}`);
+              if (_selects.length === 0) {
+                this.log.warn('custom-room-cleaning: kein Raum ausgewählt für aktive Map, Start abgebrochen');
+                await this.setStateAsync(id, false, true);
+                return;
+              }
+              const _selectsJson = JSON.stringify({ selects: _selects });
+              // Keep customCommand in sync with what is actually sent.
+              await this.setState(`${deviceId}.remote.custom-room-cleaning.customCommand`, _selectsJson, true);
+              this.log.info(`custom-room-cleaning start: ${_selectsJson}`);
+              await this.sendCommand({
                 did: deviceId,
-                siid: 4,
-                aiid: 1,
-                in: [
-                  { piid: 1, value: 18 },
-                  { piid: 10, value: _selectsJson },
-                ],
-              },
-            });
-            await this.setStateAsync(id, false, true);
+                method: 'action',
+                params: {
+                  did: deviceId,
+                  siid: 4,
+                  aiid: 1,
+                  in: [
+                    { piid: 1, value: 18 },
+                    { piid: 10, value: _selectsJson },
+                  ],
+                },
+              });
+              await this.setStateAsync(id, false, true);
+            } finally {
+              this._crcStartInFlight.delete(deviceId);
+            }
             return;
           }
           // Any other sub-state (e.g. active-map): no device command needed
