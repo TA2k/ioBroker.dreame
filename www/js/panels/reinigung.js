@@ -1,6 +1,6 @@
 /*
- * Reinigungs-Panel: Modus/Route/Saugstaerke/Wassermenge (Kachel-Grid), Betriebsart
- * (Einheitlich/Individuell), Raumauswahl-Anzeige, Start-Button-Semantik.
+ * Reinigungs-Panel: Modus/Route/Saugstaerke/Wassermenge (Kachel-Grid), Raumauswahl-Anzeige,
+ * Start-Button-Semantik.
  * ========================================================================
  * Groesstes Panel — WIDGET_UMBAU_PLAN.md Etappe C, Commit C5, "Konsolidierungs-Commit"
  * (MAP_PLAN 7.2: alle Sende-Wege ueber Adapter-Trigger).
@@ -22,10 +22,16 @@
  * 2. Individuelle Pro-Raum-Einstellungen (Ricardos openRoomSettings(), Popup mit eigenem
  *    Modus/Saugstaerke/Wassermenge/Wiederholung je Raum, schreibt map.cleanset.<roomId>.*)
  *    sind NICHT Teil dieses Commits — eigener Entwurf/Speichern-Fluss, vertagt auf einen
- *    spaeteren Nachtrag. Die Betriebsart-Kachel (Einheitlich/Individuell) schaltet trotzdem
- *    schon den echten Geraeteschalter (remote.customized-cleaning) — das Geraet wendet dann
- *    an, was VORHER (App/altes Widget) je Raum gespeichert wurde, auch ohne dass dieses
- *    Widget einen Editor dafuer hat.
+ *    spaeteren Nachtrag. Der "Individuell pro Raum"-Umschalter, den Ricardos Original hier
+ *    zeigt (schreibt remote.customized-cleaning), hatte im modularen Widget nur so lange
+ *    einen Zweck, wie der Adapter dieses Flag als Vorbedingung fuer custom-room-cleaning.start
+ *    verlangte — dieses Gate ist mit Fix b78772e entfernt (siehe WIDGET_SESSION_STATUS.md),
+ *    die Kachel damit funktional obsolet und in Commit C6-2 (WIDGET_UMBAU_PLAN.md Abschnitt 6)
+ *    wieder entfernt worden. remote.customized-cleaning wird weiterhin gespiegelt (siehe
+ *    customizedCleaning unten) — der Schalter ist ein echter Geraetezustand, der auch ohne
+ *    Widget-UI von aussen (App/altes Widget) gesetzt sein kann und weiterhin bestimmt, ob
+ *    Modus/Route/Saug/Wasser-Kacheln und Karten-Badges die globalen oder die (hier nicht
+ *    editierbaren) Pro-Raum-Werte zeigen.
  *
  * 3. Kein Auswahl-Overlay (openPicker/openSlider existieren im modularen Widget noch nicht,
  *    siehe station.js-Kommentarkopf zu C4): Modus/Route/Saugstaerke sind direkte
@@ -236,7 +242,6 @@ class ReinigungPanel extends Panel {
     this._renderRoute();
     this._renderSaug();
     this._renderWasser();
-    this._renderBetriebsart();
     updateRoomBadges();
   }
 
@@ -320,14 +325,6 @@ class ReinigungPanel extends Panel {
     if (this.wasser != null && document.activeElement !== el) el.value = String(this.wasser);
     fuellen();
     el.disabled = customizedCleaning || !modeWischt(cleanMode);
-  }
-
-  _renderBetriebsart() {
-    const el = document.getElementById('reinigungBetriebsart');
-    if (!el) return;
-    el.onchange = () => Trigger.setCustomizedCleaning(this.did, el.checked);
-    if (this.custom != null) el.checked = this.custom;
-    el.disabled = geraetGestartet();
   }
 
   dispose() {
