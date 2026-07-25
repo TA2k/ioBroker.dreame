@@ -53,7 +53,7 @@
  * Betriebsart.
  */
 
-/* global Panel, Trigger, geraetGestartet, selectedRooms, updateRoomBadges */
+/* global Panel, Trigger, Daten, geraetGestartet, selectedRooms, updateRoomBadges, drawFills, updateLabels */
 
 // ===== Reinigungsmodus: EINE Auswahl aus vier, wie das Geraet es kennt (remote.cleaning-mode,
 // vom Adapter bereits auf 0-3 dekodiert — siehe lib/specs/cleaning.js CLEANING_MODE_DECODE). =====
@@ -104,6 +104,12 @@ class ReinigungPanel extends Panel {
     this.wasser = null;
     this.wasserDa = false;
     this.custom = null;
+    // Adapter->Widget-Spiegelung der Raum-Checkboxen (Etappe C5.5, WIDGET_UMBAU_PLAN.md
+    // Abschnitt 5.1, Commit 2). _mapId/_raumMuster/_raumVonState gehoeren zusammen, siehe
+    // _aktualisiereRaumMuster().
+    this._mapId = null;
+    this._raumMuster = null;
+    this._raumVonState = {}; // State-ID -> numerische Raum-ID (native.roomId)
   }
 
   benoetigteStates(did) {
@@ -112,7 +118,8 @@ class ReinigungPanel extends Panel {
     this._idSaug = `dreame.0.${did}.remote.suction-level`;
     this._idWasser = `dreame.0.${did}.remote.wetness-level`;
     this._idCustom = `dreame.0.${did}.remote.customized-cleaning`;
-    return [this._idModus, this._idRoute, this._idSaug, this._idWasser, this._idCustom];
+    this._idActiveMap = `dreame.0.${did}.remote.custom-room-cleaning.active-map`;
+    return [this._idModus, this._idRoute, this._idSaug, this._idWasser, this._idCustom, this._idActiveMap];
   }
 
   init(did) {
@@ -137,9 +144,58 @@ class ReinigungPanel extends Panel {
     } else if (stateId === this._idCustom) {
       this.custom = !!wert;
       customizedCleaning = this.custom;
+    } else if (stateId === this._idActiveMap) {
+      this._aktualisiereRaumMuster(wert == null ? null : String(wert));
+      return; // _aktualisiereRaumMuster rendert selbst (async), hier nicht doppelt
     } else {
       return;
     }
+    this.render();
+  }
+
+  /** Bei (Erst-)Bekanntwerden oder Wechsel der aktiven Karte: alte Raum-Muster-Subscription
+   * abmelden, neue fuer die jetzt aktive Karte aufbauen. Adapter->Widget-Richtung von
+   * C5.5-2 -- Gegenstueck zu trigger.js' ermittleAktiveKarte()/startCustomRoomCleaning(),
+   * die dasselbe Muster fuer die Widget->Adapter-Richtung nutzen (dort einmalig beim Start,
+   * hier dauerhaft abonniert). */
+  async _aktualisiereRaumMuster(mapId) {
+    if (this._mapId === mapId) return;
+    if (this._raumMuster) this.entferneMusterAbo(this._raumMuster);
+    // Raeume der bisherigen Karte aus der Auswahl nehmen -- sie gehoeren zu einer jetzt
+    // nicht mehr aktiven Karte und duerfen nicht als "ausgewaehlt" stehen bleiben.
+    for (const raumId of Object.values(this._raumVonState)) selectedRooms.delete(raumId);
+    this._mapId = mapId;
+    this._raumMuster = null;
+    this._raumVonState = {};
+    if (this.did !== null && mapId) {
+      const muster = `dreame.0.${this.did}.remote.custom-room-cleaning.map-${mapId}.*`;
+      const [objekte, werte] = await Promise.all([Daten.getObjects(muster), Daten.getStates(muster)]);
+      if (this._mapId !== mapId || this.did === null) return; // waehrenddessen wieder gewechselt/abgebaut
+      for (const [stateId, o] of Object.entries(objekte)) {
+        if (!o || !o.native || o.native.roomId === undefined) continue;
+        const raumId = Number(o.native.roomId);
+        this._raumVonState[stateId] = raumId;
+        const st = werte[stateId];
+        if (st && st.val) selectedRooms.add(raumId); else selectedRooms.delete(raumId);
+      }
+      this._raumMuster = muster;
+      this.abonniereMuster(muster);
+    }
+    drawFills();
+    updateLabels();
+    this.render();
+  }
+
+  /** Eingehende Checkbox-Aenderung (Klick am Adapter, Objekt-Editor, Skript, ...) in die
+   * lokale Auswahl uebernehmen und die Karte neu zeichnen. Bewusst NICHT auf
+   * document.activeElement/eigene Klicks pruefen wie bei _renderWasser() -- hier gibt es
+   * (noch) kein Eingabeelement, das waehrend der Eingabe verfaelscht werden koennte. */
+  neueDatenMuster(stateId, wert) {
+    const raumId = this._raumVonState[stateId];
+    if (raumId === undefined) return;
+    if (wert) selectedRooms.add(raumId); else selectedRooms.delete(raumId);
+    drawFills();
+    updateLabels();
     this.render();
   }
 

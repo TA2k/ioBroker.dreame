@@ -50,11 +50,20 @@ class Panel {
     this.sichtbar = false;
     this.did = null;
     this._stateAbos = new Map(); // State-ID -> Callback, fuer dispose()
+    this._musterAbos = new Map(); // Muster -> Callback, fuer dispose() (Etappe C5.5)
   }
 
   /** State-IDs (vollstaendig, inkl. DID), die dieses Panel fuer das gegebene Geraet
    * braucht. In Unterklassen ueberschreiben. Default: keine. */
   benoetigteStates(did) { return []; }
+
+  /** Wildcard-Muster (vollstaendig, inkl. DID), die dieses Panel fuer das gegebene Geraet
+   * schon beim Aufbau kennt und dauerhaft braucht (analog zu benoetigteStates()). In
+   * Unterklassen ueberschreiben. Default: keine. Fuer Muster, die sich WAEHREND der
+   * Panel-Lebenszeit aendern (z.B. abhaengig von einem anderen State wie der aktiven
+   * Karte), stattdessen abonniereMuster()/entferneMusterAbo() direkt aufrufen -- dispose()
+   * raeumt in beiden Faellen gleich auf, weil beides in _musterAbos landet. */
+  benoetigteMuster(did) { return []; }
 
   /** Fuer ein Geraet aufbauen: States abonnieren, erstes Rendern. Wird von main.js beim
    * ersten Aufbau und nach jedem Roboter-Wechsel aufgerufen (nach vorherigem dispose()
@@ -69,6 +78,7 @@ class Panel {
     this.did = did;
     const stateIds = this.benoetigteStates(did);
     for (const stateId of stateIds) this.abonniereState(stateId);
+    for (const muster of this.benoetigteMuster(did)) this.abonniereMuster(muster);
     const werte = await Promise.all(stateIds.map(id => Daten.getState(id)));
     stateIds.forEach((stateId, i) => { if (werte[i] != null) this.neueDaten(stateId, werte[i]); });
     this.render();
@@ -82,12 +92,19 @@ class Panel {
    * Werten koennen das granularer ueberschreiben. */
   neueDaten(stateId, wert) { this.render(); }
 
+  /** Wird aufgerufen, wenn sich ein per abonniereMuster() abonnierter State aendert.
+   * Anders als neueDaten() mit der konkreten ID, weil unter einem Muster mehrere States
+   * liegen. Default: einfach neu rendern. */
+  neueDatenMuster(stateId, wert, state) { this.render(); }
+
   /** Beim Roboter-Wechsel oder Abschalten: alle Abos loesen. In Unterklassen bei Bedarf
    * ueberschreiben (super.dispose() aufrufen!), um zusaetzlich eigenen DOM-Zustand oder
    * Timer/Intervalle aufzuraeumen. */
   dispose() {
     for (const [stateId, cb] of this._stateAbos) Daten.unsubscribe(stateId, cb);
     this._stateAbos.clear();
+    for (const [muster, cb] of this._musterAbos) Daten.unsubscribeMuster(muster, cb);
+    this._musterAbos.clear();
     this.did = null;
   }
 
@@ -97,6 +114,23 @@ class Panel {
     const cb = wert => this.neueDaten(stateId, wert);
     this._stateAbos.set(stateId, cb);
     Daten.subscribe(stateId, cb);
+  }
+
+  /** Komfort-Wrapper: Muster abonnieren und fuer dispose() merken. Kann sowohl aus
+   * benoetigteMuster() heraus (statisch, ab init()) als auch jederzeit direkt aus einer
+   * Unterklasse aufgerufen werden (dynamisch, z.B. bei Kartenwechsel — siehe reinigung.js). */
+  abonniereMuster(muster) {
+    const cb = (stateId, wert, state) => this.neueDatenMuster(stateId, wert, state);
+    this._musterAbos.set(muster, cb);
+    Daten.subscribeMuster(muster, cb);
+  }
+
+  /** Gegenstueck zu abonniereMuster() fuer dynamisches Um-Abonnieren (z.B. Kartenwechsel). */
+  entferneMusterAbo(muster) {
+    const cb = this._musterAbos.get(muster);
+    if (!cb) return;
+    Daten.unsubscribeMuster(muster, cb);
+    this._musterAbos.delete(muster);
   }
 
   zeige() {
