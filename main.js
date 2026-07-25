@@ -5599,14 +5599,8 @@ class Dreame extends utils.Adapter {
           }
           // Part C — start button → send cleaning command
           if (_crcParts[5] === 'start' && state.val) {
-            const _custSt = await this.getStateAsync(`${deviceId}.remote.customized-cleaning`);
-            if (!_custSt || !_custSt.val) {
-              this.log.warn(
-                'custom-room-cleaning: customized-cleaning must be enabled before starting custom room cleaning',
-              );
-              await this.setStateAsync(id, false, true);
-              return;
-            }
+            // customized-cleaning-Vorbedingung entfernt am 25.07. Live-Test hat gezeigt, dass
+            // das Geraet die Bedingung nicht braucht - Fall B in WIDGET_SESSION_STATUS.
             const _startActiveMapSt = await this.getStateAsync(`${deviceId}.remote.custom-room-cleaning.active-map`);
             const _startActiveMapId =
               _startActiveMapSt && _startActiveMapSt.val ? String(_startActiveMapSt.val) : null;

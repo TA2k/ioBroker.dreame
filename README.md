@@ -288,11 +288,7 @@ Under `remote.custom-room-cleaning.map-<id>/`, each recognized room appears as a
 
 `remote.suction-level` and `remote.water-volume` apply to all selected rooms. Set them before triggering start if you want non-default values. These are the same states used for regular cleaning.
 
-**e) Enable customized cleaning mode**
-
-`remote.customized-cleaning` must be `true` before starting. If it is not active, the start command is rejected and a warning is logged. This is a device-level prerequisite and is not set automatically.
-
-**f) Start the cleaning run**
+**e) Start the cleaning run**
 
 Set `remote.custom-room-cleaning.start` to `true`. The adapter builds the room selection from the active map's checkboxes, sends it to the robot, and resets the `start` state to `false` automatically.
 
@@ -315,7 +311,6 @@ The `customCommand` and the room checkboxes are **bidirectionally synchronized**
 #### Known limitations
 
 - **Global suction/water only** — suction level and water volume are set identically for all selected rooms. Per-room settings (as shown in `map.cleanset.*`) are not supported by this feature.
-- **`customized-cleaning` prerequisite** — `remote.customized-cleaning` must be enabled manually before triggering `start`. The adapter does not activate it automatically.
 - **Multi-floor tested with one map** — the multi-map structure (one channel group per map) is fully implemented, but only single-map operation has been tested extensively on real hardware. Multi-floor households with two or more maps should work but are not yet verified end-to-end.
 
 ---
