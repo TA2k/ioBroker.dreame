@@ -2875,6 +2875,130 @@ class Dreame extends utils.Adapter {
     return selects;
   }
 
+  // Liefert den zuletzt bekannten rohen (bit-gepackten) Wert einer Compound-Property
+  // (aktuell nur cleaning-mode 4-23) — normalerweise aus this.compoundRaw, befuellt durch
+  // einen MQTT-Push (siehe _lazyCreateState). Ist noch keiner eingetroffen (z.B. direkt
+  // nach Adapter-Neustart, bevor das Geraet von sich aus etwas zu diesem siid/piid
+  // meldet), wird EINMALIG aktiv per HTTP get_properties nachgefragt — gezielt nur fuer
+  // dieses eine siid/piid. Der bestehende Bulk-Poll (updateDevicesViaSpec) fragt ~50
+  // Properties aus SIID 2/3/4 in einem Request ab und scheitert dabei fuer SIID 4 immer
+  // mit code:80001 (im Log verifiziert, 2026-07-25) — ob das an der Buendelung liegt oder
+  // wirklich an SIID 4 als Ganzes, war bislang ungetestet; ein einzelnes siid/piid ist ein
+  // neuer, bisher unverifizierter Versuch (David-Live-Test noetig). Liefert undefined,
+  // wenn auch das scheitert — Aufrufer muss dann abbrechen: einen Rohwert zu ERRATEN
+  // (z.B. 0) wuerde die ungenutzten gepackten Bits (self-clean-area, humidity) im
+  // Compound-Wert stillschweigend zerstoeren, siehe Kommentar am generischen
+  // Schreibpfad in onStateChange.
+  async _ensureRawCompound(did, siid, piid, key) {
+    const cached = this.compoundRaw?.[did]?.[key];
+    if (cached !== undefined) {
+      return cached;
+    }
+    const result = await this.sendCommand({
+      did,
+      method: 'get_properties',
+      params: [{ did, siid, piid, code: 0, updateTime: 0 }],
+    });
+    const entry =
+      result && Array.isArray(result.result) && result.result.find((r) => r.siid === siid && r.piid === piid);
+    if (!entry || entry.value === undefined) {
+      return undefined;
+    }
+    this.compoundRaw[did] = this.compoundRaw[did] || {};
+    this.compoundRaw[did][key] = entry.value;
+    return entry.value;
+  }
+
+  // Liest den aktuellen Adapter-Wert von remote.<remoteId> und schickt ihn (oder, falls
+  // kein sinnvoller Wert vorliegt, defaultValue) als eigenstaendiges Kommando ans Geraet —
+  // Baustein fuer _preSendCleaningProperties() (cleaning-mode-Bug-Fix, siehe
+  // WIDGET_SESSION_STATUS.md). Deckt die drei Schreib-Mechanismen ab, die unter den vier
+  // betroffenen Properties vorkommen: einfache siid/piid-Werte (suction-level,
+  // wetness-level/water-volume), die bit-gepackte cleaning-mode-Property (gleiche
+  // Encode-Logik wie der generische onStateChange-Schreibpfad, inkl. _ensureRawCompound)
+  // und die AutoSwitch-JSON-Eigenschaft (set-cleaning-route).
+  // Existiert der State fuer dieses Geraet nicht (z.B. wetness-level auf einem Modell ohne
+  // SIID 28, oder noch nicht lazy angelegt): still uebersprungen, kein Fehler. Gibt true
+  // zurueck, wenn tatsaechlich etwas gesendet wurde.
+  async _sendCleaningProperty(did, remoteId, defaultValue) {
+    const stateId = `${did}.remote.${remoteId}`;
+    const obj = await this.getObjectAsync(stateId);
+    if (!obj || !obj.native) {
+      return false;
+    }
+    const st = await this.getStateAsync(stateId);
+    const raw = st && st.val !== null && st.val !== undefined ? Number(st.val) : NaN;
+    const value = Number.isFinite(raw) ? raw : defaultValue;
+
+    if (obj.native.autoSwitchKey) {
+      await this.sendCommand({
+        did,
+        method: 'set_properties',
+        params: [{ did, siid: 4, piid: 50, value: JSON.stringify({ k: obj.native.autoSwitchKey, v: value }) }],
+      });
+      this.log.info(`Pre-send ${remoteId}: AutoSwitch ${obj.native.autoSwitchKey}=${value}`);
+      return true;
+    }
+
+    if (obj.native.siid === undefined || obj.native.piid === undefined) {
+      return false;
+    }
+    const key = `${obj.native.siid}-${obj.native.piid}`;
+    const compoundMeta = this.specMetaDict?.[did]?.[key];
+    let writeValue = value;
+    if (compoundMeta?.encode) {
+      const rawCompound = await this._ensureRawCompound(did, obj.native.siid, obj.native.piid, key);
+      if (rawCompound === undefined) {
+        this.log.warn(`Pre-send ${remoteId} skipped: raw compound not available for ${key}`);
+        return false;
+      }
+      const device = this.deviceArray.find((d) => String(d.did) === String(did));
+      writeValue = compoundMeta.encode(value, rawCompound, device && this.deviceHasMopPadLifting(device));
+      this.compoundRaw[did] = this.compoundRaw[did] || {};
+      this.compoundRaw[did][key] = writeValue;
+    }
+    await this.sendCommand({
+      did,
+      method: 'set_properties',
+      params: [{ did, siid: obj.native.siid, piid: obj.native.piid, value: writeValue }],
+    });
+    this.log.info(`Pre-send ${remoteId}: ${key}=${writeValue}`);
+    return true;
+  }
+
+  // cleaning-mode-Bug-Fix (David-Live-Test 2026-07-25 bestaetigt, siehe
+  // WIDGET_SESSION_STATUS.md): das Geraet uebernimmt bei Multi-Raum-Reinigung den globalen
+  // Modus nur, wenn er kurz VOR dem eigentlichen Start-Kommando nochmal explizit gesetzt
+  // wird — nicht einfach den zuletzt am Geraet aktiven Wert. Schickt die vier
+  // Geraete-Properties, die den naechsten Reinigungsauftrag beeinflussen, sequenziell (mit
+  // kurzer Pause dazwischen) ans Geraet, bevor der eigentliche custom-clean-Start folgt.
+  // HA kennt/loest dieses Problem nicht (siehe HA-Referenz-Analyse) — eigener, live
+  // verifizierter Fix. Jeder Schritt darf fuer sich scheitern oder uebersprungen werden
+  // (_sendCleaningProperty faengt das ab) — dieser Vorlauf darf den eigentlichen Start nie
+  // verhindern.
+  async _preSendCleaningProperties(did) {
+    const PAUSE_MS = 150;
+    const pause = () => new Promise((resolve) => setTimeout(resolve, PAUSE_MS));
+
+    await this._sendCleaningProperty(did, 'suction-level', 1); // 1 = Standard
+    await pause();
+
+    // wetness-level (SIID 28-1, z.B. L40s Pro Ultra) bevorzugt, water-volume (SIID 4-5)
+    // als Fallback fuer Geraete ohne wetness-level — gleiche Unterscheidung wie in
+    // reinigung.js und _buildCustomRoomCleaningSelects().
+    const wetnessSent = await this._sendCleaningProperty(did, 'wetness-level', 16); // Mitte von 1-32
+    if (!wetnessSent) {
+      await this._sendCleaningProperty(did, 'water-volume', 2); // 2 = Medium
+    }
+    await pause();
+
+    await this._sendCleaningProperty(did, 'cleaning-mode', 0); // 0 = Saugen
+    await pause();
+
+    await this._sendCleaningProperty(did, 'set-cleaning-route', 1); // 1 = Standard
+    await pause();
+  }
+
   async _lazyCreateState(did, siid, piid, value) {
     const key = `${siid}-${piid}`;
     const path = this.specPropsToIdDict[did]?.[key];
@@ -5636,6 +5760,11 @@ class Dreame extends utils.Adapter {
                 await this.setStateAsync(id, false, true);
                 return;
               }
+              // cleaning-mode-Bug-Fix (live bestaetigt 2026-07-25, siehe
+              // WIDGET_SESSION_STATUS.md): Geraet uebernimmt bei Multi-Raum-Reinigung Modus/
+              // Saug/Wasser/Route nur, wenn sie kurz VOR dem Start nochmal explizit gesetzt
+              // werden. Siehe _preSendCleaningProperties()-Kommentarkopf.
+              await this._preSendCleaningProperties(deviceId);
               const _selectsJson = JSON.stringify({ selects: _selects });
               // Keep customCommand in sync with what is actually sent.
               await this.setState(`${deviceId}.remote.custom-room-cleaning.customCommand`, _selectsJson, true);
@@ -5805,11 +5934,16 @@ class Dreame extends utils.Adapter {
             writeValue = state.val ? 1 : 0;
           }
           if (compoundMeta?.encode) {
-            const rawCompound = this.compoundRaw?.[deviceId]?.[compoundKey];
+            // War bis 2026-07-25 ein reiner Cache-Read mit Abbruch bei Fehltreffer (siehe
+            // Git-Historie) — jetzt _ensureRawCompound(): cacht wie zuvor aus MQTT-Pushes,
+            // fragt aber zusaetzlich EINMALIG aktiv per gezieltem HTTP get_properties nach,
+            // wenn noch nichts gecacht ist, statt nur auf einen zufaelligen Push zu warten
+            // (Live-Beleg: main.js Kommentar dort, cleaning-mode-Bug-Diagnose 2026-07-25).
+            const rawCompound = await this._ensureRawCompound(deviceId, wSiid, wPiid, compoundKey);
             if (rawCompound === undefined) {
-              // SIID 4 never responds to HTTP get_properties (code:80001); raw value
-              // arrives only via MQTT push. Refuse the write rather than silently
-              // destroying the packed bits (humidity, area) with rawCompound=0.
+              // Rohwert weder gecacht noch per gezieltem Read zu bekommen. Abbruch statt
+              // Raten (z.B. 0): wuerde die ungenutzten gepackten Bits (humidity, area)
+              // stillschweigend zerstoeren.
               this.log.warn(
                 `Write aborted for ${compoundKey}: raw compound not yet received from device. ` +
                 `Trigger an MQTT push first (e.g. change a setting in the app).`,
@@ -5823,6 +5957,15 @@ class Dreame extends utils.Adapter {
               encodeDevice && this.deviceHasMopPadLifting(encodeDevice),
             );
             this.log.info(`Compound encode ${compoundKey}: field=${state.val}, raw=${rawCompound} → ${writeValue}`);
+            // Self-prime fuer die naechste Schreibung in dieser Session (z.B. den naechsten
+            // Schritt der _preSendCleaningProperties-Kette) -- optimistisch VOR der
+            // HTTP-Bestaetigung, wie der gesamte compoundRaw-Cache ohnehin nur ein
+            // Best-Effort-Spiegel ist (auch die MQTT-Push-Befuellung hat keine
+            // Erfolgsgarantie). Scheitert der Send doch, ist der gecachte Rohwert fuer
+            // einen Zyklus leicht stale -- kein neues Risiko, nur schneller wieder nutzbar
+            // als "auf den naechsten Zufalls-Push warten".
+            this.compoundRaw[deviceId] = this.compoundRaw[deviceId] || {};
+            this.compoundRaw[deviceId][compoundKey] = writeValue;
           }
           // miIO/Dreame cloud expects an array of property objects, not a single object.
           // Sending a bare object is silently ignored by the device — see official APK
