@@ -247,8 +247,16 @@ class ReinigungPanel extends Panel {
     el.textContent = n === 0 ? 'Raum antippen zum Wählen' : (n === 1 ? '1 Raum gewählt' : n + ' Räume gewählt');
   }
 
+  /** Bei Raum-Auswahl waehlt das X40 den Modus pro Raum selbst und ignoriert den globalen
+   * remote.cleaning-mode (live verifiziert, siehe WIDGET_SESSION_STATUS.md Etappe C5.5-Test
+   * "X40-Eigenheit, kein Bug"). Die Kachel bliebe sonst bedienbar, obwohl die Einstellung beim
+   * Start wirkungslos ist -- deshalb hier ausgegraut + Tooltip statt stillschweigend falscher
+   * Anzeige (Plan Abschnitt 6, Commit C6-3). Tooltip sitzt auf der umschliessenden .rkarte,
+   * nicht auf dem <select> selbst: disabled-Formelemente feuern in den meisten Browsern keine
+   * hover-Events, ein title auf dem <select> wuerde also nie sichtbar werden. */
   _renderModus() {
     const el = document.getElementById('reinigungModus');
+    const karte = document.getElementById('reinigungModusKarte');
     if (!el) return;
     if (!el.dataset.gefuellt) {
       el.innerHTML = CLEAN_MODES.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
@@ -256,7 +264,9 @@ class ReinigungPanel extends Panel {
       el.onchange = () => Trigger.setCleaningMode(this.did, Number(el.value));
     }
     if (this.modus != null) el.value = String(this.modus);
-    el.disabled = customizedCleaning || geraetGestartet();
+    const raumAktiv = selectedRooms.size > 0;
+    el.disabled = customizedCleaning || geraetGestartet() || raumAktiv;
+    if (karte) karte.title = raumAktiv ? 'Bei Raum-Reinigung wählt das Gerät den Modus selbst' : '';
   }
 
   _renderRoute() {
