@@ -5452,6 +5452,15 @@ class Dreame extends utils.Adapter {
    */
   async onStateChange(id, state) {
     if (state) {
+      // custom-room-cleaning.start is a command (role:button) and must arrive with
+      // ack:false. An ack:true write (e.g. a manual value edit rather than a control
+      // click) would otherwise be silently skipped by the ack check below with no
+      // trace anywhere - make that failure mode visible instead.
+      if (state.ack && id.endsWith('.remote.custom-room-cleaning.start')) {
+        this.log.warn(
+          `custom-room-cleaning: start received with ack=true, ignored (expected ack=false for a command)`,
+        );
+      }
       if (!state.ack) {
         const deviceId = id.split('.')[2];
         const folder = id.split('.')[3];
