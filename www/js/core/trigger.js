@@ -79,30 +79,27 @@ const Trigger = (() => {
   }
 
   /**
-   * Reinigung ausgewaehlter Raeume ueber das Adapter-eigene custom-room-cleaning-Feature
-   * (seit v0.3.22): pro Karte benannte Checkbox-States mit `native.roomId`, der Adapter
-   * baut daraus selbst die Geraete-Befehlsliste. Der Adapter VERLANGT selbst
-   * customized-cleaning=true, bevor er den Start-Befehl ausfuehrt (main.js onStateChange,
-   * `custom-room-cleaning.start`-Zweig) — keine Erfindung des Widgets, wird hier nur
-   * automatisch erfuellt statt den Nutzer separat daran zu erinnern.
-   * @param did      Geraete-ID
-   * @param roomIds  ausgewaehlte Raum-IDs (numerisch, wie von der Karte geklickt)
+   * Reinigung der aktuell ausgewaehlten Raeume ueber das Adapter-eigene
+   * custom-room-cleaning-Feature (seit v0.3.22). Deutlich schlanker als vor Etappe C5.5:
+   * die Checkbox-States sind bereits aktuell (jeder Kartenklick schreibt seit C5.5-3 sofort,
+   * siehe reinigung.js raumUmschalten()) -- kein Batch-Write mehr hier noetig, kein
+   * roomIds-Parameter mehr. Die frueher hier erzwungene customized-cleaning=true entfaellt
+   * ebenfalls: der Adapter verlangte das nie wirklich vom Geraet, das war reine
+   * Adapter-Logik, per Fix b78772e entfernt (siehe WIDGET_SESSION_STATUS.md).
+   * Nach dem Start werden die Checkbox-States auf false zurueckgesetzt, damit Widget und
+   * Adapter danach wieder "keine Auswahl" zeigen -- der Adapter hat die Auswahl beim
+   * Verarbeiten von `.start=true` bereits gelesen (main.js Teil C), das Zuruecksetzen
+   * beeinflusst den gerade abgeschickten Befehl nicht mehr.
+   * @param did  Geraete-ID
    * @returns true, wenn der Start-Befehl abgeschickt werden konnte
    */
-  async function startCustomRoomCleaning(did, roomIds) {
+  async function startCustomRoomCleaning(did) {
     const mapId = await ermittleAktiveKarte(did);
     if (!mapId) return false;
-    const objekte = await Daten.getObjects(crcPfad(did, `map-${mapId}.*`));
-    const eintraege = Object.entries(objekte).filter(([, o]) => o && o.native && o.native.roomId !== undefined);
-    if (!eintraege.length) {
-      console.warn('[trigger] custom-room-cleaning: keine Raum-Checkboxen fuer Karte', mapId);
-      return false;
-    }
-    const gewaehlt = new Set([...roomIds].map(Number));
-    await Promise.all(eintraege.map(([stateId, o]) => Daten.setState(stateId, gewaehlt.has(Number(o.native.roomId)))));
-    const custAn = await Daten.getState(pfad(did, 'customized-cleaning'));
-    if (!custAn) await setCustomizedCleaning(did, true);
     await Daten.setState(crcPfad(did, 'start'), true);
+    const objekte = await Daten.getObjects(crcPfad(did, `map-${mapId}.*`));
+    const raumStates = Object.keys(objekte).filter(id => objekte[id] && objekte[id].native && objekte[id].native.roomId !== undefined);
+    await Promise.all(raumStates.map(id => Daten.setState(id, false)));
     return true;
   }
 

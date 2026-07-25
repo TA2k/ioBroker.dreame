@@ -29,7 +29,7 @@
  * KopfPanel-Instanz zeigen (es gibt zu jedem Zeitpunkt hoechstens eine).
  */
 
-/* global Trigger, Panel, uiIcon, NS, ICON, ICON_SIZE, robotMk, chargerMk, selectedRooms, drawFills, updateLabels, updateCleanPanel */
+/* global Trigger, Panel, uiIcon, NS, ICON, ICON_SIZE, robotMk, chargerMk, selectedRooms */
 
 // ===== Roboter-Status (HA device.robot_status / station_status, 1:1 geportet) =====
 
@@ -415,15 +415,12 @@ class KopfPanel extends Panel {
    * Semantik: bei Auswahl -> startCustomRoomCleaning, bei 'alles' -> startCleaning") jetzt
    * umgesetzt: `selectedRooms` (seit Etappe C5.5/Commit 3 in reinigung.js, reiner
    * Adapter-Spiegel statt lokalem Klick-Set) entscheidet.
-   * Nach einem erfolgreichen raumbasierten Start wird die Auswahl geleert (1:1 wie Ricardos
-   * Original: "Auswahl nach dem Start leeren, damit sie nicht beim naechsten Mal 'vergessen'
-   * mitlaeuft") — `drawFills()`/`updateLabels()` (Karten-Layer) und `updateCleanPanel()`
-   * (Reinigungs-Panel-Bruecke, Commit C5) zeichnen die Aenderung nach.
-   * ACHTUNG (seit C5.5-3, offen fuer C5.5-4): `selectedRooms.clear()` leert nur die lokale
-   * Spiegel-Menge, schreibt aber NICHT `false` in die Adapter-Checkboxen — die bleiben nach
-   * dem Start auf `true` stehen (Batch-Write in trigger.js setzt sie dorthin). Bis zur naechsten
-   * echten Aenderung zeigt das Widget "keine Auswahl", obwohl der Adapter noch alle Haken
-   * gesetzt hat. Vor C5.5-4 mit David klaeren, ob/wie das noch behoben wird.
+   * Seit C5.5-4 wird die Auswahl NICHT mehr hier lokal geleert: `Trigger.startCustomRoomCleaning()`
+   * setzt die Checkbox-States nach dem Start selbst auf `false` zurueck (trigger.js) — die
+   * Aenderung kommt wie jede andere Checkbox-Aenderung ueber die C5.5-2-Muster-Subscription
+   * zurueck und raeumt `selectedRooms` samt Kartenanzeige auf demselben Weg auf wie ein
+   * manuelles Abwaehlen. Kein manuelles `drawFills()`/`updateLabels()`/`updateCleanPanel()`
+   * mehr an dieser Stelle noetig.
    */
   _renderButtons() {
     const start = document.getElementById('c-start');
@@ -431,10 +428,9 @@ class KopfPanel extends Panel {
     const home = document.getElementById('c-home');
     if (!start || !stop || !home) return;
     start.innerHTML = uiIcon('start', 18) + '<span class="abtext">Start</span>';
-    start.onclick = async () => {
-      if (selectedRooms.size === 0) { Trigger.startCleaning(this.did); return; }
-      const ok = await Trigger.startCustomRoomCleaning(this.did, [...selectedRooms]);
-      if (ok) { selectedRooms.clear(); drawFills(); updateLabels(); updateCleanPanel(); }
+    start.onclick = () => {
+      if (selectedRooms.size === 0) Trigger.startCleaning(this.did);
+      else Trigger.startCustomRoomCleaning(this.did);
     };
     stop.innerHTML = uiIcon('stop', 20);
     stop.onclick = () => Trigger.stopCleaning(this.did);
