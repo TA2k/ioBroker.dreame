@@ -536,6 +536,7 @@ class Dreame extends utils.Adapter {
     this.subscribeStates('*.shortcuts.*.start');
     this.subscribeStates('*.cleanset.*');
     this.subscribeStates('*.map.maps.*.mapName');
+    this.subscribeStates('*.config.tank.*');
     this.log.info(`Login to ${(this.config.cloudService || 'dreame').toUpperCase()} Cloud...`);
     await this.login();
     if (this.session.access_token) {
@@ -2729,10 +2730,105 @@ class Dreame extends utils.Adapter {
       native: {},
     });
 
+    // Tank-Verbrauchsmanagement (D1a): Konfigurierbare Tank-Kapazitaet + Verbrauch pro
+    // Wasch-Session, daraus berechneter Restwasser-Stand. Siehe TANK_ANALYSE.md.
+    await this.extendObject(`${did}.config.tank`, {
+      type: 'channel',
+      common: { name: 'Water Tank Management' },
+      native: {},
+    });
+    const _tankConfigStates = [
+      { id: 'capacity-ml', name: 'Tank Capacity', unit: 'ml', def: 4000 },
+      { id: 'ml-per-wash', name: 'Water Usage per Wash Session', unit: 'ml', def: 200 },
+      { id: 'warn-threshold-pct', name: 'Warn Threshold', unit: '%', def: 30 },
+      { id: 'critical-threshold-pct', name: 'Critical Threshold', unit: '%', def: 15 },
+      { id: 'wash-counter', name: 'Wash Session Counter', unit: null, def: 0 },
+    ];
+    for (const s of _tankConfigStates) {
+      const _tankStatePath = `${did}.config.tank.${s.id}`;
+      const _tankCommon = /** @type {any} */ ({
+        name: s.name,
+        type: 'number',
+        role: 'value',
+        read: true,
+        write: true,
+        def: s.def,
+      });
+      if (s.unit) {
+        _tankCommon.unit = s.unit;
+      }
+      await this.extendObject(_tankStatePath, { type: 'state', common: _tankCommon, native: {} });
+      // Nutzer-Werte nach Adapter-Update nicht ueberschreiben - nur bei fehlendem Wert Default setzen.
+      const _existingTankState = await this.getStateAsync(_tankStatePath);
+      if (!_existingTankState || _existingTankState.val === null || _existingTankState.val === undefined) {
+        await this.setState(_tankStatePath, s.def, true);
+      }
+    }
+    const _tankResultStates = [
+      { id: 'remaining-ml', name: 'Remaining Water', type: 'number', role: 'value', unit: 'ml' },
+      { id: 'remaining-washes', name: 'Remaining Wash Sessions', type: 'number', role: 'value', unit: null },
+      { id: 'status', name: 'Tank Status', type: 'string', role: 'text', unit: null },
+    ];
+    for (const s of _tankResultStates) {
+      const _tankCommon = /** @type {any} */ ({
+        name: s.name,
+        type: s.type,
+        role: s.role,
+        read: true,
+        write: false,
+      });
+      if (s.unit) {
+        _tankCommon.unit = s.unit;
+      }
+      await this.extendObject(`${did}.config.tank.${s.id}`, { type: 'state', common: _tankCommon, native: {} });
+    }
+    await this._recalcTank(did);
+
     this.log.info(
       `Vacuum states created: ${statusStates.length} status, ${remoteStates.length} remote, ${autoSwitchRemotes.length} autoSwitch, ${actionStates.length} actions`,
     );
   }
+
+  // Berechnet remaining-ml, remaining-washes und status aus capacity-ml, ml-per-wash,
+  // wash-counter und den beiden Schwellenwerten. Einzige Stelle, die diese drei RO-States
+  // schreibt - wird nach jeder Aenderung eines der Eingabe-Werte erneut aufgerufen.
+  async _recalcTank(did) {
+    const _base = `${did}.config.tank`;
+    const [_capacityState, _mlPerWashState, _counterState, _warnState, _criticalState] = await Promise.all([
+      this.getStateAsync(`${_base}.capacity-ml`),
+      this.getStateAsync(`${_base}.ml-per-wash`),
+      this.getStateAsync(`${_base}.wash-counter`),
+      this.getStateAsync(`${_base}.warn-threshold-pct`),
+      this.getStateAsync(`${_base}.critical-threshold-pct`),
+    ]);
+
+    const _capacity = Number(_capacityState && _capacityState.val);
+    const _mlPerWash = Number(_mlPerWashState && _mlPerWashState.val);
+    const _counter = Number(_counterState && _counterState.val) || 0;
+    const _warnPct = Number(_warnState && _warnState.val);
+    const _criticalPct = Number(_criticalState && _criticalState.val);
+
+    if (!_capacity || !_mlPerWash) {
+      this.log.warn(`_recalcTank: capacity-ml oder ml-per-wash fehlt/ist 0 fuer ${did}, ueberspringe Berechnung`);
+      return;
+    }
+
+    const _remainingMl = Math.max(0, _capacity - _counter * _mlPerWash);
+    const _remainingWashes = Math.floor(_remainingMl / _mlPerWash);
+    const _remainingPct = (_remainingMl / _capacity) * 100;
+
+    let _status = 'ok';
+    if (!Number.isNaN(_criticalPct) && _remainingPct <= _criticalPct) {
+      _status = 'critical';
+    } else if (!Number.isNaN(_warnPct) && _remainingPct <= _warnPct) {
+      _status = 'warn';
+    }
+
+    await this.setState(`${_base}.remaining-ml`, _remainingMl, true);
+    await this.setState(`${_base}.remaining-washes`, _remainingWashes, true);
+    await this.setState(`${_base}.status`, _status, true);
+  }
+
   async _setCustomRoomCleaningMap(device, mapId, areaInfo, displayName) {
     const did = device.did;
     const segTypeMap = buildSegmentTypeMap();
@@ -5789,6 +5885,24 @@ class Dreame extends utils.Adapter {
             return;
           }
           // Any other sub-state (e.g. active-map): no device command needed
+          return;
+        }
+        // config.tank: Nutzer/Widget aendert Tank-Einstellungen - Wert uebernehmen (ack:true),
+        // dann Restwasser/Restwaeschen/Status neu berechnen. Siehe TANK_ANALYSE.md.
+        if (id.includes('.config.tank.')) {
+          const _tankIdParts = id.split('.');
+          const _tankStateId = _tankIdParts[_tankIdParts.length - 1];
+          const _writableTankStates = [
+            'capacity-ml',
+            'ml-per-wash',
+            'warn-threshold-pct',
+            'critical-threshold-pct',
+            'wash-counter',
+          ];
+          if (_writableTankStates.includes(_tankStateId)) {
+            await this.setState(id, state.val, true);
+            await this._recalcTank(deviceId);
+          }
           return;
         }
         // Plugin CFG SET/ACTION remotes (cfgKey or actionOp or autoSwitchKey or mowAction in native)
