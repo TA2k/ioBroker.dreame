@@ -35,6 +35,7 @@
 const Trigger = (() => {
   const pfad = (did, id) => `dreame.0.${did}.remote.${id}`;
   const crcPfad = (did, id) => pfad(did, `custom-room-cleaning.${id}`);
+  const tankPfad = (did, id) => `dreame.0.${did}.config.tank.${id}`;
 
   const startCleaning = did => Daten.setState(pfad(did, 'startCleaning'), true);
   const stopCleaning = did => Daten.setState(pfad(did, 'stop'), true);
@@ -56,6 +57,11 @@ const Trigger = (() => {
   const setCleaningRoute = (did, wert) => Daten.setState(pfad(did, 'set-cleaning-route'), wert);
   const setSuctionLevel = (did, wert) => Daten.setState(pfad(did, 'suction-level'), wert);
   const setWetnessLevel = (did, wert) => Daten.setState(pfad(did, 'wetness-level'), wert);
+
+  // ===== Tank-Verbrauch (Etappe D, Commit D1d): manueller Reset zusaetzlich zum
+  // Auto-Reset-Timer im Adapter (D1c) -- fuer den Fall, dass der Nutzer sofort
+  // zuruecksetzen will oder die 10s-Erkennung mal danebenliegt. =====
+  const resetTankCounter = did => Daten.setState(tankPfad(did, 'wash-counter'), 0);
 
   /**
    * Aktive Karte fuer custom-room-cleaning ermitteln. Bevorzugt den bereits gesetzten
@@ -107,5 +113,6 @@ const Trigger = (() => {
     resetMainBrush, resetSideBrush, resetFilter, resetSensor,
     startWashing, startAutoEmpty, resumeWashing, pauseWashing, startDrying, stopDrying,
     setCleaningMode, setCleaningRoute, setSuctionLevel, setWetnessLevel,
+    resetTankCounter,
   };
 })();

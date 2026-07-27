@@ -26,7 +26,7 @@
  * Siehe WIDGET_SESSION_STATUS.md fuer die vollstaendige Herleitung dieser Entscheidung.
  */
 
-/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel, ReinigungPanel, FehlerPanel */
+/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel, ReinigungPanel, FehlerPanel, WasserMoppPanel */
 
 // ===== Zustand (verbatim aus www/legacy.html "Zustand"-Bereich uebernommen, minus SOCK —
 // die alte direkte Socket.io-Sendefunktion cmd() wird nicht mehr gebraucht, Trigger/Daten
@@ -56,6 +56,7 @@ PanelRegistry.registriere('kopf', KopfPanel);
 PanelRegistry.registriere('fehler', FehlerPanel);
 PanelRegistry.registriere('reinigung', ReinigungPanel);
 PanelRegistry.registriere('wartung', WartungPanel);
+PanelRegistry.registriere('frischwasser', WasserMoppPanel);
 PanelRegistry.registriere('statistik', StatistikPanel);
 PanelRegistry.registriere('station', StationPanel);
 
