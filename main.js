@@ -98,6 +98,9 @@ const DreameRoomClean = Object.freeze({
   0: 'No',
   1: 'Yes',
 });
+// D1c: Mindestdauer, die der Frischwassertank draussen sein muss, damit ein Wiedereinsetzen
+// als "aufgefuellt" gilt und den wash-counter zuruecksetzt (siehe TANK_ANALYSE.md 5.3).
+const WATERBOX_REMOVAL_THRESHOLD_MS = 10000;
 const DEVICE_STATUS_STATES = Object.freeze({
   vacuum: {
     1: 'Cleaning',
@@ -533,12 +536,14 @@ class Dreame extends utils.Adapter {
     this._areaInfoByMapId = {};
     this._loggedMissingAreaInfo = {};
     this._lastWashBaseStatus = {};
+    this._waterboxRemovalTimers = {};
     this.subscribeStates('*.remote.*');
     this.subscribeStates('*.shortcuts.*.start');
     this.subscribeStates('*.cleanset.*');
     this.subscribeStates('*.map.maps.*.mapName');
     this.subscribeStates('*.config.tank.*');
     this.subscribeStates('*.status.self-wash-base-status');
+    this.subscribeStates('*.status.clean-water-tank-status');
     this.log.info(`Login to ${(this.config.cloudService || 'dreame').toUpperCase()} Cloud...`);
     await this.login();
     if (this.session.access_token) {
@@ -5660,6 +5665,9 @@ class Dreame extends utils.Adapter {
       this.updateInterval && clearInterval(this.updateInterval);
       this.mowerMapInterval && clearInterval(this.mowerMapInterval);
       this.refreshTokenInterval && clearInterval(this.refreshTokenInterval);
+      for (const _timer of Object.values(this._waterboxRemovalTimers || {})) {
+        if (_timer && _timer !== 'confirmed') clearTimeout(_timer);
+      }
       this.mqttClient && this.mqttClient.end();
 
       callback();
@@ -5698,6 +5706,47 @@ class Dreame extends utils.Adapter {
           await this.setState(`${_tankBase}.wash-counter`, _newCount, true);
           this.log.info(`Tank: wash-counter fuer ${_deviceId} erhoeht auf ${_newCount} (self-wash-base-status 1->0)`);
           await this._recalcTank(_deviceId);
+        }
+        return;
+      }
+      // Tank-Auto-Reset (D1c, siehe TANK_ANALYSE.md 5.3): status.clean-water-tank-status
+      // (siid 27, piid 1, Stations-Seite, lib/specs/station.js) kommt wie self-wash-base-status
+      // immer mit ack:true vom Geraete-Polling. Live bestaetigt per TANK-DIAG-Log (David,
+      // 2026-07-27): 1=Tank raus, 2=wieder rein (Zwischenzustand, zaehlt als installiert), 0=
+      // normal installiert. Zwischenzeitlich faelschlich auf status.water-tank (siid 4, piid 6,
+      // Roboter-Seite) umgestellt worden -- Live-Check auf der laufenden Instanz zeigte, dass
+      // dieser State sich beim Tank-Rausziehen gar nicht mitbewegt (Wert blieb bei 1, letzte
+      // Aenderung Stunden zuvor) und damit fuer diese Erkennung ungeeignet ist. Zurueckkorrigiert
+      // auf clean-water-tank-status. Statt eines separaten Wert-Caches dient ein laufender/
+      // abgelaufener setTimeout selbst als Zustand: solange ein Timer fuer ein Geraet existiert,
+      // gilt der Tank als "gerade entfernt". Feuert der Timer, wird der Eintrag auf 'confirmed'
+      // gesetzt (Schwelle ueberschritten, Tank noch draussen). Kommt der Tank vor Ablauf der
+      // Schwelle zurueck, wird der Timer einfach gecancelt - kein Reset. _waterboxRemovalTimers
+      // startet leer in onReady -> ein Geraet, das beim Start bereits als "installiert" gemeldet
+      // wird, loest nichts aus.
+      if (state.ack && id.endsWith('.status.clean-water-tank-status')) {
+        const _deviceId = id.split('.')[2];
+        const _tankRemoved = state.val === 1; // "Not installed" (0=Installed, 2=Low water gelten als "drin")
+        const _existingTimer = this._waterboxRemovalTimers[_deviceId];
+
+        if (_tankRemoved) {
+          if (!_existingTimer) {
+            this._waterboxRemovalTimers[_deviceId] = setTimeout(() => {
+              this._waterboxRemovalTimers[_deviceId] = 'confirmed';
+            }, WATERBOX_REMOVAL_THRESHOLD_MS);
+          }
+        } else if (_existingTimer) {
+          if (_existingTimer === 'confirmed') {
+            const _tankBase = `${_deviceId}.config.tank`;
+            await this.setState(`${_tankBase}.wash-counter`, 0, true);
+            this.log.info(
+              `Tank: wash-counter fuer ${_deviceId} zurueckgesetzt (Frischwassertank laenger als ${WATERBOX_REMOVAL_THRESHOLD_MS / 1000} Sekunden draussen)`,
+            );
+            await this._recalcTank(_deviceId);
+          } else {
+            clearTimeout(_existingTimer);
+          }
+          delete this._waterboxRemovalTimers[_deviceId];
         }
         return;
       }
