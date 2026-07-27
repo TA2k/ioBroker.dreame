@@ -532,11 +532,13 @@ class Dreame extends utils.Adapter {
     this._areaInfoByDid = {};
     this._areaInfoByMapId = {};
     this._loggedMissingAreaInfo = {};
+    this._lastWashBaseStatus = {};
     this.subscribeStates('*.remote.*');
     this.subscribeStates('*.shortcuts.*.start');
     this.subscribeStates('*.cleanset.*');
     this.subscribeStates('*.map.maps.*.mapName');
     this.subscribeStates('*.config.tank.*');
+    this.subscribeStates('*.status.self-wash-base-status');
     this.log.info(`Login to ${(this.config.cloudService || 'dreame').toUpperCase()} Cloud...`);
     await this.login();
     if (this.session.access_token) {
@@ -5680,6 +5682,24 @@ class Dreame extends utils.Adapter {
         this.log.warn(
           `custom-room-cleaning: start received with ack=true, ignored (expected ack=false for a command)`,
         );
+      }
+      // Tank-Verbrauch (D1b, siehe TANK_ANALYSE.md 3.2): status.self-wash-base-status kommt
+      // immer mit ack:true vom Geraete-Polling. Alter Wert wird selbst gecacht, da onStateChange
+      // nur den neuen Wert liefert und der DB-Wert zu diesem Zeitpunkt bereits ueberschrieben ist.
+      // _lastWashBaseStatus startet leer in onReady -> kein Fehltrigger beim ersten Event nach Restart.
+      if (state.ack && id.endsWith('.status.self-wash-base-status')) {
+        const _deviceId = id.split('.')[2];
+        const _prevWashStatus = this._lastWashBaseStatus[_deviceId];
+        this._lastWashBaseStatus[_deviceId] = state.val;
+        if (_prevWashStatus === 1 && state.val === 0) {
+          const _tankBase = `${_deviceId}.config.tank`;
+          const _counterState = await this.getStateAsync(`${_tankBase}.wash-counter`);
+          const _newCount = (Number(_counterState && _counterState.val) || 0) + 1;
+          await this.setState(`${_tankBase}.wash-counter`, _newCount, true);
+          this.log.info(`Tank: wash-counter fuer ${_deviceId} erhoeht auf ${_newCount} (self-wash-base-status 1->0)`);
+          await this._recalcTank(_deviceId);
+        }
+        return;
       }
       if (!state.ack) {
         const deviceId = id.split('.')[2];
