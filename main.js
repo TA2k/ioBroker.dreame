@@ -2791,6 +2791,34 @@ class Dreame extends utils.Adapter {
     }
     await this._recalcTank(did);
 
+    // Widget-UI-Einstellungen (E0): rein UI-seitig, Adapter greift inhaltlich nicht ein.
+    // Persistenz-Basis fuer das kommende Config-Overlay (E2) - Struktur (sichtbarePanels,
+    // seitenleisteBreite, hintergrund, zahnradSichtbar, spaeter panelEinstellungen) wird
+    // ausschliesslich vom Widget definiert; der Adapter legt den State nur an und ruehrt
+    // den Inhalt sonst nicht an (kein Schema, kein onStateChange-Handler).
+    await this.extendObject(`${did}.info`, {
+      type: 'channel',
+      common: { name: 'Information' },
+      native: {},
+    });
+    const _widgetConfigPath = `${did}.info.widgetConfig`;
+    await this.extendObject(_widgetConfigPath, {
+      type: 'state',
+      common: {
+        name: 'Widget UI Configuration (JSON)',
+        type: 'string',
+        role: 'json',
+        read: true,
+        write: true,
+        def: '{}',
+      },
+      native: {},
+    });
+    const _existingWidgetConfig = await this.getStateAsync(_widgetConfigPath);
+    if (!_existingWidgetConfig || _existingWidgetConfig.val === null || _existingWidgetConfig.val === undefined) {
+      await this.setState(_widgetConfigPath, '{}', true);
+    }
+
     this.log.info(
       `Vacuum states created: ${statusStates.length} status, ${remoteStates.length} remote, ${autoSwitchRemotes.length} autoSwitch, ${actionStates.length} actions`,
     );
