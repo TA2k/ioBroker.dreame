@@ -49,7 +49,7 @@ let scale = 1, tx = 0, ty = 0, minScale = 1, box = { x0: 0, y0: 0, x1: 1, y1: 1 
 // dem NEUEN Config-System (Commit B3), nicht mehr aus URL-Parametern/localStorage wie im
 // alten Widget — die Aussehen-Einstellungen ziehen erst mit Etappe E ins Zahnrad-Overlay. =====
 let uiFaktor = 1;
-let kartenDrehung = 0; // wird nach Config.laden() aus config.aussehen.drehung gesetzt
+let kartenDrehung = 0; // wird nach Config.laden() aus config.layout.drehung gesetzt
 
 // ===== Panels (Etappe C). Weitere Panel-Klassen kommen mit ihren Commits dazu. =====
 PanelRegistry.registriere('kopf', KopfPanel);
@@ -154,7 +154,7 @@ async function kartenPaketVerarbeiten(cloudStr) {
     document.title = 'Map – ' + geraet.name;
 
     const config = await Config.laden(did);
-    kartenDrehung = (config.aussehen && Number(config.aussehen.drehung)) || 0;
+    kartenDrehung = (config.layout && Number(config.layout.drehung)) || 0;
 
     for (const { id, klasse } of PanelRegistry.aktive(config, geraet.typ)) {
       const panel = new klasse(id, document.getElementById('panel-' + id));

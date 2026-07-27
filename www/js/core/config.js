@@ -14,7 +14,7 @@
 
 /* global Daten */
 
-const WIDGET_CONFIG_VERSION = 1;
+const WIDGET_CONFIG_VERSION = 2;
 const WIDGET_ADAPTER_VERSION = '0.4.0'; // Zielversion dieses Umbaus, siehe WIDGET_UMBAU_PLAN.md Kopf
 
 function defaultWidgetConfig() {
@@ -32,7 +32,10 @@ function defaultWidgetConfig() {
       fehler: { sichtbar: true },
       frischwasser: { sichtbar: true },
     },
-    aussehen: {
+    // Namespace hiess bis configVersion 1 "aussehen" - umbenannt im Zuge der Etappe-E-
+    // Modularitaets-Entscheidung (Namespaces layout/panels/einstellungen). Siehe
+    // Migrationsschritt in migriere() weiter unten.
+    layout: {
       farben: 'auto',
       hintergrund: 'gefuellt',
       leiste: 'rechts',
@@ -55,11 +58,18 @@ const Config = (() => {
         'ist neuer als dieses Widget (', WIDGET_CONFIG_VERSION, ') — wird unveraendert genutzt.');
       return gespeichert;
     }
+    // v1->v2: Namespace "aussehen" in "layout" umbenannt (Etappe E). Alten Wert 1:1
+    // uebernehmen, BEVOR unten mit dem Default gemerged wird - sonst wuerden bestehende
+    // Nutzerwerte (z.B. drehung, hintergrund) stillschweigend auf Default zurueckfallen,
+    // weil ab jetzt nur noch "layout" gelesen wird.
+    const _altesLayout = gespeichert.layout || gespeichert.aussehen;
+    const gespeichertOhneAussehen = { ...gespeichert };
+    delete gespeichertOhneAussehen.aussehen;
     return {
       ...std,
-      ...gespeichert,
+      ...gespeichertOhneAussehen,
       panels: { ...std.panels, ...(gespeichert.panels || {}) },
-      aussehen: { ...std.aussehen, ...(gespeichert.aussehen || {}) },
+      layout: { ...std.layout, ...(_altesLayout || {}) },
       configVersion: WIDGET_CONFIG_VERSION,
       adapterVersion: WIDGET_ADAPTER_VERSION,
     };
