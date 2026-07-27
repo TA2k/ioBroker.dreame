@@ -1,15 +1,10 @@
 /*
  * config.js — Widget-Config lesen/schreiben/migrieren.
- * Speicherort: dreame.0.<did>.info.widgetConfig (type: string, role: json), pro Roboter
- * getrennt. Ablauf beim Oeffnen, Migration bei Version-Sprung: WIDGET_ARCHITEKTUR.md
- * Abschnitt 10.
- *
- * WICHTIG (siehe WIDGET_SESSION_STATUS.md): Etappe A hat nur dreame.0.info.devices als
- * neues Adapter-State-Objekt angelegt, kein <did>.info.widgetConfig. Ob Daten.setState()
- * auf ein noch nicht existierendes State-Objekt schreiben kann, haengt von der
- * Socket.io-Konfiguration des web-Adapters ab und ist hier NICHT verifiziert (kein Zugriff
- * auf eine laufende Instanz waehrend der Entwicklung). speichern() protokolliert eine
- * Warnung, wenn das Schreiben fehlschlaegt — Live-Test-Punkt B muss das pruefen.
+ * Speicherort: dreame.0.<did>.config.widget (type: string, role: json), pro Roboter
+ * getrennt. State wird adapterseitig garantiert angelegt (main.js createVacuumRemotes()).
+ * Lag bis zum Umzug unter <did>.info.widgetConfig - Migration auf den neuen Pfad laeuft
+ * einmalig adapterseitig, hier im Widget spielt nur noch der neue Pfad eine Rolle. Ablauf
+ * beim Oeffnen, Migration bei Version-Sprung: WIDGET_ARCHITEKTUR.md Abschnitt 10.
  */
 
 /* global Daten */
@@ -45,7 +40,7 @@ function defaultWidgetConfig() {
 }
 
 const Config = (() => {
-  const konfigId = did => `dreame.0.${did}.info.widgetConfig`;
+  const konfigId = did => `dreame.0.${did}.config.widget`;
 
   /** Gespeicherte Config gegen den aktuellen Stand auffuellen (neue Panels/Felder
    * bekommen ihren Default, vorhandene Nutzer-Werte bleiben erhalten). */

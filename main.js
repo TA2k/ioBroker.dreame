@@ -2791,17 +2791,14 @@ class Dreame extends utils.Adapter {
     }
     await this._recalcTank(did);
 
-    // Widget-UI-Einstellungen (E0): rein UI-seitig, Adapter greift inhaltlich nicht ein.
+    // Widget-UI-Einstellungen: rein UI-seitig, Adapter greift inhaltlich nicht ein.
     // Persistenz-Basis fuer das kommende Config-Overlay (E2) - Struktur (sichtbarePanels,
     // seitenleisteBreite, hintergrund, zahnradSichtbar, spaeter panelEinstellungen) wird
     // ausschliesslich vom Widget definiert; der Adapter legt den State nur an und ruehrt
-    // den Inhalt sonst nicht an (kein Schema, kein onStateChange-Handler).
-    await this.extendObject(`${did}.info`, {
-      type: 'channel',
-      common: { name: 'Information' },
-      native: {},
-    });
-    const _widgetConfigPath = `${did}.info.widgetConfig`;
+    // den Inhalt sonst nicht an (kein Schema, kein onStateChange-Handler). Liegt unter
+    // config.* statt info.* (kein eigener Channel noetig, analog zu config.tank.<id>,
+    // die auch ohne separaten Channel direkt als States existieren).
+    const _widgetConfigPath = `${did}.config.widget`;
     await this.extendObject(_widgetConfigPath, {
       type: 'state',
       common: {
@@ -2814,9 +2811,50 @@ class Dreame extends utils.Adapter {
       },
       native: {},
     });
+
+    // Einmalige Migration vom fruehreren Speicherort <did>.info.widgetConfig (E0) nach
+    // <did>.config.widget. Grundsatz: config.widget ist die Wahrheit, SOBALD es eigenen
+    // Inhalt hat - info.widgetConfig wird nur uebernommen, wenn config.widget noch KEINEN
+    // eigenen Inhalt hat (fehlt, ist noch der leere Default "{}", oder enthaelt kein
+    // gueltiges JSON). Ohne diese Bedingung wuerde ein zufaellig wieder aufgetauchter alter
+    // State (z.B. Backup-Restore, manuell angelegt) bei jedem Adapter-Neustart den
+    // aktuelleren config.widget-Inhalt ueberschreiben. Reihenfolge beim tatsaechlichen
+    // Migrieren bewusst: Wert ZUERST in den neuen State kopieren, ERST DANACH den alten
+    // State loeschen - geht beim Kopieren etwas schief, bleibt der alte Wert als
+    // Ruecksicherung liegen statt verloren zu gehen. Nur der State wird geloescht (nicht
+    // der info-Channel selbst). In jedem Fall, der NICHT migriert (config.widget hat schon
+    // Inhalt), wird ein noch vorhandener alter State trotzdem aufgeraeumt (geloescht), nur
+    // eben ohne config.widget anzufassen.
+    const _hatGueltigenJsonInhalt = val => {
+      if (val === null || val === undefined) return false;
+      try {
+        const _parsed = JSON.parse(val);
+        return _parsed !== null && typeof _parsed === 'object';
+      } catch (e) {
+        return false;
+      }
+    };
     const _existingWidgetConfig = await this.getStateAsync(_widgetConfigPath);
-    if (!_existingWidgetConfig || _existingWidgetConfig.val === null || _existingWidgetConfig.val === undefined) {
-      await this.setState(_widgetConfigPath, '{}', true);
+    const _widgetConfigHatInhalt =
+      !!_existingWidgetConfig &&
+      _existingWidgetConfig.val !== '{}' &&
+      _hatGueltigenJsonInhalt(_existingWidgetConfig.val);
+
+    const _oldWidgetConfigPath = `${did}.info.widgetConfig`;
+    const _oldWidgetConfigState = await this.getStateAsync(_oldWidgetConfigPath);
+    const _oldHatGueltigenInhalt = !!_oldWidgetConfigState && _hatGueltigenJsonInhalt(_oldWidgetConfigState.val);
+
+    if (!_widgetConfigHatInhalt && _oldHatGueltigenInhalt) {
+      await this.setState(_widgetConfigPath, _oldWidgetConfigState.val, true);
+      await this.delObject(_oldWidgetConfigPath);
+      this.log.info(`Widget-Config fuer ${did} migriert von info.widgetConfig nach config.widget`);
+    } else {
+      if (_oldWidgetConfigState) {
+        await this.delObject(_oldWidgetConfigPath);
+      }
+      if (!_widgetConfigHatInhalt) {
+        await this.setState(_widgetConfigPath, '{}', true);
+      }
     }
 
     this.log.info(
