@@ -7,26 +7,23 @@
  * beim Oeffnen, Migration bei Version-Sprung: WIDGET_ARCHITEKTUR.md Abschnitt 10.
  */
 
-/* global Daten */
+/* global Daten, PanelRegistry */
 
-const WIDGET_CONFIG_VERSION = 2;
+const WIDGET_CONFIG_VERSION = 3;
 const WIDGET_ADAPTER_VERSION = '0.4.0'; // Zielversion dieses Umbaus, siehe WIDGET_UMBAU_PLAN.md Kopf
 
 function defaultWidgetConfig() {
+  // Panel-IDs kommen aus PanelRegistry statt aus einer hier gepflegten Liste (bis
+  // configVersion 2 noch hardcodiert) - main.js registriert alle Panel-Klassen SYNCHRON
+  // beim Skript-Start, bevor die Start-IIFE (und damit Config.laden()) ueberhaupt laeuft,
+  // siehe WIDGET_SESSION_STATUS.md Etappe E2a fuer die Ladereihenfolge-Analyse. Jedes neue
+  // Panel bekommt seinen Config-Eintrag damit automatisch, ohne diese Datei anzufassen.
+  const panels = {};
+  for (const { id } of PanelRegistry.alle) panels[id] = { sichtbar: true, versteckt: [] };
   return {
     configVersion: WIDGET_CONFIG_VERSION,
     adapterVersion: WIDGET_ADAPTER_VERSION,
-    // Panel-Liste nach WIDGET_UMBAU_PLAN.md Etappe C/D (siehe auch Commit-B1-Notiz in
-    // WIDGET_SESSION_STATUS.md zur Abweichung von der Beispiel-Liste in WIDGET_ARCHITEKTUR.md §9).
-    panels: {
-      kopf: { sichtbar: true },
-      reinigung: { sichtbar: true },
-      wartung: { sichtbar: true },
-      statistik: { sichtbar: true },
-      station: { sichtbar: true },
-      fehler: { sichtbar: true },
-      frischwasser: { sichtbar: true },
-    },
+    panels,
     // Namespace hiess bis configVersion 1 "aussehen" - umbenannt im Zuge der Etappe-E-
     // Modularitaets-Entscheidung (Namespaces layout/panels/einstellungen). Siehe
     // Migrationsschritt in migriere() weiter unten.
@@ -35,6 +32,19 @@ function defaultWidgetConfig() {
       hintergrund: 'gefuellt',
       leiste: 'rechts',
       drehung: 0,
+      // Ab configVersion 3 (Etappe E2): Zahnrad-Overlay-Felder aus WIDGET_UMBAU_PLAN.md
+      // Etappe E2. theme/color loesen "farben" perspektivisch ab, bleiben aber vorerst
+      // parallel bestehen (farben wird von E2-UI-Code nicht mehr geschrieben, aber noch
+      // nicht entfernt - kein Scope fuer E2a).
+      theme: 1, // 0=hell, 1=dunkel, 2=main-Farbe, 3=custom
+      color: '', // Basis-Farbe fuer theme=2
+      transparent: false, // Hintergrund transparent, orthogonal zu theme
+      width: 275, // Seitenleisten-Breite in px, Default = bisheriger --leiste-breite-Wert (theme.css)
+      customBg: '',
+      customPanel: '',
+      customLine: '',
+      customText: '',
+      customMuted: '',
     },
   };
 }
@@ -60,10 +70,21 @@ const Config = (() => {
     const _altesLayout = gespeichert.layout || gespeichert.aussehen;
     const gespeichertOhneAussehen = { ...gespeichert };
     delete gespeichertOhneAussehen.aussehen;
+    // Panel-Merge auf Feld-Ebene (nicht nur pro Panel-ID) - seit configVersion 3 hat jedes
+    // Panel mehrere Felder (sichtbar, versteckt). Ein flacher Merge wie beim alten
+    // { ...std.panels, ...gespeichert.panels } wuerde bei einem vom Nutzer bereits
+    // individualisierten Panel (z.B. sichtbar:false) das komplette Sub-Objekt ersetzen und
+    // damit das neue versteckt-Default verlieren - analog zum layout-Merge unten daher
+    // pro ID: Default-Panel ueberschrieben von den tatsaechlich gespeicherten Feldern.
+    const alleIds = new Set([...Object.keys(std.panels), ...Object.keys(gespeichert.panels || {})]);
+    const panels = {};
+    for (const id of alleIds) {
+      panels[id] = { ...(std.panels[id] || { sichtbar: true, versteckt: [] }), ...((gespeichert.panels || {})[id]) };
+    }
     return {
       ...std,
       ...gespeichertOhneAussehen,
-      panels: { ...std.panels, ...(gespeichert.panels || {}) },
+      panels,
       layout: { ...std.layout, ...(_altesLayout || {}) },
       configVersion: WIDGET_CONFIG_VERSION,
       adapterVersion: WIDGET_ADAPTER_VERSION,
