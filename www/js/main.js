@@ -66,6 +66,49 @@ const connEl = document.getElementById('conn');
 function setConn(txt, col) { connEl.textContent = txt; connEl.style.color = col || ''; connEl.style.borderColor = col || ''; }
 setConn('🟡 Verbindet…', '#ffcc66');
 
+// ===== Roboter-Umschalter in der Kopfzeile (Etappe E, Commit E1, WIDGET_ARCHITEKTUR.md
+// Abschnitt 12). Sitzt bewusst hier und NICHT in kopf.js: #devName liegt im Karten-Stage
+// (index.html, .maptag.links), ausserhalb jedes Panel-Containers -- Panels werden bei jedem
+// Geraete-Wechsel disposed und neu gebaut, der Umschalter selbst muss das ueberleben. Bei
+// genau einem Geraet bleibt es reiner Text ohne Klick-Verhalten (unveraendertes Verhalten). =====
+const devNameEl = document.getElementById('devName');
+let geraeteDropdownEl = null;
+
+function schliesseGeraeteDropdown() {
+  if (geraeteDropdownEl) { geraeteDropdownEl.remove(); geraeteDropdownEl = null; }
+}
+
+function oeffneGeraeteDropdown() {
+  schliesseGeraeteDropdown();
+  const box = document.createElement('div');
+  box.className = 'geraeteliste';
+  for (const g of Geraete.liste) {
+    const zeile = document.createElement('div');
+    zeile.className = 'gitem' + (g.did === Geraete.aktiveDid ? ' aktiv' : '');
+    zeile.textContent = g.name;
+    zeile.onclick = e => { e.stopPropagation(); schliesseGeraeteDropdown(); Geraete.wechsle(g.did); };
+    box.appendChild(zeile);
+  }
+  devNameEl.appendChild(box);
+  geraeteDropdownEl = box;
+  // Naechster Klick irgendwo (auch ausserhalb) schliesst wieder -- { once:true } braucht
+  // kein manuelles Abmelden. capture:false reicht, weil der Listener erst NACH diesem
+  // Klick-Event registriert wird (kein Selbst-Schliessen durch denselben Klick).
+  setTimeout(() => document.addEventListener('click', schliesseGeraeteDropdown, { once: true }), 0);
+}
+
+/** Name (+ Dropdown-Faehigkeit) fuer das aktuell aktive Geraet neu aufbauen. Wird beim
+ * Start, bei jedem Geraete-Wechsel und bei jeder reinen Listen-Aenderung aufgerufen
+ * (WIDGET_ARCHITEKTUR.md Abschnitt 12: "Bei nur einem Roboter: Dropdown zeigt nur den
+ * einen Namen als Label ohne Interaktion."). */
+function renderGeraeteAuswahl(geraet) {
+  schliesseGeraeteDropdown();
+  devNameEl.textContent = geraet ? geraet.name : '–';
+  const mehrere = Geraete.liste.length > 1;
+  devNameEl.classList.toggle('umschaltbar', mehrere);
+  devNameEl.onclick = mehrere ? (e => { e.stopPropagation(); oeffneGeraeteDropdown(); }) : null;
+}
+
 // Gebunden an den echten Adapter-State dreame.0.info.connection (Cloud-Verbindung des
 // Adapters zum Geraet-Hersteller-Backend) -- NICHT an das Socket.io-Verbindungsereignis zum
 // ioBroker-Server selbst, das nur sagt, ob unser Browser mit ioBroker spricht, nichts ueber
@@ -83,7 +126,10 @@ function zeigeVerbindung(wert) {
 function initZoomPan() {
   stage.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.15 : 1 / 1.15); }, { passive: false });
   let drag = false, lx = 0, ly = 0, sx0 = 0, sy0 = 0;
-  const aufBedienung = t => !!(t && t.closest && t.closest('.zoom'));
+  // #devName ausgenommen seit Etappe E1 (Roboter-Umschalter): sonst faengt
+  // setPointerCapture() jeden Klick darauf als Kartendrag/Raumklick ab, bevor
+  // devNameEl.onclick ueberhaupt feuert -- gleiches Prinzip wie bei .zoom oben.
+  const aufBedienung = t => !!(t && t.closest && (t.closest('.zoom') || t.closest('#devName')));
   stage.addEventListener('pointerdown', e => {
     if (aufBedienung(e.target)) return;
     drag = true; lx = e.clientX; ly = e.clientY; sx0 = e.clientX; sy0 = e.clientY;
@@ -130,6 +176,103 @@ async function kartenPaketVerarbeiten(cloudStr) {
   if (firstFit) { fitVisible(); firstFit = false; } else { box = visibleBox(); clamp(); applyT(); }
 }
 
+// ===== Geraete-Wechsel (Etappe E, Commit E1, WIDGET_ARCHITEKTUR.md Abschnitt 12/8.5):
+// "Roboter-Wechsel ist ein Datenlayer-Ereignis, kein Reload." Alles unten war bis Commit E1
+// einmaliger Ablauf in der Start-IIFE -- jetzt eine wiederverwendbare Funktion, aufgerufen
+// beim Start UND bei jedem Geraete.aufWechsel()-Ereignis. =====
+
+// Stabile Callback-Referenzen (fuer Daten.subscribe/unsubscribe -- dieselbe Funktion muss
+// beim Ab-/Wiederanmelden uebergeben werden, sonst bleibt die alte Socket.io-Subscription
+// bestehen). Die IDs selbst wechseln pro Geraet, siehe ladeGeraet().
+function onRobotState(val) { updateRobot(parsePt(val)); }
+function onChargerState(val) { updateCharger(parsePt(val)); }
+function onCloudState(val) { if (val) kartenPaketVerarbeiten(val); }
+
+let aktivePanels = [];
+let aktRobotId = null, aktChargerId = null, aktCloudId = null;
+
+function panelsAbbauen() {
+  for (const panel of aktivePanels) { panel.verstecke(); panel.dispose(); }
+  aktivePanels = [];
+}
+
+/** Kompletten Karten-Anzeigezustand auf "noch keine Karte da" zuruecksetzen. Noetig, weil
+ * fast der komplette Karten-Layer (main.js/karte/*.js) aus modul-globalen Variablen fuer
+ * GENAU EIN Geraet besteht (WIDGET_ARCHITEKTUR.md 5.4/8.1 sind darauf noch nicht
+ * eingegangen) -- ohne diesen Reset wuerde beim Wechsel kurz die alte Karte/Spur/Marke des
+ * VORHERIGEN Geraets stehen bleiben, bis das neue Geraet sein erstes Kartenpaket schickt
+ * (oder, im Testfall eines Geraets ganz ohne Kartendaten, fuer immer). */
+function resetKartenZustand() {
+  if (animReq) cancelAnimationFrame(animReq);
+  animReq = null;
+  stopGlide();
+  robotPos = null; chargerPos = null;
+  robotMk = null; chargerMk = null;
+  trailEl = null; mopEl = null;
+  trailPts = []; cum = []; headDist = 0; sektTyp = [];
+  staticSaug = ''; staticWisch = ''; staticIdx = 0;
+  dispPos = null; dispAngle = null; angFrom = null; angTo = null; animT = 1;
+  stationHit = null;
+  markScale = null; markUi = null; markDreh = null;
+  rooms = {}; raw = null; META = {}; H = null;
+  // 0 statt undefined: hitRoom() (render.js, Ricardos Portierung, hier unveraendert) prueft
+  // Kartengrenzen ueber "ox>=W||oy>=He" -- mit W/He=undefined waere dieser Vergleich immer
+  // false (Vergleich mit undefined -> NaN), der Guard griffe nicht, und raw[...] crashte mit
+  // "Cannot read properties of null" auf jeden Klick auf die Karte, solange das neue Geraet
+  // noch kein erstes Kartenpaket geschickt hat. Mit 0 bleibt "ox>=0"/"oy>=0" wahr fuer jeden
+  // Klick auf der Kartenflaeche, der Guard greift wie vorgesehen.
+  W = He = GS = MAPW = MAPH = mapStart = 0;
+  carpetSet = new Set(); carpetData = new Map();
+  haHidden = new Set(); activeSegs = new Set(); zoneCleaning = false;
+  roomColorIdx = {};
+  changeSnap = null;
+  hidden.clear();
+  for (const k of Object.keys(markEls)) delete markEls[k];
+  for (const k of Object.keys(labelEls)) delete labelEls[k];
+  for (const k of Object.keys(rowEls)) delete rowEls[k];
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ov.innerHTML = '';
+  firstFit = true;
+}
+
+/** Fuer ein Geraet (neu) aufbauen: Panels + Kartendaten. Wird beim Start UND bei jedem
+ * Geraete-Wechsel aufgerufen (nach vorherigem Abbau des alten Zustands). */
+async function ladeGeraet(did) {
+  panelsAbbauen();
+  resetKartenZustand();
+
+  if (aktRobotId) Daten.unsubscribe(aktRobotId, onRobotState);
+  if (aktChargerId) Daten.unsubscribe(aktChargerId, onChargerState);
+  if (aktCloudId) Daten.unsubscribe(aktCloudId, onCloudState);
+
+  const geraet = Geraete.aktuelles();
+  renderGeraeteAuswahl(geraet);
+  document.title = 'Map – ' + (geraet ? geraet.name : '?');
+
+  const config = await Config.laden(did);
+  kartenDrehung = (config.layout && Number(config.layout.drehung)) || 0;
+
+  for (const { id, klasse } of PanelRegistry.aktive(config, geraet && geraet.typ)) {
+    const panel = new klasse(id, document.getElementById('panel-' + id));
+    aktivePanels.push(panel);
+    panel.zeige();
+    await panel.init(did);
+  }
+
+  aktCloudId = `dreame.0.${did}.map.mergedCloud`;
+  aktRobotId = `dreame.0.${did}.map.robot`;
+  aktChargerId = `dreame.0.${did}.map.charger`;
+
+  robotPos = parsePt(await Daten.getState(aktRobotId));
+  chargerPos = parsePt(await Daten.getState(aktChargerId));
+  const cloud = await Daten.getState(aktCloudId);
+  if (cloud) await kartenPaketVerarbeiten(cloud);
+
+  Daten.subscribe(aktRobotId, onRobotState);
+  Daten.subscribe(aktChargerId, onChargerState);
+  Daten.subscribe(aktCloudId, onCloudState);
+}
+
 (async () => {
   try {
     const sock = await Daten.verbinden();
@@ -149,31 +292,9 @@ async function kartenPaketVerarbeiten(cloudStr) {
       setConn('🔴 kein Gerät', '#ff8098');
       return;
     }
-    const did = geraet.did;
-    document.getElementById('devName').textContent = geraet.name;
-    document.title = 'Map – ' + geraet.name;
-
-    const config = await Config.laden(did);
-    kartenDrehung = (config.layout && Number(config.layout.drehung)) || 0;
-
-    for (const { id, klasse } of PanelRegistry.aktive(config, geraet.typ)) {
-      const panel = new klasse(id, document.getElementById('panel-' + id));
-      panel.zeige();
-      await panel.init(did);
-    }
-
-    const cloudId = `dreame.0.${did}.map.mergedCloud`;
-    const robotId = `dreame.0.${did}.map.robot`;
-    const chargerId = `dreame.0.${did}.map.charger`;
-
-    robotPos = parsePt(await Daten.getState(robotId));
-    chargerPos = parsePt(await Daten.getState(chargerId));
-    const cloud = await Daten.getState(cloudId);
-    if (cloud) await kartenPaketVerarbeiten(cloud);
-
-    Daten.subscribe(robotId, val => updateRobot(parsePt(val)));
-    Daten.subscribe(chargerId, val => updateCharger(parsePt(val)));
-    Daten.subscribe(cloudId, val => { if (val) kartenPaketVerarbeiten(val); });
+    Geraete.aufWechsel(g => { if (g) ladeGeraet(g.did); });
+    Geraete.aufListeAenderung(() => renderGeraeteAuswahl(Geraete.aktuelles()));
+    await ladeGeraet(geraet.did);
   } catch (e) {
     errEl.textContent = 'Fehler: ' + e.message + '\n' + (e.stack || '');
     setConn('🔴 Fehler', '#ff8098');
