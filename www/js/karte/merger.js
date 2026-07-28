@@ -297,6 +297,12 @@ async function decode(cloudStr){
 }
 
 function drawFills(){
+  // Etappe E1: Panels koennen (asynchron, ueber _aktualisiereRaumMuster()/neueDatenMuster())
+  // rendern, BEVOR das aktive Geraet sein erstes Kartenpaket geschickt hat -- z.B. direkt
+  // nach einem Geraete-Wechsel. createImageData(0,0) wirft eine IndexSizeError-Exception;
+  // ohne dekodierte Karte gibt es ohnehin nichts zu zeichnen. Gleicher Guard wie
+  // takeChangeSnapshot() weiter unten in dieser Datei.
+  if (!raw || !W || !He) return;
   const img = octx.createImageData(W,He);
   // Wände gehoeren keinem Raum (Typ WALL ohne Segment-Info). Beim Ausblenden eines
   // Raums sollen seine Waende mitverschwinden: eine Wand-Zelle bleibt nur sichtbar,
