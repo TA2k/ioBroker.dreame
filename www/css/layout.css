@@ -198,7 +198,7 @@ body.trail-off .trail, body.trail-off .mopspur{display:none}
 .zovl-feld:last-child{margin-bottom:0}
 .zovl-feld > span:first-child{color:var(--txt)}
 .zovl-feld select{font:inherit; font-size:12.5px; padding:6px 8px; border-radius:8px;
-  border:1px solid var(--line); background:var(--panel2); color:var(--txt); cursor:pointer}
+  border:1px solid var(--line); background:var(--knoepfe); color:var(--txt); cursor:pointer}
 /* Zusaetzliche Farb-Picker fuer die Modi "Hauptfarbe"/"Benutzerdefiniert" -- per hidden-
    Attribut ein-/ausgeblendet (main.js wendeFarbmodus()), NICHT aus dem DOM entfernt, damit
    Werte beim Hin-und-her-Wechseln zwischen Modi erhalten bleiben (David-Vorgabe E2c). Leichter
@@ -212,12 +212,14 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
    Tastatur/Screenreader nutzbar (appearance:none entfernt nur die native Optik). */
 .zovl-switch-wrap{display:flex; align-items:center; gap:8px}
 .zovl-switch{appearance:none; -webkit-appearance:none; margin:0; flex:none; cursor:pointer;
-  width:44px; height:24px; border-radius:12px; background:var(--panel2);
+  width:44px; height:24px; border-radius:12px;
+  background:color-mix(in srgb, var(--txt) 20%, var(--panel));
   border:1px solid var(--line); position:relative; transition:.15s}
 .zovl-switch::before{content:''; position:absolute; top:1px; left:1px; width:18px; height:18px;
-  border-radius:50%; background:var(--muted); transition:.15s}
-.zovl-switch:checked{background:var(--accent,#4a78e0); border-color:var(--accent,#4a78e0)}
-.zovl-switch:checked::before{left:21px; background:#fff}
+  border-radius:50%; background:var(--panel);
+  border:2px solid color-mix(in srgb, var(--txt) 60%, var(--panel)); transition:.15s}
+.zovl-switch:checked{background:var(--txt)}
+.zovl-switch:checked::before{left:21px}
 .zovl-switch-txt{font-size:12px; color:var(--muted); min-width:38px}
 /* UI-Zoom (Etappe E2c, Nachtrag 2): Zahlenfeld + Minus/Reset/Plus-Buttons statt Slider --
    ein Slider hatte zu groben/schwer feinjustierbaren Effekt und keinen einfachen Weg zurueck
@@ -445,8 +447,9 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
 .vrow{display:flex;align-items:center;gap:9px;font-size:12.5px}
 .vrow .ico{flex:none;opacity:.8}
 .vrow .vname{flex:none;width:88px}
-.vbar{flex:1;height:8px;border-radius:5px;background:var(--line);overflow:hidden}
-.vbar i{display:block;height:100%;border-radius:5px;background:var(--ok,#38e29b)}
+.vbar{flex:1;height:8px;border-radius:5px;
+  background:color-mix(in srgb, var(--txt) 20%, var(--panel));overflow:hidden}
+.vbar i{display:block;height:100%;border-radius:5px;background:var(--txt)}
 .vrow.warn .vbar i{background:var(--warn,#e0a33a)}
 .vrow.bad  .vbar i{background:var(--bad,#ff5c7a)}
 .vpct{flex:none;width:34px;text-align:right;font-variant-numeric:tabular-nums;opacity:.8}
@@ -492,7 +495,7 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
 .rgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 .rkarte{display:flex;flex-direction:column;gap:3px;font-size:11.5px;opacity:.85;min-width:0}
 .rkarte select{font:inherit;font-size:12.5px;font-weight:700;padding:6px 8px;border-radius:8px;
-  border:1px solid var(--line);background:var(--panel2);color:var(--txt);min-width:0}
+  border:1px solid var(--line);background:var(--knoepfe);color:var(--txt);min-width:0}
 .rkarte select:disabled{opacity:.4;cursor:not-allowed}
 .rkarte input[type=range]:disabled{opacity:.4;cursor:not-allowed}
 .rk .rkwert{font-weight:800;color:var(--accent,#4a78e0)}
@@ -559,14 +562,18 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
 input[type=range]{-webkit-appearance:none;appearance:none;
   width:100%;height:34px;margin:0;background:transparent;cursor:pointer;touch-action:pan-y}
 input[type=range]::-webkit-slider-runnable-track{height:10px;border-radius:99px;
-  background:linear-gradient(to right,var(--accent) var(--fill,0%),var(--line) var(--fill,0%))}
+  background:linear-gradient(to right,var(--txt) var(--fill,0%),
+    color-mix(in srgb, var(--txt) 20%, var(--panel)) var(--fill,0%))}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
   width:28px;height:28px;margin-top:-9px;border-radius:50%;
-  background:var(--accent);border:3px solid var(--panel);box-shadow:0 1px 5px rgba(0,0,0,.45)}
-input[type=range]::-moz-range-track{height:10px;border-radius:99px;background:var(--line)}
-input[type=range]::-moz-range-progress{height:10px;border-radius:99px;background:var(--accent)}
+  background:var(--txt);border:3px solid color-mix(in srgb, var(--txt) 60%, var(--panel));
+  box-shadow:0 1px 5px rgba(0,0,0,.45)}
+input[type=range]::-moz-range-track{height:10px;border-radius:99px;
+  background:color-mix(in srgb, var(--txt) 20%, var(--panel))}
+input[type=range]::-moz-range-progress{height:10px;border-radius:99px;background:var(--txt)}
 input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;
-  background:var(--accent);border:3px solid var(--panel);box-shadow:0 1px 5px rgba(0,0,0,.45)}
+  background:var(--txt);border:3px solid color-mix(in srgb, var(--txt) 60%, var(--panel));
+  box-shadow:0 1px 5px rgba(0,0,0,.45)}
 .actbtns{display:flex;gap:8px;flex:none;margin-left:auto}
 /* 44px Hoehe, damit der Knopf am Tablet sicher mit dem Finger zu treffen ist.
    Start traegt als einziger eine Beschriftung und ist breiter: er ist die Aktion, die

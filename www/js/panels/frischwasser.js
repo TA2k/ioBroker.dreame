@@ -17,7 +17,7 @@
 // Balken braucht drei Zustaende (ok/warn/critical), die bestehenden .vrow.warn/.vrow.bad-Regeln
 // greifen hier nicht, weil der Balken (anders als bei wartung.js) senkrecht statt waagerecht
 // neben Icon/Name steht (Vorgabe: Text UEBER dem Balken).
-const TANK_FARBE = { ok: 'var(--ok,#38e29b)', warn: 'var(--warn,#e0a33a)', critical: 'var(--bad,#ff5c7a)' };
+const TANK_FARBE = { ok: 'var(--txt)', warn: 'var(--warn,#e0a33a)', critical: 'var(--bad,#ff5c7a)' };
 const TANK_WARNTEXT = {
   warn: 'Wasser bald nachfüllen',
   critical: 'Wasser dringend nachfüllen — Störungsgefahr!',
