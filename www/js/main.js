@@ -337,6 +337,47 @@ zovlBreiteEl.oninput = () => {
 };
 zovlBreiteEl.onchange = () => schreibeLayout('width', Number(zovlBreiteEl.value));
 
+// ===== Panels-Sektion im Einstellungs-Overlay (Etappe E2d): Sichtbarkeit-Toggle pro Panel
+// (Ebene 1 aus WIDGET_UMBAU_PLAN.md Abschnitt 8.2 -- Feld-Sichtbarkeit "versteckt" ist
+// bewusst NICHT Teil dieser Etappe, siehe WIDGET_SESSION_STATUS.md E2d-Struktur-Analyse:
+// braucht Aenderungen in mehreren Panel-Dateien, eigene Etappe E2e).
+// kopf/fehler sind Kern-Chrome ohne eigene Ueberschrift (Start/Stop/Home bzw. Warnungen) --
+// bewusst NICHT toggle-bar, damit sich niemand versehentlich die Bedienelemente wegklickt.
+// Liste kommt aus PanelRegistry.alle (nicht hartcodierte Reihenfolge) -- sortiert sich die
+// Registry um, folgen die Toggles automatisch. Nur die Anzeige-Namen sind hier gepflegt,
+// weil es keine zentrale "Titel"-Eigenschaft je Panel-Klasse gibt. =====
+const PANEL_LABEL = { reinigung: 'Reinigung', wartung: 'Wartung', frischwasser: 'Wasser & Mopp', statistik: 'Statistik', station: 'Station' };
+const zovlPanelsListe = document.getElementById('zovlPanelsListe');
+zovlPanelsListe.innerHTML = PanelRegistry.alle
+  .filter(eintrag => PANEL_LABEL[eintrag.id])
+  .map(eintrag => `<label class="zovl-feld"><span>${PANEL_LABEL[eintrag.id]}</span>`
+    + `<input type="checkbox" class="zovl-switch" data-panel="${eintrag.id}"></label>`)
+  .join('');
+
+/** Panel-Sichtbarkeit-Checkboxen auf den Stand des aktuell aktiven Geraets bringen
+ * (config.widget ist pro Geraet -- unterschiedliche Roboter koennen unterschiedliche
+ * Panels ausgeblendet haben, Toggles muessen bei jedem Geraete-Wechsel neu gesetzt werden). */
+function initPanelsSektion(config) {
+  for (const el of zovlPanelsListe.querySelectorAll('input[data-panel]')) {
+    const eintrag = config.panels && config.panels[el.dataset.panel];
+    el.checked = eintrag ? eintrag.sichtbar !== false : true;
+  }
+}
+
+// Delegated Listener statt einzelner Handler pro Checkbox: die Checkboxen werden oben zur
+// Laufzeit generiert, ihre Zahl/Reihenfolge kann sich mit der PanelRegistry aendern. Kein
+// Minimum erzwungen -- alle fuenf Panels gleichzeitig aus ist erlaubt (David-Vorgabe),
+// Sidebar bleibt dann einfach leer/leer bis auf kopf/fehler.
+zovlPanelsListe.addEventListener('change', async e => {
+  const id = e.target.dataset.panel;
+  if (!id) return;
+  aktiveWidgetConfig.panels[id].sichtbar = e.target.checked;
+  panelsAbbauen();
+  const geraet = Geraete.aktuelles();
+  await baueAktivePanels(aktiveWidgetConfig, Geraete.aktiveDid, geraet && geraet.typ);
+  await Config.speichern(Geraete.aktiveDid, aktiveWidgetConfig);
+});
+
 // Gebunden an den echten Adapter-State dreame.0.info.connection (Cloud-Verbindung des
 // Adapters zum Geraet-Hersteller-Backend) -- NICHT an das Socket.io-Verbindungsereignis zum
 // ioBroker-Server selbst, das nur sagt, ob unser Browser mit ioBroker spricht, nichts ueber
@@ -425,6 +466,21 @@ function panelsAbbauen() {
   aktivePanels = [];
 }
 
+/** Panel-Instanzen fuer die aktuell sichtbaren Panels (PanelRegistry.aktive(), also
+ * config.widget.panels.<id>.sichtbar + Roboter-Typ) aufbauen. Ausgelagert aus ladeGeraet()
+ * (Etappe E2d), damit die Panel-Sichtbarkeit-Toggles im Einstellungs-Overlay live neu
+ * aufbauen koennen, ohne den kompletten Geraete-Ladevorgang (Karte, Subscriptions usw.) zu
+ * wiederholen. Ruft panelsAbbauen() NICHT selbst auf -- der Aufrufer muss vorher abbauen
+ * (ladeGeraet() tut das schon ganz am Anfang, der Panel-Toggle-Handler ruft es selbst auf). */
+async function baueAktivePanels(config, did, typ) {
+  for (const { id, klasse } of PanelRegistry.aktive(config, typ)) {
+    const panel = new klasse(id, document.getElementById('panel-' + id));
+    aktivePanels.push(panel);
+    panel.zeige();
+    await panel.init(did);
+  }
+}
+
 /** Kompletten Karten-Anzeigezustand auf "noch keine Karte da" zuruecksetzen. Noetig, weil
  * fast der komplette Karten-Layer (main.js/karte/*.js) aus modul-globalen Variablen fuer
  * GENAU EIN Geraet besteht (WIDGET_ARCHITEKTUR.md 5.4/8.1 sind darauf noch nicht
@@ -486,17 +542,13 @@ async function ladeGeraet(did) {
   // Configs zwischen Geraeten abweichen.
   document.documentElement.dataset.leiste = (config.layout && config.layout.leiste) || 'rechts';
   initAussehenSektion(config); // E2c: setzt u.a. --ui aus config.layout.groesse
+  initPanelsSektion(config); // E2d: Panel-Sichtbarkeit-Toggles auf den Stand DIESES Geraets
   // renderGeraeteAuswahl() erst NACH initAussehenSektion(): sie loest
   // aktualisiereOverlayRaender() aus, das den --ui-Wert DIESES Geraets schon braucht (sonst
   // rechnet der erste Aufruf nach einem Geraete-Wechsel noch mit dem alten --ui).
   renderGeraeteAuswahl(geraet);
 
-  for (const { id, klasse } of PanelRegistry.aktive(config, geraet && geraet.typ)) {
-    const panel = new klasse(id, document.getElementById('panel-' + id));
-    aktivePanels.push(panel);
-    panel.zeige();
-    await panel.init(did);
-  }
+  await baueAktivePanels(config, did, geraet && geraet.typ);
 
   aktCloudId = `dreame.0.${did}.map.mergedCloud`;
   aktRobotId = `dreame.0.${did}.map.robot`;
