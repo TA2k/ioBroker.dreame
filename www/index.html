@@ -42,7 +42,48 @@
         <div class="zovl-body">
           <section class="zovl-sektion" id="zovlAussehen">
             <h3>Aussehen</h3>
-            <div class="zovl-inhalt">— folgt in E2c —</div>
+            <label class="zovl-feld"><span>Farbmodus</span>
+              <select id="zovlTheme">
+                <option value="hell">Hell</option>
+                <option value="dunkel">Dunkel</option>
+                <option value="hauptfarbe">Hauptfarbe</option>
+                <option value="custom">Benutzerdefiniert</option>
+              </select>
+            </label>
+            <div class="zovl-farbextra" id="zovlHauptfarbeBlock" hidden>
+              <label class="zovl-feld"><span>Hintergrund</span><input type="color" id="zovlHauptfarbe"></label>
+            </div>
+            <div class="zovl-farbextra" id="zovlCustomBlock" hidden>
+              <label class="zovl-feld"><span>Hintergrund</span><input type="color" id="zovlCustomHintergrund"></label>
+              <label class="zovl-feld"><span>Menü</span><input type="color" id="zovlCustomMenue"></label>
+              <label class="zovl-feld"><span>Knöpfe</span><input type="color" id="zovlCustomKnoepfe"></label>
+              <label class="zovl-feld"><span>Rahmen</span><input type="color" id="zovlCustomRahmen"></label>
+              <label class="zovl-feld"><span>Schrift</span><input type="color" id="zovlCustomSchrift"></label>
+            </div>
+            <label class="zovl-feld"><span>Kartendrehung</span>
+              <select id="zovlDrehung">
+                <option value="0">0°</option>
+                <option value="90">90°</option>
+                <option value="180">180°</option>
+                <option value="270">270°</option>
+              </select>
+            </label>
+            <label class="zovl-feld"><span>Sidebar-Seite</span>
+              <span class="zovl-switch-wrap">
+                <input type="checkbox" id="zovlLeiste" class="zovl-switch">
+                <span class="zovl-switch-txt" id="zovlLeisteTxt">Rechts</span>
+              </span>
+            </label>
+            <label class="zovl-feld"><span>UI-Zoom</span>
+              <span class="zovl-zoom">
+                <button type="button" id="zovlGroesseMinus" aria-label="Verkleinern">−</button>
+                <input type="number" id="zovlGroesse" min="70" max="150" step="5"><span class="zovl-zoom-pct">%</span>
+                <button type="button" id="zovlGroessePlus" aria-label="Vergrößern">+</button>
+              </span>
+            </label>
+            <label class="zovl-feld"><span>Menü-Breite <span class="zovl-wert" id="zovlBreiteWert"></span></span>
+              <input type="range" id="zovlBreite" min="250" max="500" step="10">
+            </label>
           </section>
           <section class="zovl-sektion" id="zovlPanels">
             <h3>Panels</h3>

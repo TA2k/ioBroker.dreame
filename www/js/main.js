@@ -178,6 +178,165 @@ if (GEAR_SICHTBAR) {
 // Listener wird nie angemeldet (nur beim Oeffnen ueber den Button) -- Overlay ist damit auch
 // nicht per Escape erreichbar, ganz ohne Sonderfall-Code dafuer.
 
+// ===== Aussehen-Sektion im Einstellungs-Overlay (Etappe E, Commit E2c). Vier Bedienelemente
+// mit Live-Uebernahme + Persistenz nach config.widget.layout. aktiveWidgetConfig haelt die
+// zuletzt von Config.laden() gelieferte Config als Modul-Zustand -- vorher gab es dafuer
+// keinen Speicherort ausserhalb von ladeGeraet(), siehe E2c-Struktur-Analyse Punkt e). =====
+let aktiveWidgetConfig = null; // gesetzt in ladeGeraet(), gelesen/geschrieben von schreibeLayout()
+
+/** Schreibt einen Wert nach config.widget.layout.<feld> (Punkt-Notation fuer verschachtelte
+ * Felder, z.B. "custom.hintergrund") und persistiert die komplette Config. Wird NACH der
+ * lokalen visuellen Anwendung aufgerufen (siehe Handler unten) -- die sichtbare Reaktion
+ * wartet nie auf den Netzwerk-Rundlauf. */
+async function schreibeLayout(feld, wert) {
+  const teile = feld.split('.');
+  let ziel = aktiveWidgetConfig.layout;
+  for (let i = 0; i < teile.length - 1; i++) ziel = ziel[teile[i]];
+  ziel[teile[teile.length - 1]] = wert;
+  await Config.speichern(Geraete.aktiveDid, aktiveWidgetConfig);
+}
+
+/** WCAG-relative Luminanz eines Hex-Farbwerts (#rrggbb). */
+function relLuminanz(hex) {
+  const kanal = s => (s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4));
+  const r = kanal(parseInt(hex.slice(1, 3), 16) / 255);
+  const g = kanal(parseInt(hex.slice(3, 5), 16) / 255);
+  const b = kanal(parseInt(hex.slice(5, 7), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** Waehlt zwischen den zwei im Theme bereits vorhandenen Text-Token (Dunkel-Schema hell,
+ * Hell-Schema dunkel) dasjenige mit dem hoeheren WCAG-Kontrastverhaeltnis gegen den
+ * gegebenen Hintergrund -- garantiert lesbar auch bei extremen Farben (reines Weiss/Schwarz,
+ * gesaettigtes Rot), ohne experimentelle CSS-Funktionen (color-contrast()) oder das an die
+ * OS-Praeferenz gebundene light-dark(), siehe E2c-Feinabstimmung. */
+function waehleSchriftFarbe(hexHintergrund) {
+  const lBg = relLuminanz(hexHintergrund);
+  const lHell = relLuminanz('#e6ecf7'), lDunkel = relLuminanz('#1a2436');
+  const kontrast = (l1, l2) => (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  return kontrast(lBg, lHell) >= kontrast(lBg, lDunkel) ? '#e6ecf7' : '#1a2436';
+}
+
+function wendeFarbmodus(modus) {
+  document.documentElement.dataset.farben = modus; // 'hell'/'dunkel'/'hauptfarbe'/'custom', siehe theme.css
+  document.getElementById('zovlHauptfarbeBlock').hidden = modus !== 'hauptfarbe';
+  document.getElementById('zovlCustomBlock').hidden = modus !== 'custom';
+}
+function wendeHauptfarbe(hex) {
+  document.documentElement.style.setProperty('--hauptfarbe', hex);
+  document.documentElement.style.setProperty('--hauptfarbe-schrift', waehleSchriftFarbe(hex));
+}
+function wendeCustomFarbe(feld, hex) {
+  document.documentElement.style.setProperty('--custom-' + feld, hex);
+}
+
+/** Alle vier Aussehen-Bedienelemente beim (Neu-)Laden eines Geraets aus der Config
+ * vorbelegen + sofort visuell anwenden. Muss VOR renderGeraeteAuswahl() laufen (siehe
+ * ladeGeraet()) -- das loest aktualisiereOverlayRaender() aus, das den hier gesetzten
+ * --ui-Wert schon braucht, sonst rechnet der erste Aufruf fuer ein neues Geraet noch mit
+ * dem --ui-Wert des vorherigen (oder dem CSS-Default). */
+function initAussehenSektion(config) {
+  const L = config.layout;
+
+  const themeSel = document.getElementById('zovlTheme');
+  themeSel.value = L.theme || 'dunkel';
+  wendeFarbmodus(themeSel.value);
+
+  const hauptfarbe = L.hauptfarbe || '#eef2f8';
+  document.getElementById('zovlHauptfarbe').value = hauptfarbe;
+  wendeHauptfarbe(hauptfarbe);
+
+  const customDefaults = { hintergrund: '#eef2f8', menue: '#ffffff', knoepfe: '#f4f7fc', rahmen: '#dbe3ef', schrift: '#1a2436' };
+  const customIds = { hintergrund: 'zovlCustomHintergrund', menue: 'zovlCustomMenue', knoepfe: 'zovlCustomKnoepfe', rahmen: 'zovlCustomRahmen', schrift: 'zovlCustomSchrift' };
+  for (const feld of Object.keys(customDefaults)) {
+    const wert = (L.custom && L.custom[feld]) || customDefaults[feld];
+    document.getElementById(customIds[feld]).value = wert;
+    wendeCustomFarbe(feld, wert);
+  }
+
+  document.getElementById('zovlDrehung').value = String(L.drehung || 0);
+
+  const links = L.leiste === 'links';
+  document.getElementById('zovlLeiste').checked = links;
+  document.getElementById('zovlLeisteTxt').textContent = links ? 'Links' : 'Rechts';
+
+  const groesse = (L.groesse != null) ? L.groesse : 1;
+  document.documentElement.style.setProperty('--ui', groesse);
+  document.getElementById('zovlGroesse').value = Math.round(groesse * 100);
+
+  const breite = L.width || 275;
+  document.documentElement.style.setProperty('--leiste-breite', breite + 'px');
+  document.getElementById('zovlBreite').value = breite;
+  fuelleBreite();
+}
+
+document.getElementById('zovlTheme').onchange = e => {
+  wendeFarbmodus(e.target.value);
+  schreibeLayout('theme', e.target.value);
+};
+document.getElementById('zovlHauptfarbe').onchange = e => {
+  wendeHauptfarbe(e.target.value);
+  schreibeLayout('hauptfarbe', e.target.value);
+};
+document.getElementById('zovlCustomHintergrund').onchange = e => { wendeCustomFarbe('hintergrund', e.target.value); schreibeLayout('custom.hintergrund', e.target.value); };
+document.getElementById('zovlCustomMenue').onchange = e => { wendeCustomFarbe('menue', e.target.value); schreibeLayout('custom.menue', e.target.value); };
+document.getElementById('zovlCustomKnoepfe').onchange = e => { wendeCustomFarbe('knoepfe', e.target.value); schreibeLayout('custom.knoepfe', e.target.value); };
+document.getElementById('zovlCustomRahmen').onchange = e => { wendeCustomFarbe('rahmen', e.target.value); schreibeLayout('custom.rahmen', e.target.value); };
+document.getElementById('zovlCustomSchrift').onchange = e => { wendeCustomFarbe('schrift', e.target.value); schreibeLayout('custom.schrift', e.target.value); };
+
+document.getElementById('zovlDrehung').onchange = e => {
+  kartenDrehung = Number(e.target.value);
+  // Belegter Bereich aendert sich bei 90/270 (Breite/Hoehe tauschen) -- neu einpassen statt
+  // nur neu zu zeichnen. Legacy-Muster aus legacy.html:drehRow, try/catch weil vor dem ersten
+  // Kartenpaket eines Geraets rooms/raw noch leer sein koennen.
+  try { box = visibleBox(); fitVisible(); } catch (err) { /* keine Kartendaten geladen */ }
+  schreibeLayout('drehung', kartenDrehung);
+};
+
+const zovlLeisteEl = document.getElementById('zovlLeiste');
+zovlLeisteEl.onchange = () => {
+  const seite = zovlLeisteEl.checked ? 'links' : 'rechts';
+  document.getElementById('zovlLeisteTxt').textContent = zovlLeisteEl.checked ? 'Links' : 'Rechts';
+  document.documentElement.dataset.leiste = seite;
+  schreibeLayout('leiste', seite);
+};
+
+// UI-Zoom (Etappe E2c, Nachtrag 2): Zahlenfeld + Minus/Plus statt Slider. User tippt
+// bewusst eine Zahl -> onchange (Enter/Tab/Blur) wendet sofort an UND persistiert in einem
+// Schritt, kein separates input-Live-Preview-Event wie beim Wetness-/E2c-Original-Slider.
+// Prozent im Feld (70-150), Faktor (0.7-1.5) nur intern fuer --ui/config.layout.groesse.
+const zovlGroesseEl = document.getElementById('zovlGroesse');
+function wendeUndSchreibeGroesse(prozent) {
+  const geklemmt = Math.min(150, Math.max(70, Math.round(prozent) || 100)); // HTML5 min/max
+  // greift meist schon selbst, zusaetzliches Klemmen hier gegen "abc"/leer/Tippfehler
+  zovlGroesseEl.value = geklemmt;
+  document.documentElement.style.setProperty('--ui', geklemmt / 100);
+  aktualisiereOverlayRaender(); // schliesst den deferred Punkt aus E2b/Nachtrag 3
+  schreibeLayout('groesse', geklemmt / 100);
+}
+zovlGroesseEl.onchange = () => wendeUndSchreibeGroesse(Number(zovlGroesseEl.value));
+document.getElementById('zovlGroesseMinus').onclick = () => wendeUndSchreibeGroesse(Number(zovlGroesseEl.value) - 5);
+document.getElementById('zovlGroessePlus').onclick = () => wendeUndSchreibeGroesse(Number(zovlGroesseEl.value) + 5);
+
+// Menue-Breite (Etappe E2c, Nachtrag 3): nutzt das seit E2a im Schema stehende, bisher nie
+// verdrahtete config.widget.layout.width + die zugehoerige --leiste-breite-CSS-Variable
+// (.side{width:calc(var(--leiste-breite) * var(--ui))}, siehe layout.css) -- bewusst kein
+// neues Feld, David-Entscheidung. input (Ziehen): nur live anwenden + Fuellstand/Anzeige
+// aktualisieren, kein Schreiben. change (Loslassen): persistieren -- gleiches Muster wie
+// der Wetness-Slider in reinigung.js.
+const zovlBreiteEl = document.getElementById('zovlBreite');
+const zovlBreiteWertEl = document.getElementById('zovlBreiteWert');
+function fuelleBreite() {
+  const pct = (Number(zovlBreiteEl.value) - Number(zovlBreiteEl.min)) / (Number(zovlBreiteEl.max) - Number(zovlBreiteEl.min)) * 100;
+  zovlBreiteEl.style.setProperty('--fill', pct + '%');
+  zovlBreiteWertEl.textContent = zovlBreiteEl.value + ' px';
+}
+zovlBreiteEl.oninput = () => {
+  document.documentElement.style.setProperty('--leiste-breite', zovlBreiteEl.value + 'px');
+  fuelleBreite();
+};
+zovlBreiteEl.onchange = () => schreibeLayout('width', Number(zovlBreiteEl.value));
+
 // Gebunden an den echten Adapter-State dreame.0.info.connection (Cloud-Verbindung des
 // Adapters zum Geraet-Hersteller-Backend) -- NICHT an das Socket.io-Verbindungsereignis zum
 // ioBroker-Server selbst, das nur sagt, ob unser Browser mit ioBroker spricht, nichts ueber
@@ -316,16 +475,21 @@ async function ladeGeraet(did) {
   if (aktCloudId) Daten.unsubscribe(aktCloudId, onCloudState);
 
   const geraet = Geraete.aktuelles();
-  renderGeraeteAuswahl(geraet);
   document.title = 'Map – ' + (geraet ? geraet.name : '?');
 
   const config = await Config.laden(did);
+  aktiveWidgetConfig = config;
   kartenDrehung = (config.layout && Number(config.layout.drehung)) || 0;
   // data-leiste war seit Etappe A deklariert, aber nie aktiv gesetzt (WIDGET_SESSION_STATUS.md
   // E2b-Analyse) -- ab hier steuert es Sidebar-Ausrichtung UND die Seite des Einstellungs-
   // Overlays (layout.css :root[data-leiste="links"] .zovl). Pro Geraet neu gesetzt, falls
   // Configs zwischen Geraeten abweichen.
   document.documentElement.dataset.leiste = (config.layout && config.layout.leiste) || 'rechts';
+  initAussehenSektion(config); // E2c: setzt u.a. --ui aus config.layout.groesse
+  // renderGeraeteAuswahl() erst NACH initAussehenSektion(): sie loest
+  // aktualisiereOverlayRaender() aus, das den --ui-Wert DIESES Geraets schon braucht (sonst
+  // rechnet der erste Aufruf nach einem Geraete-Wechsel noch mit dem alten --ui).
+  renderGeraeteAuswahl(geraet);
 
   for (const { id, klasse } of PanelRegistry.aktive(config, geraet && geraet.typ)) {
     const panel = new klasse(id, document.getElementById('panel-' + id));

@@ -9,7 +9,7 @@
 
 /* global Daten, PanelRegistry */
 
-const WIDGET_CONFIG_VERSION = 3;
+const WIDGET_CONFIG_VERSION = 5;
 const WIDGET_ADAPTER_VERSION = '0.4.0'; // Zielversion dieses Umbaus, siehe WIDGET_UMBAU_PLAN.md Kopf
 
 function defaultWidgetConfig() {
@@ -36,15 +36,42 @@ function defaultWidgetConfig() {
       // Etappe E2. theme/color loesen "farben" perspektivisch ab, bleiben aber vorerst
       // parallel bestehen (farben wird von E2-UI-Code nicht mehr geschrieben, aber noch
       // nicht entfernt - kein Scope fuer E2a).
-      theme: 1, // 0=hell, 1=dunkel, 2=main-Farbe, 3=custom
-      color: '', // Basis-Farbe fuer theme=2
+      // Ab configVersion 4 (Etappe E2c): theme ist jetzt ein String ('hell'/'dunkel'/
+      // 'hauptfarbe'/'custom') statt der urspruenglichen Zahl 0-3 aus E2a - siehe
+      // migriere() fuer die Abbildung alter Zahlenwerte. color/customBg/customPanel/
+      // customLine/customText/customMuted (E2a) sind damit ebenfalls abgeloest durch
+      // hauptfarbe bzw. custom.* unten, bleiben aber unveraendert stehen (gleiche Politik
+      // wie bei "farben" oben - kein Scope fuer E2c, sie aufzuraeumen).
+      theme: 'dunkel', // 'hell' | 'dunkel' | 'hauptfarbe' | 'custom'
+      color: '', // ALT (E2a), abgeloest durch hauptfarbe
       transparent: false, // Hintergrund transparent, orthogonal zu theme
       width: 275, // Seitenleisten-Breite in px, Default = bisheriger --leiste-breite-Wert (theme.css)
-      customBg: '',
-      customPanel: '',
-      customLine: '',
-      customText: '',
-      customMuted: '',
+      customBg: '', // ALT (E2a), abgeloest durch custom.hintergrund
+      customPanel: '', // ALT (E2a), abgeloest durch custom.menue
+      customLine: '', // ALT (E2a), abgeloest durch custom.rahmen
+      customText: '', // ALT (E2a), abgeloest durch custom.schrift
+      customMuted: '', // ALT (E2a), kein Nachfolger in E2c (--muted wird aus custom.schrift abgeleitet)
+      // E2c: Basis-Hintergrundfarbe fuer theme="hauptfarbe" - Menue/Rahmen werden per
+      // color-mix() daraus abgeleitet, Schrift per Kontrast-Regel (main.js waehleSchriftFarbe()).
+      hauptfarbe: '#eef2f8',
+      // E2c: vier frei waehlbare Farben fuer theme="custom", keine Ableitung, kein
+      // automatischer Lesbarkeits-Schutz (bewusste Nutzer-Freiheit). Defaults = heutiger
+      // Hell-Modus (theme.css :root[data-farben="hell"]), damit der Nutzer vom vertrauten
+      // Zustand aus startet.
+      custom: {
+        hintergrund: '#eef2f8',
+        menue: '#ffffff',
+        // Ab configVersion 5 (Etappe E2c, Nachtrag 1): fuenfte Farbe fuer Buttons, getrennt
+        // von "menue" -- Default = Hell-Modus-panel2, konsistent mit --knoepfe-Default in
+        // theme.css (siehe migriere() fuer den v4->v5-Merge, der das bei bestehenden
+        // v4-Configs nachtraeglich ergaenzt).
+        knoepfe: '#f4f7fc',
+        rahmen: '#dbe3ef',
+        schrift: '#1a2436',
+      },
+      // E2c: UI-Zoom (--ui), vorher nie aus Config gelesen/geschrieben (siehe
+      // WIDGET_SESSION_STATUS.md E2c-Struktur-Analyse). 1 = unveraendert, Slider 0.7-1.5.
+      groesse: 1,
     },
   };
 }
@@ -67,7 +94,24 @@ const Config = (() => {
     // uebernehmen, BEVOR unten mit dem Default gemerged wird - sonst wuerden bestehende
     // Nutzerwerte (z.B. drehung, hintergrund) stillschweigend auf Default zurueckfallen,
     // weil ab jetzt nur noch "layout" gelesen wird.
-    const _altesLayout = gespeichert.layout || gespeichert.aussehen;
+    const _altesLayout = { ...(gespeichert.layout || gespeichert.aussehen) };
+    // v3->v4 (Etappe E2c): theme war in E2a eine Zahl (0=hell,1=dunkel,2=main-Farbe,
+    // 3=custom), ist jetzt ein String. Alten Zahlenwert 1:1 abbilden, BEVOR unten
+    // gemerged wird - sonst wuerde die Zahl unveraendert in den neuen String-Namensraum
+    // durchgereicht (main.js erwartet nur noch Strings) statt auf den neuen Default
+    // zurueckzufallen oder korrekt konvertiert zu werden.
+    if (typeof _altesLayout.theme === 'number') {
+      const THEME_ZAHL_ZU_STRING = { 0: 'hell', 1: 'dunkel', 2: 'hauptfarbe', 3: 'custom' };
+      _altesLayout.theme = THEME_ZAHL_ZU_STRING[_altesLayout.theme] || 'dunkel';
+    }
+    // v4->v5 (Etappe E2c, Nachtrag 1): custom bekommt eine fuenfte Farbe (knoepfe). Ein
+    // flacher Merge (layout: {...std.layout, ..._altesLayout}) wuerde ein bereits
+    // gespeichertes v4-custom-Objekt (ohne knoepfe) unveraendert uebernehmen und dabei den
+    // neuen Default verlieren -- daher wie beim Panel-Merge unten explizit auf Feld-Ebene
+    // gemerged, kein Datenverlust bei den bereits vorhandenen vier Farben.
+    if (_altesLayout.custom) {
+      _altesLayout.custom = { ...std.layout.custom, ..._altesLayout.custom };
+    }
     const gespeichertOhneAussehen = { ...gespeichert };
     delete gespeichertOhneAussehen.aussehen;
     // Panel-Merge auf Feld-Ebene (nicht nur pro Panel-ID) - seit configVersion 3 hat jedes

@@ -129,10 +129,10 @@ body.trail-off .trail, body.trail-off .mopspur{display:none}
 .zoom{position:absolute; right:14px; bottom:14px; display:flex; flex-direction:column;
   gap:6px; z-index:5; zoom:var(--ui)}
 .zoom button{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);
-  background:var(--panel);color:var(--txt);font-size:18px;line-height:1;cursor:pointer;
+  background:var(--knoepfe);color:var(--txt);font-size:18px;line-height:1;cursor:pointer;
   display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.22)}
 .zoom button:hover{border-color:var(--accent)}
-.zoom button:active{transform:scale(.92);background:var(--panel2)}
+.zoom button:active{transform:scale(.92);filter:brightness(.92)}
 
 /* Zahnrad-Button + Einstellungs-Overlay (Etappe E, Commit E2b). Button sitzt in der
    aeussersten Ecke oben rechts im Kartenbereich -- wichtiger Dauer-Bedienpunkt, deshalb
@@ -189,6 +189,58 @@ body.trail-off .trail, body.trail-off .mopspur{display:none}
 .zovl-sektion h3{margin:0 0 6px; font-size:13px; text-transform:uppercase;
   letter-spacing:.4px; color:var(--muted)}
 .zovl-inhalt{font-size:12px; color:var(--muted)}
+
+/* Bedienelemente der Aussehen-Sektion (Etappe E2c). Eine Label-Wert-Zeile pro Feld,
+   untereinander -- bei nur vier Feldern in einer 320px-Spalte reicht das, kein Grid noetig
+   (siehe E2c-Struktur-Analyse). */
+.zovl-feld{display:flex; align-items:center; justify-content:space-between; gap:10px;
+  margin-bottom:10px; font-size:12.5px}
+.zovl-feld:last-child{margin-bottom:0}
+.zovl-feld > span:first-child{color:var(--txt)}
+.zovl-feld select{font:inherit; font-size:12.5px; padding:6px 8px; border-radius:8px;
+  border:1px solid var(--line); background:var(--panel2); color:var(--txt); cursor:pointer}
+/* Zusaetzliche Farb-Picker fuer die Modi "Hauptfarbe"/"Benutzerdefiniert" -- per hidden-
+   Attribut ein-/ausgeblendet (main.js wendeFarbmodus()), NICHT aus dem DOM entfernt, damit
+   Werte beim Hin-und-her-Wechseln zwischen Modi erhalten bleiben (David-Vorgabe E2c). Leichter
+   Rahmen links als optische Zuordnung zum Farbmodus-Dropdown darueber. */
+.zovl-farbextra{margin:4px 0 10px 8px; padding-left:10px; border-left:2px solid var(--line)}
+.zovl-farbextra .zovl-feld{margin-bottom:8px}
+.zovl-farbextra .zovl-feld:last-child{margin-bottom:0}
+input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
+  border:1px solid var(--line); background:var(--panel2); cursor:pointer; flex:none}
+/* Sidebar-Seite-Toggle: Checkbox visuell als Schalter, echte Checkbox bleibt fuer
+   Tastatur/Screenreader nutzbar (appearance:none entfernt nur die native Optik). */
+.zovl-switch-wrap{display:flex; align-items:center; gap:8px}
+.zovl-switch{appearance:none; -webkit-appearance:none; margin:0; flex:none; cursor:pointer;
+  width:44px; height:24px; border-radius:12px; background:var(--panel2);
+  border:1px solid var(--line); position:relative; transition:.15s}
+.zovl-switch::before{content:''; position:absolute; top:1px; left:1px; width:18px; height:18px;
+  border-radius:50%; background:var(--muted); transition:.15s}
+.zovl-switch:checked{background:var(--accent,#4a78e0); border-color:var(--accent,#4a78e0)}
+.zovl-switch:checked::before{left:21px; background:#fff}
+.zovl-switch-txt{font-size:12px; color:var(--muted); min-width:38px}
+/* UI-Zoom (Etappe E2c, Nachtrag 2): Zahlenfeld + Minus/Reset/Plus-Buttons statt Slider --
+   ein Slider hatte zu groben/schwer feinjustierbaren Effekt und keinen einfachen Weg zurueck
+   auf 100%. Eigene spinner-freie Zahlenfeld-Optik statt der generischen input[type=range]-
+   Regeln weiter unten in dieser Datei (die waren nur fuer den jetzt entfernten Slider hier
+   gedacht, siehe Session-Historie). */
+.zovl-zoom{display:flex; align-items:center; gap:4px}
+.zovl-zoom input[type=number]{width:42px; font:inherit; font-size:12.5px; padding:5px 4px;
+  border-radius:8px; border:1px solid var(--line); background:var(--panel2); color:var(--txt);
+  text-align:right; -moz-appearance:textfield; appearance:textfield}
+.zovl-zoom input[type=number]::-webkit-outer-spin-button,
+.zovl-zoom input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
+.zovl-zoom-pct{font-size:12px; color:var(--muted); margin-right:2px}
+.zovl-zoom button{width:26px; height:26px; border-radius:7px; border:1px solid var(--line);
+  background:var(--panel2); color:var(--txt); font-size:14px; line-height:1; cursor:pointer; flex:none}
+.zovl-zoom button:hover{border-color:var(--accent,#4a78e0)}
+.zovl-zoom button:active{transform:scale(.93)}
+.zovl-wert{color:var(--muted); font-weight:400}
+/* Menue-Breite (Etappe E2c, Nachtrag 3): generische input[type=range]-Optik weiter unten
+   in dieser Datei ist width:100% (fuers Reinigungs-Panel gedacht) -- in der schmalen 320px-
+   Spalte hier neben einem Label wuerde das den Platz sprengen, gleiches Prinzip wie beim
+   inzwischen entfernten UI-Zoom-Slider. */
+.zovl-feld input[type=range]{width:140px; flex:none}
 
 /* Der Kasten selbst wird NICHT gezoomt — er bekommt seine Hoehe vom Flexaufbau und
    soll sie behalten. Gezoomt wird nur der Inhalt darin (.sidein). Dadurch bleiben
@@ -425,7 +477,7 @@ body.trail-off .trail, body.trail-off .mopspur{display:none}
 .saktionen{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 .saktion{flex:1;min-width:84px;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:4px;padding:8px 6px;border-radius:9px;border:1px solid var(--line);
-  background:var(--panel2);color:var(--txt);font:inherit;font-size:12px;font-weight:600;
+  background:var(--knoepfe);color:var(--txt);font:inherit;font-size:12px;font-weight:600;
   cursor:pointer;text-align:center;transition:opacity .12s,filter .12s,border-color .12s;
   -webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .saktion .ico{opacity:.85}

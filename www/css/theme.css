@@ -26,6 +26,12 @@
      Flaeche durchsichtig macht und nicht auch Dialoge, Kacheln und Kartenmarken. */
   --flaeche:var(--panel); --flaeche2:var(--panel2);
   --schleier:radial-gradient(circle at 50% 40%, rgba(43,180,226,.06), transparent 60%);
+  /* Hintergrundfarbe von Aktions-Buttons (Zoom +/−, Waschen/Trocknen/Entleeren/Tank-Reset
+     u.ae.) -- Etappe E2c, Nachtrag 1: eigene Kategorie "Knoepfe", getrennt von "Menue"
+     (--panel/--panel2), damit Custom-Farbmodus beides unabhaengig einstellbar macht. Default
+     = --panel2, also bewusst IDENTISCH zum bisherigen Aussehen in Hell/Dunkel (kein
+     visueller Bruch dort, siehe unten die hauptfarbe/custom-Ableitungen). */
+  --knoepfe:var(--panel2);
   /* Hauch + Kante fuer die Bedienspalte im transparenten Betrieb: sie soll sich leicht
      absetzen, ohne den VIS-Hintergrund zu verdecken.
      GEGEN das Farbschema, nicht mit ihm: wer dunkel waehlt, hat ringsum eine dunkle
@@ -52,6 +58,47 @@
          --ok:#1a9e6b; --warn:#b57611; --bad:#d92f52;
          --hauch:rgba(0,0,0,.05); --kante:rgba(0,0,0,.14); }
 }
+/* Farbmodus "Hauptfarbe" (Etappe E2c, Farb-Semantik ueberarbeitet in Nachtrag 1): eine
+   Basisfarbe (--hauptfarbe, per Color-Picker gewaehlt, main.js wendeHauptfarbe()) faerbt
+   NUR die Kartenflaeche direkt (siehe .stage-Override weiter unten) -- Menue/Knoepfe/Rahmen
+   werden per color-mix() zunehmend abgedunkelt, damit sie sich klar von der Kartenflaeche UND
+   voneinander abheben. Schrift folgt keiner Ableitungsformel, sondern main.js' Kontrast-
+   Berechnung (waehleSchriftFarbe(), WCAG-Luminanz gegen die zwei bestehenden --txt-Werte) und
+   landet in --hauptfarbe-schrift -- garantiert lesbar auch bei extremen Farben (reines Weiss,
+   reines Schwarz, gesaettigtes Rot).
+   WICHTIG: --bg/--flaeche/--flaeche2 werden hier bewusst NICHT gesetzt (anders als in einer
+   frueheren Fassung) -- --bg wirkt nur auf das unsichtbare <body> (von .app ueberdeckt),
+   --flaeche/--flaeche2 (.app/.side) sollen als "Menue" rein an --panel/--panel2 haengen
+   bleiben, nicht an der Hauptfarbe. Die tatsaechlich sichtbare Kartenflaeche wird stattdessen
+   gezielt ueber :root[data-farben="hauptfarbe"] .stage weiter unten gesetzt. */
+:root[data-farben="hauptfarbe"]{
+  --panel:color-mix(in srgb, var(--hauptfarbe,#eef2f8) 92%, black);
+  --panel2:color-mix(in srgb, var(--hauptfarbe,#eef2f8) 96%, black);
+  --knoepfe:color-mix(in srgb, var(--hauptfarbe,#eef2f8) 84%, black);
+  --line:color-mix(in srgb, var(--hauptfarbe,#eef2f8) 80%, black);
+  --txt:var(--hauptfarbe-schrift,#1a2436);
+  --muted:color-mix(in srgb, var(--hauptfarbe-schrift,#1a2436) 65%, var(--hauptfarbe,#eef2f8));
+}
+/* Farbmodus "Benutzerdefiniert" (Etappe E2c, fuenf Farben seit Nachtrag 1): fuenf frei
+   gewaehlte Farben direkt uebernommen, keine Ableitung, kein automatischer Lesbarkeits-Schutz
+   (bewusste Nutzer-Freiheit laut Vorgabe). Kartenflaeche (--custom-hintergrund) wirkt NUR ueber
+   den .stage-Override unten, NICHT ueber --bg/--flaeche/--flaeche2 -- gleicher Grund wie beim
+   Hauptfarbe-Modus oben. --panel2/--muted als einfache Ableitung ergaenzt, kein eigenes
+   Bedienelement dafuer vorgesehen. */
+:root[data-farben="custom"]{
+  --panel:var(--custom-menue,#ffffff);
+  --panel2:color-mix(in srgb, var(--custom-menue,#ffffff) 96%, black);
+  --knoepfe:var(--custom-knoepfe,#f4f7fc);
+  --line:var(--custom-rahmen,#dbe3ef);
+  --txt:var(--custom-schrift,#1a2436);
+  --muted:color-mix(in srgb, var(--custom-schrift,#1a2436) 65%, var(--custom-menue,#ffffff));
+}
+/* Kartenflaeche (Etappe E2c, Nachtrag 1): .stage{background:var(--schleier)} ist der
+   tatsaechlich sichtbare Karten-Backdrop (nicht --bg/--flaeche, siehe Kommentare oben) --
+   nur in den zwei neuen Modi ersetzt, Hell/Dunkel behalten ihren Schleier-Gradienten
+   unveraendert. */
+:root[data-farben="hauptfarbe"] .stage{background:var(--hauptfarbe,#eef2f8)}
+:root[data-farben="custom"] .stage{background:var(--custom-hintergrund,#eef2f8)}
 /* Durchsichtig: der VIS-Hintergrund scheint durch. Bauteile bleiben deckend, sonst
    laege fremder Inhalt unter dem Text. Der Schleier hinter der Karte muss weg, sonst
    bleibt ein blauer Schimmer stehen.
