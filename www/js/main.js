@@ -26,7 +26,7 @@
  * Siehe WIDGET_SESSION_STATUS.md fuer die vollstaendige Herleitung dieser Entscheidung.
  */
 
-/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel, ReinigungPanel, FehlerPanel, WasserMoppPanel */
+/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel, ReinigungPanel, FehlerPanel, WasserMoppPanel, uiIcon */
 
 // ===== Zustand (verbatim aus www/legacy.html "Zustand"-Bereich uebernommen, minus SOCK —
 // die alte direkte Socket.io-Sendefunktion cmd() wird nicht mehr gebraucht, Trigger/Daten
@@ -63,7 +63,10 @@ PanelRegistry.registriere('station', StationPanel);
 // ===== Verbindungsstatus (Karten-Overlay oben rechts) + Geraetename in der Kopfzeile =====
 const errEl = document.getElementById('err');
 const connEl = document.getElementById('conn');
-function setConn(txt, col) { connEl.textContent = txt; connEl.style.color = col || ''; connEl.style.borderColor = col || ''; }
+function setConn(txt, col) {
+  connEl.textContent = txt; connEl.style.color = col || ''; connEl.style.borderColor = col || '';
+  aktualisiereOverlayRaender();
+}
 setConn('🟡 Verbindet…', '#ffcc66');
 
 // ===== Roboter-Umschalter in der Kopfzeile (Etappe E, Commit E1, WIDGET_ARCHITEKTUR.md
@@ -107,7 +110,73 @@ function renderGeraeteAuswahl(geraet) {
   const mehrere = Geraete.liste.length > 1;
   devNameEl.classList.toggle('umschaltbar', mehrere);
   devNameEl.onclick = mehrere ? (e => { e.stopPropagation(); oeffneGeraeteDropdown(); }) : null;
+  aktualisiereOverlayRaender();
 }
+
+// ===== Zahnrad-Button + Einstellungs-Overlay (Etappe E, Commit E2b, WIDGET_UMBAU_PLAN.md
+// Abschnitt 11). Sitzt hier statt in einem eigenen Panel-Modul: Umfang (Button + vier leere
+// Platzhalter-Sections + Toggle/Escape) ist klein genug, main.js hat mit dem Roboter-
+// Umschalter (E1) bereits aehnliches Karten-Chrome hier sitzen -- Bedienlogik/Config-Werte
+// in den Sektionen folgen erst ab E2c. Offen/Zu ist reiner Widget-UI-Zustand (kein Adapter-
+// State, keine Persistenz über Reload), siehe WIDGET_ARCHITEKTUR.md Ausnahme fuer temporaere
+// UI-Zustaende. =====
+const GEAR_SICHTBAR = new URLSearchParams(location.search).get('gear') !== '0'; // Kiosk-Modus fuer iframe-Einbettung
+// data-gear aufs Root, konsistent mit data-leiste/data-farben -- CSS braucht es, um den
+// #conn-Versatz (siehe layout.css) nur zu setzen, wenn tatsaechlich ein Zahnrad da ist.
+document.documentElement.dataset.gear = GEAR_SICHTBAR ? 'an' : 'aus';
+const zahnradBtn = document.getElementById('zahnradBtn');
+const zahnradOvl = document.getElementById('zahnradOvl');
+
+/** Misst die tatsaechlich gerenderte Breite von #conn und #devName (beide Text-Badges mit
+ * dynamischem Inhalt -- Verbindungsstatus bzw. Geraetename) und schreibt sie als CSS-
+ * Variablen auf :root. .zovl (layout.css) nutzt --conn-rand/--umschalter-rand fuer seinen
+ * eigenen right/left-Wert, damit das Overlay nie den Badge ueberdeckt, egal wie lang der
+ * aktuelle Text gerade ist (Nachtrag 3, WIDGET_SESSION_STATUS.md).
+ * Rueckrechnung durch --ui: getBoundingClientRect() liefert die bereits gezoomte Breite,
+ * .zovl multipliziert seinen eigenen right/left-Wert aber selbst nochmal mit --ui (gleiches
+ * Prinzip wie #zahnradBtn/.maptag) -- ohne Ruecktransformation waere der Abstand ab dem
+ * ersten Zoom-Wert != 1 (kommt erst mit dem E2c-Zoomregler) falsch.
+ * Fragt die Elemente frisch per getElementById ab statt die weiter oben deklarierten
+ * connEl/devNameEl-Konstanten zu nutzen: der allererste setConn()-Aufruf direkt nach dessen
+ * Definition (siehe "setConn('Verbindet...')" weiter oben im Datei-Fluss) laeuft VOR der
+ * devNameEl-Deklaration im Roboter-Umschalter-Abschnitt -- ein Zugriff auf das const
+ * devNameEl waere dort noch in der Temporal Dead Zone und wuerfe einen ReferenceError,
+ * der die ganze Startsequenz abbricht. Frische Abfrage umgeht das und macht die Funktion
+ * unabhaengig davon, wo/wann sie im Skript aufgerufen wird. */
+function aktualisiereOverlayRaender() {
+  const ui = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui')) || 1;
+  const puffer = 10 + 14; // 10px Rand-Anker der Badges (.maptag-Konvention) + 14px Luft
+  const conn = document.getElementById('conn');
+  const devName = document.getElementById('devName');
+  document.documentElement.style.setProperty('--conn-rand', (conn.getBoundingClientRect().width / ui + puffer) + 'px');
+  document.documentElement.style.setProperty('--umschalter-rand', (devName.getBoundingClientRect().width / ui + puffer) + 'px');
+}
+
+function onZahnradEscape(e) { if (e.key === 'Escape') schliesseZahnradOvl(); }
+
+function schliesseZahnradOvl() {
+  zahnradOvl.classList.remove('offen');
+  zahnradBtn.classList.remove('on');
+  document.removeEventListener('keydown', onZahnradEscape);
+}
+
+function oeffneZahnradOvl() {
+  zahnradOvl.classList.add('offen');
+  zahnradBtn.classList.add('on');
+  document.addEventListener('keydown', onZahnradEscape);
+}
+
+if (GEAR_SICHTBAR) {
+  zahnradBtn.hidden = false;
+  zahnradBtn.innerHTML = uiIcon('einstellungen', 24);
+  zahnradBtn.onclick = () => {
+    if (zahnradOvl.classList.contains('offen')) schliesseZahnradOvl(); else oeffneZahnradOvl();
+  };
+  document.getElementById('zovlSchliessen').onclick = schliesseZahnradOvl;
+}
+// Bleibt GEAR_SICHTBAR=false: Button bleibt hidden, kein Klick-Handler registriert, Escape-
+// Listener wird nie angemeldet (nur beim Oeffnen ueber den Button) -- Overlay ist damit auch
+// nicht per Escape erreichbar, ganz ohne Sonderfall-Code dafuer.
 
 // Gebunden an den echten Adapter-State dreame.0.info.connection (Cloud-Verbindung des
 // Adapters zum Geraet-Hersteller-Backend) -- NICHT an das Socket.io-Verbindungsereignis zum
@@ -129,7 +198,8 @@ function initZoomPan() {
   // #devName ausgenommen seit Etappe E1 (Roboter-Umschalter): sonst faengt
   // setPointerCapture() jeden Klick darauf als Kartendrag/Raumklick ab, bevor
   // devNameEl.onclick ueberhaupt feuert -- gleiches Prinzip wie bei .zoom oben.
-  const aufBedienung = t => !!(t && t.closest && (t.closest('.zoom') || t.closest('#devName')));
+  const aufBedienung = t => !!(t && t.closest && (t.closest('.zoom') || t.closest('#devName')
+    || t.closest('#zahnradBtn') || t.closest('#zahnradOvl')));
   stage.addEventListener('pointerdown', e => {
     if (aufBedienung(e.target)) return;
     drag = true; lx = e.clientX; ly = e.clientY; sx0 = e.clientX; sy0 = e.clientY;
@@ -251,6 +321,11 @@ async function ladeGeraet(did) {
 
   const config = await Config.laden(did);
   kartenDrehung = (config.layout && Number(config.layout.drehung)) || 0;
+  // data-leiste war seit Etappe A deklariert, aber nie aktiv gesetzt (WIDGET_SESSION_STATUS.md
+  // E2b-Analyse) -- ab hier steuert es Sidebar-Ausrichtung UND die Seite des Einstellungs-
+  // Overlays (layout.css :root[data-leiste="links"] .zovl). Pro Geraet neu gesetzt, falls
+  // Configs zwischen Geraeten abweichen.
+  document.documentElement.dataset.leiste = (config.layout && config.layout.leiste) || 'rechts';
 
   for (const { id, klasse } of PanelRegistry.aktive(config, geraet && geraet.typ)) {
     const panel = new klasse(id, document.getElementById('panel-' + id));

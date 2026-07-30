@@ -134,6 +134,62 @@ body.trail-off .trail, body.trail-off .mopspur{display:none}
 .zoom button:hover{border-color:var(--accent)}
 .zoom button:active{transform:scale(.92);background:var(--panel2)}
 
+/* Zahnrad-Button + Einstellungs-Overlay (Etappe E, Commit E2b). Button sitzt in der
+   aeussersten Ecke oben rechts im Kartenbereich -- wichtiger Dauer-Bedienpunkt, deshalb
+   Vorrang vor dem Verbindungsstatus-Badge (#conn/.maptag.rechts), das dafuer eine Zeile
+   tiefer rueckt (siehe unten). z-index ueber .maptag/.zoom, damit das Zahnrad nie unter
+   Karten-Interaktion haengt. */
+#zahnradBtn{position:absolute; top:10px; right:10px; z-index:6; zoom:var(--ui);
+  width:46px; height:46px; border-radius:50%; border:none; cursor:pointer; padding:0;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.35); color:#fff; transition:.12s}
+#zahnradBtn:hover{background:rgba(0,0,0,.5); transform:scale(1.06)}
+#zahnradBtn:active{transform:scale(.94)}
+#zahnradBtn svg{width:24px; height:24px}
+/* #conn (.maptag.rechts) rueckt eine Zeile tiefer, weil das Zahnrad jetzt die aeusserste
+   Ecke belegt -- fester Versatz reicht fuer dieses Grundgeruest, siehe WIDGET_SESSION_STATUS.md.
+   Nur unter [data-gear="an"] (main.js setzt das Attribut aus GEAR_SICHTBAR): bei ?gear=0
+   gibt es kein Zahnrad, das den Platz braucht, #conn bleibt auf dem normalen .maptag-Wert. */
+:root[data-gear="an"] .maptag.rechts{top:calc(10px + 46px + 8px)}
+
+/* Overlay klebt an der Sidebar-Kante, auf der Seite, auf der die Sidebar liegt (folgt
+   data-leiste, das main.js aus config.layout.leiste setzt -- siehe main.js ladeGeraet()).
+   Solide Hintergrundfarbe (Lesbarkeit), Rand/Schatten zur Karte hin fuer klare Abgrenzung.
+   Komplett unsichtbar wenn zu (opacity 0 + pointer-events:none), kein Slide-Zwang, nur ein
+   sanfter Fade. KEIN transform:scale fuer die Groesse -- immer zoom:var(--ui).
+   right:var(--conn-rand) statt fixem px-Wert (Nachtrag 3): #conn ist ein Text-Badge mit
+   dynamischer Breite (Verbindet.../Live/Offline/keine Verbindung) -- main.js misst die
+   tatsaechlich gerenderte Breite (aktualisiereOverlayRaender()) und schreibt sie hierher,
+   damit der Abstand zu jedem Text passt statt nur zum laengsten geschaetzten. Fallback-Wert
+   nur fuer das kurze Fenster vor der ersten Messung. */
+.zovl{position:absolute; top:0; bottom:0; right:var(--conn-rand, 100px); width:320px;
+  z-index:7; zoom:var(--ui);
+  background:var(--panel); border-left:1px solid var(--line);
+  box-shadow:-4px 0 16px rgba(0,0,0,.25);
+  display:flex; flex-direction:column;
+  opacity:0; pointer-events:none; transition:opacity .15s ease}
+.zovl.offen{opacity:1; pointer-events:auto}
+/* left:var(--umschalter-rand) statt fixem px-Wert (Nachtrag 3): #devName ist ebenfalls ein
+   Text-Badge mit dynamischer Breite (Geraetename) -- gleiches Prinzip wie --conn-rand oben,
+   main.js misst und schreibt den Wert. */
+:root[data-leiste="links"] .zovl{right:auto; left:var(--umschalter-rand, 190px);
+  border-left:none; border-right:1px solid var(--line);
+  box-shadow:4px 0 16px rgba(0,0,0,.25)}
+.zovl-kopf{display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:14px 16px; border-bottom:1px solid var(--line); flex:none}
+.zovl-kopf h2{margin:0; font-size:16px}
+.zovl-x{width:28px; height:28px; border-radius:8px; border:1px solid var(--line);
+  background:var(--panel2); color:var(--txt); cursor:pointer; flex:none}
+.zovl-x:hover{background:var(--panel)}
+/* Scrollt innerhalb des Overlays, sobald der Sektionsinhalt (ab E2c) die verfuegbare
+   Hoehe uebersteigt -- Kopfzeile bleibt fest stehen. */
+.zovl-body{flex:1; min-height:0; overflow-y:auto}
+.zovl-sektion{padding:14px 16px; border-bottom:1px solid var(--line)}
+.zovl-sektion:last-child{border-bottom:none}
+.zovl-sektion h3{margin:0 0 6px; font-size:13px; text-transform:uppercase;
+  letter-spacing:.4px; color:var(--muted)}
+.zovl-inhalt{font-size:12px; color:var(--muted)}
+
 /* Der Kasten selbst wird NICHT gezoomt — er bekommt seine Hoehe vom Flexaufbau und
    soll sie behalten. Gezoomt wird nur der Inhalt darin (.sidein). Dadurch bleiben
    Hoehe und Zoom voneinander unabhaengig; wird der Inhalt zu lang, rollt er im Kasten. */

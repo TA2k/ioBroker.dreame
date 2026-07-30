@@ -29,6 +29,35 @@
         <button id="z-out" title="Zoom −" aria-label="Verkleinern">−</button>
         <button id="z-reset" title="Zurücksetzen" aria-label="Ansicht zurücksetzen">⤢</button>
       </div>
+      <!-- Zahnrad + Einstellungs-Overlay (Etappe E, Commit E2b). Icon wird per uiIcon()
+           aus main.js injiziert (siehe dort) -- hier nur das Grundgeruest. Per Default
+           hidden, main.js entfernt das Attribut ausser bei ?gear=0 (Kiosk-Modus). Die vier
+           Sektionen sind in E2b bewusst leer (Platzhaltertext), Inhalte folgen ab E2c. -->
+      <button id="zahnradBtn" title="Einstellungen" aria-label="Einstellungen öffnen" hidden></button>
+      <div id="zahnradOvl" class="zovl">
+        <div class="zovl-kopf">
+          <h2>Einstellungen</h2>
+          <button id="zovlSchliessen" class="zovl-x" title="Schließen" aria-label="Einstellungen schließen">✕</button>
+        </div>
+        <div class="zovl-body">
+          <section class="zovl-sektion" id="zovlAussehen">
+            <h3>Aussehen</h3>
+            <div class="zovl-inhalt">— folgt in E2c —</div>
+          </section>
+          <section class="zovl-sektion" id="zovlPanels">
+            <h3>Panels</h3>
+            <div class="zovl-inhalt">— folgt in E2c —</div>
+          </section>
+          <section class="zovl-sektion" id="zovlLink">
+            <h3>Link</h3>
+            <div class="zovl-inhalt">— folgt in E2c —</div>
+          </section>
+          <section class="zovl-sektion" id="zovlSonstiges">
+            <h3>Sonstiges</h3>
+            <div class="zovl-inhalt">— folgt in E2c —</div>
+          </section>
+        </div>
+      </div>
     </div>
     <div class="side"><div class="sidein">
       <!-- Kopf-Panel (Etappe C, Commit C1). Zahnrad fehlt bewusst noch — das Einstellungs-
