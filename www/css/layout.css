@@ -266,6 +266,16 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
   font:inherit; font-size:12px; text-overflow:ellipsis}
 .zovl-link-zeile{display:flex; align-items:center; justify-content:space-between; gap:10px}
 
+/* Sonstiges-Sektion (Etappe E2f): Reset-Button nutzt .zovl-link-btn als Basis (siehe E2e-
+   Kommentar oben), .zovl-reset-btn nur fuer den Abstand zum Erklaertext darueber. Warn-
+   Zustand (zweiter Klick faellig) hebt sich farblich ab -- color-mix() gegen --panel2,
+   gleiches Muster wie die Theme-Ableitungen aus der E2c-Nachfassung, statt eine feste
+   Rot-Variante einzufuehren, die in Hell/Dunkel/Custom unterschiedlich stark auffiele. */
+.zovl-reset-btn{margin-top:6px}
+.zovl-reset-btn-warn{border-color:var(--bad,#ff5c7a); color:var(--bad,#ff5c7a);
+  background:color-mix(in srgb, var(--bad,#ff5c7a) 12%, var(--panel2))}
+#zovlResetFehler{margin-top:6px; color:var(--bad,#ff5c7a)}
+
 /* Der Kasten selbst wird NICHT gezoomt — er bekommt seine Hoehe vom Flexaufbau und
    soll sie behalten. Gezoomt wird nur der Inhalt darin (.sidein). Dadurch bleiben
    Hoehe und Zoom voneinander unabhaengig; wird der Inhalt zu lang, rollt er im Kasten. */

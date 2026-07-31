@@ -158,6 +158,7 @@ function schliesseZahnradOvl() {
   zahnradOvl.classList.remove('offen');
   zahnradBtn.classList.remove('on');
   document.removeEventListener('keydown', onZahnradEscape);
+  zovlResetZuruecksetzen(); // E2f: kein "Reset beim naechsten Oeffnen"-Rest-Zustand
 }
 
 function oeffneZahnradOvl() {
@@ -569,6 +570,44 @@ async function kopiereLinkInsClipboard() {
   zeigeKopierManuellHinweis();
 }
 document.getElementById('zovlLinkKopieren').onclick = kopiereLinkInsClipboard;
+
+// ===== Sonstiges-Sektion im Einstellungs-Overlay (Etappe E2f): einziger Button setzt
+// config.widget auf Config.defaultWidgetConfig() zurueck und laedt das Widget neu. Adapter-
+// Kanaele (tank.config, custom-room-cleaning, map-Namen) sind kein config.widget-Inhalt und
+// bleiben unangetastet -- reiner Widget-Aussehen/Panels/Link-Reset. =====
+const zovlResetBtn = document.getElementById('zovlResetBtn');
+const zovlResetFehlerEl = document.getElementById('zovlResetFehler');
+let zovlResetTimer = null;
+
+/** Bestaetigungs-Zustand des Reset-Buttons zuruecksetzen -- sowohl beim 4-Sekunden-Timeout
+ * als auch beim Schliessen des Overlays (siehe schliesseZahnradOvl() weiter oben): ohne
+ * diesen zweiten Aufrufer wuerde ein Klick kurz vor dem Schliessen den "Wirklich
+ * zuruecksetzen?"-Zustand bis zum naechsten Oeffnen stehen lassen ("Reset beim naechsten
+ * Oeffnen"-Falle, siehe E2f-Vorgabe). */
+function zovlResetZuruecksetzen() {
+  if (zovlResetTimer) { clearTimeout(zovlResetTimer); zovlResetTimer = null; }
+  zovlResetBtn.textContent = 'Einstellungen zurücksetzen';
+  zovlResetBtn.classList.remove('zovl-reset-btn-warn');
+}
+
+zovlResetBtn.onclick = async () => {
+  if (!zovlResetTimer) {
+    zovlResetBtn.textContent = 'Wirklich zurücksetzen?';
+    zovlResetBtn.classList.add('zovl-reset-btn-warn');
+    zovlResetTimer = setTimeout(zovlResetZuruecksetzen, 4000);
+    return;
+  }
+  // Zweiter Klick innerhalb der 4 Sekunden: Timer selbst loeschen (nicht ueber
+  // zovlResetZuruecksetzen(), das wuerde auch Label/Klasse sofort zuruecksetzen, waehrend
+  // der Schreibzugriff noch laeuft -- Button bleibt im Warn-Zustand, bis Erfolg/Fehler feststeht).
+  clearTimeout(zovlResetTimer);
+  zovlResetTimer = null;
+  zovlResetFehlerEl.hidden = true;
+  const ok = await Config.speichern(Geraete.aktiveDid, Config.defaultWidgetConfig());
+  if (ok) { window.location.reload(); return; }
+  zovlResetFehlerEl.hidden = false;
+  zovlResetZuruecksetzen();
+};
 
 // Gebunden an den echten Adapter-State dreame.0.info.connection (Cloud-Verbindung des
 // Adapters zum Geraet-Hersteller-Backend) -- NICHT an das Socket.io-Verbindungsereignis zum
