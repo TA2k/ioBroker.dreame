@@ -378,6 +378,198 @@ zovlPanelsListe.addEventListener('change', async e => {
   await Config.speichern(Geraete.aktiveDid, aktiveWidgetConfig);
 });
 
+// ===== Link-Sektion im Einstellungs-Overlay (Etappe E2e, WIDGET_SESSION_STATUS.md
+// E2e-Struktur-Analyse): aktueller Widget-Zustand (Aussehen + Panels) als Delta gegen die
+// Default-Config in einen Base64url-Blob kodiert und als ?cfg=-Parameter an die URL gehaengt.
+// Rein ephemer -- schreibeLayout()/Config.speichern() werden hier bewusst NIE aufgerufen,
+// der generierte Link veraendert config.widget nicht. Signal-Farben (nicht user-einstellbar)
+// und die Roboter-ID (Sicherheitsentscheidung, URL soll kein Geraet auswaehlen koennen)
+// werden nicht kodiert. =====
+
+// Nur diese Layout-Felder sind ueberhaupt vom Nutzer im Overlay einstellbar (siehe E2c) --
+// "farben"/"color"/"customBg" usw. sind ALTe, seit E2a/E2c abgeloeste Felder (config.js-
+// Kommentarkopf) und werden hier bewusst nicht mitgefuehrt.
+const ZOVL_LINK_LAYOUT_FELDER = ['theme', 'hauptfarbe', 'drehung', 'leiste', 'groesse', 'width'];
+const ZOVL_LINK_CUSTOM_FARBEN = ['hintergrund', 'menue', 'knoepfe', 'rahmen', 'schrift'];
+
+/** btoa()/atob() arbeiten auf Latin-1 (ein Byte pro Zeichen) -- JSON.stringify() kann
+ * Unicode enthalten. Klassisches Idiom: erst URI-kodieren (jedes Nicht-ASCII-Zeichen wird zu
+ * %XX-Sequenzen), dann jede %XX-Sequenz als einzelnes Byte interpretieren, das btoa() dann
+ * unveraendert durchreicht. Rueckweg exakt umgekehrt. Anschliessend auf Base64url gebracht
+ * (+/- und /_ getauscht, Padding entfernt) -- URL-sicher ohne Prozent-Escaping noetig. */
+function b64UrlEncode(text) {
+  const latin1 = encodeURIComponent(text).replace(/%([0-9A-F]{2})/g,
+    (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  return btoa(latin1).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64UrlDecode(blob) {
+  const b64 = blob.replace(/-/g, '+').replace(/_/g, '/');
+  const gepolstert = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+  const latin1 = atob(gepolstert);
+  const prozentKodiert = latin1.split('').map(z => '%' + ('0' + z.charCodeAt(0).toString(16)).slice(-2)).join('');
+  return decodeURIComponent(prozentKodiert);
+}
+
+/** Aktueller Widget-Zustand (Aussehen + Panels-Sichtbarkeit) -- gelesen direkt aus
+ * aktiveWidgetConfig statt aus den DOM-Controls: schreibeLayout()/der Panels-Toggle-Handler
+ * halten dieses Objekt bereits durchgehend aktuell (siehe deren Kommentarkoepfe), ein
+ * separater DOM-Scrape waere nur eine fehleranfaellige zweite Quelle fuer denselben Zustand. */
+function sammleAktuellenZustand() {
+  const L = aktiveWidgetConfig.layout;
+  const zustand = { layout: { custom: { ...L.custom } }, panels: {} };
+  for (const feld of ZOVL_LINK_LAYOUT_FELDER) zustand.layout[feld] = L[feld];
+  for (const { id } of PanelRegistry.alle) {
+    zustand.panels[id] = { sichtbar: aktiveWidgetConfig.panels[id] ? aktiveWidgetConfig.panels[id].sichtbar !== false : true };
+  }
+  return zustand;
+}
+
+/** Zwei Layout-Feldwerte auf "gleich genug fuers Delta" pruefen -- kein strikter ===-
+ * Vergleich fuer alle Felder: "groesse" ist ein Float (0.7-1.5) und kann durch den Zoom-
+ * Reset/die Prozent<->Faktor-Umrechnung minimale Rundungsfehler haben (z.B.
+ * 1.0000000000000002 statt 1), auf zwei Nachkommastellen gerundet reicht (Zahlenfeld-Schritt
+ * ist 5%-Schritte = 0.05). Hex-Farben werden klein geschrieben verglichen -- <input
+ * type="color"> liefert zwar immer lowercase, schadet aber nicht, falls sich das mal aendert.
+ * drehung/width sind Integer und brauchen keine Sonderbehandlung. */
+function zovlLinkFeldGleich(feld, a, b) {
+  if (feld === 'groesse') return Math.round((Number(a) || 0) * 100) === Math.round((Number(b) || 0) * 100);
+  if (typeof a === 'string' && typeof b === 'string') return a.toLowerCase() === b.toLowerCase();
+  return a === b;
+}
+
+/** Delta zwischen dem uebergebenen Zustand (siehe sammleAktuellenZustand()) und der Default-
+ * Config bilden -- nur Werte, die abweichen, kommen in den Blob (kompakte URL bei kleinen
+ * Aenderungen, siehe WIDGET_SESSION_STATUS.md E2e-Struktur-Analyse). */
+function bildeDelta(zustand) {
+  const std = Config.defaultWidgetConfig();
+  const delta = {};
+  for (const feld of ZOVL_LINK_LAYOUT_FELDER) {
+    if (!zovlLinkFeldGleich(feld, zustand.layout[feld], std.layout[feld])) {
+      if (!delta.layout) delta.layout = {};
+      delta.layout[feld] = zustand.layout[feld];
+    }
+  }
+  for (const farbe of ZOVL_LINK_CUSTOM_FARBEN) {
+    if (!zovlLinkFeldGleich(farbe, zustand.layout.custom[farbe], std.layout.custom[farbe])) {
+      if (!delta.layout) delta.layout = {};
+      if (!delta.layout.custom) delta.layout.custom = {};
+      delta.layout.custom[farbe] = zustand.layout.custom[farbe];
+    }
+  }
+  for (const id of Object.keys(zustand.panels)) {
+    const stdSichtbar = std.panels[id] ? std.panels[id].sichtbar !== false : true;
+    if (zustand.panels[id].sichtbar !== stdSichtbar) {
+      if (!delta.panels) delta.panels = {};
+      delta.panels[id] = { sichtbar: zustand.panels[id].sichtbar };
+    }
+  }
+  return delta;
+}
+
+/** Vollstaendigen Link (Origin + Pfad + ?cfg=<Blob> + ggf. &gear=0) aus dem aktuellen
+ * Widget-Zustand bauen. searchParams.set() escaped den Blob nicht unnoetig -- Base64url
+ * enthaelt nur [A-Za-z0-9_-], alles davon ist in einer URL ohnehin unreserviert. */
+function generiereZovlLink() {
+  const delta = bildeDelta(sammleAktuellenZustand());
+  const blob = b64UrlEncode(JSON.stringify(delta));
+  const url = new URL(window.location.origin + window.location.pathname);
+  url.searchParams.set('cfg', blob);
+  if (document.getElementById('zovlLinkGearVerstecken').checked) url.searchParams.set('gear', '0');
+  return url.toString();
+}
+
+/** ?cfg= aus der aktuellen URL lesen + dekodieren. Gibt null bei fehlendem/ungueltigem
+ * Parameter zurueck (kein Absturz, siehe VERHALTEN-Abschnitt E2e-Prompt) -- ein Konsolen-
+ * Warnung genuegt, das Widget startet dann einfach mit der unveraenderten Config weiter. */
+function leseUrlCfgDelta() {
+  const roh = new URLSearchParams(location.search).get('cfg');
+  if (!roh) return null;
+  try {
+    const delta = JSON.parse(b64UrlDecode(roh));
+    return (delta && typeof delta === 'object') ? delta : null;
+  } catch (e) {
+    console.warn('[link] ?cfg=-Parameter ist ungueltig, wird ignoriert:', e);
+    return null;
+  }
+}
+
+/** Delta aus der URL in die (bereits aus dem Adapter geladene) Config mergen -- IN PLACE,
+ * feldweise pro verschachtelter Ebene (custom.*, panels.<id>.*), damit z.B. eine einzelne
+ * geaenderte Custom-Farbe nicht die anderen vier auf Default zurueckwirft (ein flaches
+ * Object.assign(config, delta) wuerde genau das tun). Schreibt nichts nach Config.speichern --
+ * der Aufrufer (ladeGeraet()) uebergibt dasselbe Objekt unveraendert weiter an
+ * initAussehenSektion()/initPanelsSektion()/baueAktivePanels(), die den Merge dadurch wie
+ * ganz normale Config-Werte behandeln, ohne dass diese drei Funktionen selbst etwas von
+ * ?cfg= wissen muessen. */
+function wendeCfgDeltaAn(config, delta) {
+  if (delta.layout) {
+    const { custom, ...rest } = delta.layout;
+    Object.assign(config.layout, rest);
+    if (custom) Object.assign(config.layout.custom, custom);
+  }
+  if (delta.panels) {
+    for (const id of Object.keys(delta.panels)) {
+      if (!config.panels[id]) config.panels[id] = { sichtbar: true, versteckt: [] };
+      Object.assign(config.panels[id], delta.panels[id]);
+    }
+  }
+}
+
+document.getElementById('zovlLinkGenerieren').onclick = () => {
+  document.getElementById('zovlLinkFeld').value = generiereZovlLink();
+  document.getElementById('zovlLinkKopieren').disabled = false;
+};
+document.getElementById('zovlLinkFeld').onfocus = e => e.target.select();
+
+/** Button-Label kurz auf eine Rueckmeldung wechseln, danach zurueck auf "Kopieren" --
+ * gemeinsamer Rueckweg fuer alle drei Kopier-Versuche unten. */
+function zeigeZovlLinkLabel(text) {
+  const btn = document.getElementById('zovlLinkKopieren');
+  btn.textContent = text;
+  setTimeout(() => { btn.textContent = 'Kopieren'; }, 1500);
+}
+function zeigeKopierErfolg() { zeigeZovlLinkLabel('Kopiert!'); }
+function zeigeKopierManuellHinweis() { zeigeZovlLinkLabel('Bitte Strg+C druecken'); }
+
+/** Dreistufiger Kopier-Versuch (Nachtrag E2e nach Live-Test): navigator.clipboard braucht
+ * einen Secure Context (HTTPS oder localhost) -- das Widget laeuft bei David ueber HTTP,
+ * dort ist window.isSecureContext false und die Clipboard-API entweder gar nicht vorhanden
+ * oder ihr writeText() lehnt grundsaetzlich ab. document.execCommand('copy') ist deprecated,
+ * funktioniert aber (im Gegensatz zur Clipboard-API) auch in HTTP-Kontexten, solange das
+ * Zielfeld fokussiert+selektiert ist -- deshalb als zweiter Versuch vor dem rein manuellen
+ * Fallback (Feld markiert lassen, User drueckt selbst Strg+C). */
+async function kopiereLinkInsClipboard() {
+  const feld = document.getElementById('zovlLinkFeld');
+  const link = feld.value;
+  if (!link) return;
+
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(link);
+      zeigeKopierErfolg();
+      return;
+    } catch (e) {
+      // faellt durch zum naechsten Versuch
+    }
+  }
+
+  try {
+    feld.focus();
+    feld.select();
+    if (document.execCommand('copy')) {
+      zeigeKopierErfolg();
+      return;
+    }
+  } catch (e) {
+    // faellt durch zum manuellen Fallback
+  }
+
+  feld.focus();
+  feld.select();
+  zeigeKopierManuellHinweis();
+}
+document.getElementById('zovlLinkKopieren').onclick = kopiereLinkInsClipboard;
+
 // Gebunden an den echten Adapter-State dreame.0.info.connection (Cloud-Verbindung des
 // Adapters zum Geraet-Hersteller-Backend) -- NICHT an das Socket.io-Verbindungsereignis zum
 // ioBroker-Server selbst, das nur sagt, ob unser Browser mit ioBroker spricht, nichts ueber
@@ -471,10 +663,28 @@ function panelsAbbauen() {
  * (Etappe E2d), damit die Panel-Sichtbarkeit-Toggles im Einstellungs-Overlay live neu
  * aufbauen koennen, ohne den kompletten Geraete-Ladevorgang (Karte, Subscriptions usw.) zu
  * wiederholen. Ruft panelsAbbauen() NICHT selbst auf -- der Aufrufer muss vorher abbauen
- * (ladeGeraet() tut das schon ganz am Anfang, der Panel-Toggle-Handler ruft es selbst auf). */
+ * (ladeGeraet() tut das schon ganz am Anfang, der Panel-Toggle-Handler ruft es selbst auf).
+ *
+ * Reset-first (Bug-Fix nach E2e-Live-Test, WIDGET_SESSION_STATUS.md): die Panel-Container
+ * sind statisches HTML ohne "hidden" im Default. Ein reines Ueberspringen der inaktiven
+ * Panels (frueherer Stand) liess deren Container beim ALLERERSTEN Aufbau (leeres
+ * aktivePanels, also Widget-Start/Geraete-Wechsel/?cfg=-Merge) sichtbar, aber ohne Inhalt --
+ * init()/render() lief ja nie fuer sie. panelsAbbauen() haette sie nur versteckt, wenn vorher
+ * schon eine Instanz existierte. Deshalb hier vor dem Aufbau ALLE toggle-baren Container
+ * (PanelRegistry.alle minus kopf/fehler, die nie ausblendbar sind und kein hidden im Default
+ * tragen) hart auf hidden=true setzen, danach nur die tatsaechlich aktiven wieder sichtbar
+ * machen -- kein Restzustand aus einer vorherigen Session moeglich, jeder Container ist nach
+ * dieser Funktion eindeutig hidden=true oder hidden=false. */
 async function baueAktivePanels(config, did, typ) {
+  for (const { id } of PanelRegistry.alle) {
+    if (id === 'kopf' || id === 'fehler') continue;
+    const el = document.getElementById('panel-' + id);
+    if (el) el.hidden = true;
+  }
   for (const { id, klasse } of PanelRegistry.aktive(config, typ)) {
-    const panel = new klasse(id, document.getElementById('panel-' + id));
+    const el = document.getElementById('panel-' + id);
+    if (el) el.hidden = false;
+    const panel = new klasse(id, el);
     aktivePanels.push(panel);
     panel.zeige();
     await panel.init(did);
@@ -535,6 +745,13 @@ async function ladeGeraet(did) {
 
   const config = await Config.laden(did);
   aktiveWidgetConfig = config;
+  // Etappe E2e: ?cfg=-Delta NACH dem Laden der Adapter-Config, aber VOR jeder Anwendung
+  // (Zeilen unten) mergen -- config/aktiveWidgetConfig sind dieselbe Referenz, alles danach
+  // (kartenDrehung, initAussehenSektion(), initPanelsSektion(), baueAktivePanels()) liest
+  // die gemergten Werte automatisch mit, ohne dass eine dieser Stellen ?cfg= kennen muss.
+  // schreibeLayout()/Config.speichern() laufen hier bewusst nicht -- rein im Speicher.
+  const urlCfgDelta = leseUrlCfgDelta();
+  if (urlCfgDelta) wendeCfgDeltaAn(aktiveWidgetConfig, urlCfgDelta);
   kartenDrehung = (config.layout && Number(config.layout.drehung)) || 0;
   // data-leiste war seit Etappe A deklariert, aber nie aktiv gesetzt (WIDGET_SESSION_STATUS.md
   // E2b-Analyse) -- ab hier steuert es Sidebar-Ausrichtung UND die Seite des Einstellungs-

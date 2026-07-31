@@ -143,6 +143,12 @@ body.trail-off .trail, body.trail-off .mopspur{display:none}
   width:46px; height:46px; border-radius:50%; border:none; cursor:pointer; padding:0;
   display:flex; align-items:center; justify-content:center;
   background:rgba(0,0,0,.35); color:#fff; transition:.12s}
+/* Nachtrag E2e (Kiosk-Test): #zahnradBtn[hidden] allein reicht NICHT -- die obige
+   display:flex-Regel ist eine Autor-Regel und schlaegt den UA-Default [hidden]{display:none}
+   immer, unabhaengig von Spezifitaet (Autor-normal schlaegt UA-normal). Bei ?gear=0 blieb der
+   Button dadurch trotz hidden-Attribut sichtbar+klickbar (schwacher dunkler Kreis rechts
+   oben, ueberlagerte #conn). Explizite Autor-Regel fuer den hidden-Fall noetig. */
+#zahnradBtn[hidden]{display:none}
 #zahnradBtn:hover{background:rgba(0,0,0,.5); transform:scale(1.06)}
 #zahnradBtn:active{transform:scale(.94)}
 #zahnradBtn svg{width:24px; height:24px}
@@ -243,6 +249,22 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
    Spalte hier neben einem Label wuerde das den Platz sprengen, gleiches Prinzip wie beim
    inzwischen entfernten UI-Zoom-Slider. */
 .zovl-feld input[type=range]{width:140px; flex:none}
+
+/* Link-Sektion (Etappe E2e): Button oben ueber die volle Sektionsbreite, darunter das
+   readonly-Textfeld, darunter eine Zeile mit Checkbox links / Kopieren-Button rechts. Kein
+   .zovl-feld (kein Label+Control-Paar) -- eigene schlanke Klassen, Optik an .zovl-zoom
+   button angelehnt. */
+.zovl-link-btn{display:block; width:100%; margin-bottom:8px; padding:8px 10px;
+  border-radius:8px; border:1px solid var(--line); background:var(--panel2); color:var(--txt);
+  font:inherit; font-size:12.5px; cursor:pointer}
+.zovl-link-btn:hover{border-color:var(--accent,#4a78e0)}
+.zovl-link-btn:active{transform:scale(.98)}
+.zovl-link-btn:disabled{opacity:.4; cursor:not-allowed}
+.zovl-link-btn-sek{width:auto; margin-bottom:0}
+.zovl-link-feld{display:block; width:100%; margin-bottom:8px; padding:6px 8px;
+  border-radius:8px; border:1px solid var(--line); background:var(--panel2); color:var(--txt);
+  font:inherit; font-size:12px; text-overflow:ellipsis}
+.zovl-link-zeile{display:flex; align-items:center; justify-content:space-between; gap:10px}
 
 /* Der Kasten selbst wird NICHT gezoomt — er bekommt seine Hoehe vom Flexaufbau und
    soll sie behalten. Gezoomt wird nur der Inhalt darin (.sidein). Dadurch bleiben
