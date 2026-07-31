@@ -13,6 +13,8 @@
 
 **This adapter uses Sentry libraries to automatically report exceptions and code errors to the developers.** For more details and for information how to disable the error reporting see [Sentry-Plugin Documentation](https://github.com/ioBroker/plugin-sentry#plugin-sentry)! Sentry reporting is used starting with js-controller 3.0.
 
+![Live Map widget](docs/Pics/Map-Screen.jpg)
+
 ## dreame adapter for ioBroker
 
 Adapter for Dreame and MOVA robot vacuums and robot mowers.
@@ -315,9 +317,9 @@ The `customCommand` and the room checkboxes are **bidirectionally synchronized**
 
 ---
 
-### Live Map
+### Live Map Widget
 
-The adapter includes a browser-based live map widget: robot position, cleaning trail and cleaned rooms, updating in real time while the robot cleans. It is served directly by this adapter — no vis widget or extra adapter needed.
+The adapter includes a browser-based live map widget: robot position, cleaning trail and cleaned rooms, updating in real time while the robot cleans. It is served directly by this adapter — no vis widget or extra adapter needed, and it's ready to embed as an iframe in vis, Grafana or a custom dashboard.
 
 #### Setup
 
@@ -325,42 +327,47 @@ The adapter includes a browser-based live map widget: robot position, cleaning t
 - Open it at `%web_protocol%://%ip%:%web_port%/dreame/` — e.g. `http://<your-iobroker>:8082/dreame/`. A ready-made link ("Dreame-Map") is on the ioBroker start page and next to this instance in the adapter list.
 - **Get Map** must be enabled (see [Configuration](#configuration)) — without it the widget has no data.
 - If no map is shown yet, start the adapter once while the robot sits in its dock so the first full map can load.
-- Multiple robots on the same instance: pick one with `?did=<did>` in the address. The widget otherwise uses the first device it finds.
+- Multiple robots on the same instance: the widget shows a device switcher in the header when more than one device is found, or pick one directly with `?did=<did>` in the address.
 
 > **Camera/VSLAM robots are not supported.** Devices that navigate by camera instead of lidar (e.g. Mijia 1C/1T, Dreame F9) are not covered by the map widget — it is built and tested for lidar robots only. The adapter logs a warning and the map stays empty for these devices.
 
-#### Customizing appearance
+#### Appearance
 
-The settings panel (gear icon in the widget) covers the common preferences: light/dark theme, background color, sidebar position, map rotation and display size. Everything else is controlled through CSS custom properties on the page's root element, for anyone embedding the widget with their own stylesheet (e.g. in vis):
+All appearance settings live in the widget itself — open the gear icon in the top-right corner. Four color modes are available:
 
-| Variable                    | Default (dark theme)   | Meaning                                                                                 |
-| ---------------------------- | ----------------------- | ---------------------------------------------------------------------------------------- |
-| `--bg`                       | `#0f1420`               | Page background                                                                          |
-| `--panel` / `--panel2`       | `#171e2e` / `#1d2740`   | Panel and card backgrounds                                                               |
-| `--flaeche` / `--flaeche2`   | = `--panel` / `--panel2`| Large-area backgrounds behind the map; kept separate from `--panel` so "transparent" mode (see `data-hintergrund` below) only affects these, not dialogs and cards |
-| `--line`                     | `#2a3550`               | Borders, dividers                                                                        |
-| `--txt`                      | `#e6ecf7`               | Primary text                                                                             |
-| `--muted`                    | `#8ea0c0`                | Secondary text                                                                           |
-| `--accent`                   | `#2bb4e2`               | Highlights, active states, buttons                                                       |
-| `--robot`                    | `#ff5c7a`               | Robot marker                                                                             |
-| `--charger`                  | `#38e29b`               | Charger marker                                                                           |
-| `--ok` / `--warn` / `--bad`  | `#38e29b` / `#e0a33a` / `#ff5c7a` | Status colors (consumables, warnings, errors)                                 |
-| `--hauch`                    | `rgba(255,255,255,.08)` | Subtle lift for the sidebar in transparent mode                                          |
-| `--kante`                    | `rgba(255,255,255,.16)` | Subtle edge/divider color in transparent mode                                            |
-| `--schleier`                 | radial gradient          | Faint accent glow behind the map                                                         |
+| Mode | Description |
+| --- | --- |
+| Light | Fixed light theme |
+| Dark | Fixed dark theme (default) |
+| Main color | Pick one base color; sidebar, borders and text are derived from it automatically, with a contrast check so text always stays readable |
+| Custom | Five individually chosen colors (background, sidebar, buttons, borders, text) for full control |
 
-The light theme uses its own values for all of the above (see `:root[data-farben="hell"]` in `www/legacy.html`; this widget is currently being restructured into `www/js/` + `www/css/`, see `WIDGET_UMBAU_PLAN.md`).
+<table>
+<tr>
+<td width="50%"><img src="docs/Pics/Map-Dark.jpg" alt="Dark theme"></td>
+<td width="50%"><img src="docs/Pics/Map-White.jpg" alt="Light theme"></td>
+</tr>
+</table>
 
-State toggles, set as attributes on the page root and readable in your own CSS:
+#### Features
 
-| Attribute          | Values                                    | Meaning                                                                 |
-| ------------------ | ------------------------------------------ | ------------------------------------------------------------------------ |
-| `data-farben`       | `hell` \| `dunkel` (absent = follows OS)   | Forces light/dark theme                                                 |
-| `data-hintergrund`  | `transparent` (absent = filled)            | Page background see-through, for embedding over another background (e.g. vis) |
-| `data-bg`           | any hex color (absent = theme default)     | Custom background color chosen in the settings panel; intentionally overrides `data-hintergrund="transparent"` when both are set |
-| `data-leiste`       | `links` \| `oben` \| `unten` (absent = `rechts`) | Sidebar position                                                   |
+- Device switcher in the header for setups with multiple robots
+- Customizable layout: sidebar left/right, UI zoom, sidebar width, map rotation
+- Panels can be shown or hidden individually (Cleaning, Maintenance, Water & Mop, Statistics, Station)
+- Kiosk mode (`?gear=0`) hides the settings gear — for read-only displays (wall tablets, dashboards)
+- Current appearance and panel settings can be exported as a compact link (`?cfg=<blob>`), for quickly sharing or reusing a setup across multiple embeds without touching the stored configuration
+- Tank and mop consumption counters (Water & Mop panel)
+- One-click reset back to default appearance and panel settings, independent of the stored adapter configuration
 
-All of the above (plus display size and map rotation) can also be set via URL parameters, e.g. `?farben=dunkel&hintergrund=transparent&bg=%23112233&leiste=links` — useful when embedding the same widget multiple times with different settings. The settings panel has an "address with these settings" section that builds this URL for you.
+#### Kiosk / iframe example
+
+Combine `?gear=0` (hide settings) with a `?cfg=` link generated in the settings panel to embed a pre-configured, read-only view:
+
+```
+http://<your-iobroker>:8082/dreame/?gear=0&cfg=<blob>
+```
+
+The `<blob>` is generated by the "Link" section in the widget's settings panel and only affects that browser tab/embed — it never overwrites the settings stored for the widget itself.
 
 ---
 
@@ -728,6 +735,13 @@ translations should be submitted as PRs against the respective
 - Remove invalid cleaning-progress (4-63) from mower states
 
 [Older changelogs can be found there](CHANGELOG_OLD.md)
+
+## Credits
+
+- **TA2k** — repository owner and original adapter author
+- **RicardoHipp** — original map renderer this widget's map rendering is based on (MIT licensed)
+- **Sefina-DS (David)** — co-maintainer, widget rebuild, live testing
+- **Community** — krobipd, flapman, volvodani, and everyone else reporting issues and testing devices
 
 ## License
 
