@@ -14,6 +14,7 @@ const Json2iob = require('json2iob');
 const crypto = require('node:crypto');
 const mqtt = require('mqtt');
 const zlib = require('node:zlib');
+const { parseShortcutList } = require('./lib/shortcuts');
 //check if canvas is available because is optional dependency
 let createCanvas;
 let ImageData;
@@ -2857,6 +2858,15 @@ class Dreame extends utils.Adapter {
       }
     }
 
+    // Shortcuts only arrive through MQTT (siid 4 does not answer get_properties),
+    // and the device pushes the list only when it changes. Without this the
+    // buttons would stay missing after a restart until that happens by chance,
+    // so rebuild them from the value already persisted in status.shortcuts.
+    const _scPersisted = await this.getStateAsync(`${did}.status.shortcuts`);
+    if (_scPersisted && _scPersisted.val) {
+      await this.parseShortcuts(did, _scPersisted.val);
+    }
+
     this.log.info(
       `Vacuum states created: ${statusStates.length} status, ${remoteStates.length} remote, ${autoSwitchRemotes.length} autoSwitch, ${actionStates.length} actions`,
     );
@@ -4026,9 +4036,13 @@ class Dreame extends utils.Adapter {
           if (this.isVacuum(device) && element.siid === 4 && element.piid === 50) {
             this.parseVacuumAutoSwitch(did, element.value);
           }
-          // Shortcuts (4-48): parse base64 names and running state
-          if (this.isMower(device) && element.siid === 4 && element.piid === 48) {
-            this.parseShortcuts(did, element.value);
+          // Shortcuts (4-48): parse base64 names and running state.
+          // Not restricted to mowers — vacuums report their app shortcuts on the
+          // same property and start them with the same action. parseShortcuts()
+          // ignores anything that is not a shortcut list, so devices that use
+          // 4-48 differently are unaffected.
+          if (element.siid === 4 && element.piid === 48) {
+            await this.parseShortcuts(did, element.value);
           }
           // Lazy create + setState für Properties mit bekannter Metadaten-Definition
           const lazyPath = await this._lazyCreateState(did, element.siid, element.piid, element.value);
@@ -5437,32 +5451,36 @@ class Dreame extends utils.Adapter {
     }
   }
 
-  parseShortcuts(did, value) {
+  async parseShortcuts(did, value) {
     try {
-      const shortcuts = typeof value === 'string' ? JSON.parse(value) : value;
-      if (!Array.isArray(shortcuts)) return;
-      for (const sc of shortcuts) {
-        const name = Buffer.from(sc.name, 'base64').toString('utf-8');
-        const running = sc.state === '0' || sc.state === '1';
+      for (const sc of parseShortcutList(value)) {
         const path = `${did}.shortcuts.${sc.id}`;
-        this.extendObject(path, { type: 'channel', common: { name: name }, native: {} });
-        this.extendObject(path + '.name', {
+        await this.extendObject(path, { type: 'channel', common: { name: sc.name }, native: {} });
+        await this.extendObject(path + '.name', {
           type: 'state',
           common: { name: 'Shortcut Name', type: 'string', role: 'text', read: true, write: false },
           native: {},
         });
-        this.setState(path + '.name', name, true);
-        this.extendObject(path + '.running', {
+        this.setState(path + '.name', sc.name, true);
+        // The device reports a shortcut's state only as a transient start pulse
+        // (state:"1" for a single push right after it is triggered, then gone) and
+        // never signals the end, so a per-shortcut running indicator cannot be kept
+        // truthful — an earlier version's `.running` stayed stuck at true. Remove it.
+        // delObject drops the leaf value too; safe here because this create path is
+        // sequential (no concurrent observer).
+        await this.delObjectAsync(path + '.running').catch(() => undefined);
+        await this.extendObject(path + '.start', {
           type: 'state',
-          common: { name: 'Running', type: 'boolean', role: 'indicator', read: true, write: false },
-          native: {},
-        });
-        this.setState(path + '.running', running, true);
-        this.extendObject(path + '.start', {
-          type: 'state',
-          common: { name: `Start "${name}"`, type: 'boolean', role: 'button', read: false, write: true },
+          common: { name: `Start "${sc.name}"`, type: 'boolean', role: 'button', read: false, write: true, def: false },
           native: { shortcutId: sc.id, did: did },
         });
+        // A button rests at false. Objects created before this fix had no default
+        // (value null), and a press left them stuck at true because the handler did
+        // not reset them. Normalise anything that is not already false.
+        const _scStart = await this.getStateAsync(path + '.start');
+        if (!_scStart || _scStart.val !== false) {
+          this.setState(path + '.start', false, true);
+        }
       }
     } catch (e) {
       this.log.debug(`parseShortcuts error: ${e.message}`);
@@ -5868,7 +5886,10 @@ class Dreame extends utils.Adapter {
           const stateObjSc = await this.getObjectAsync(id);
           if (stateObjSc && stateObjSc.native && stateObjSc.native.shortcutId !== undefined) {
             const device = this.deviceArray.find((obj) => obj.did === deviceId);
-            if (!device || !this.isMower(device)) return;
+            // No device-class check: this button only exists where parseShortcuts()
+            // created it, so reaching this point already means the device reported
+            // a shortcut list. Action 4-1 with mode 25 is the same on both classes.
+            if (!device) return;
             const scId = String(stateObjSc.native.shortcutId);
             this.log.info(`Starting shortcut ${scId} for ${device.model}`);
             await this.sendCommand({
@@ -5884,6 +5905,10 @@ class Dreame extends utils.Adapter {
                 ],
               },
             });
+            // Reset the button (role:button) after triggering, ack:true so this
+            // write does not re-enter onStateChange. Without it the pressed value
+            // stays true and the button reads as permanently "on".
+            await this.setState(id, false, true);
             return;
           }
         }
