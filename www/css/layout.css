@@ -238,7 +238,11 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
   text-align:right; -moz-appearance:textfield; appearance:textfield}
 .zovl-zoom input[type=number]::-webkit-outer-spin-button,
 .zovl-zoom input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
-.zovl-zoom-pct{font-size:12px; color:var(--muted); margin-right:2px}
+/* Feste Mindestbreite fuer die Einheit: "%" ist schmaler als "px", ohne sie saessen die
+   Plus-Knoepfe von UI-Zoom und Menue-Breite nicht untereinander. Links ausgerichtet, damit
+   die Einheit direkt am Zahlenfeld klebt und nur rechts davon Luft entsteht. */
+.zovl-zoom-pct{font-size:12px; color:var(--muted); margin-right:2px;
+  display:inline-block; min-width:15px; text-align:left}
 .zovl-zoom button{width:26px; height:26px; border-radius:7px; border:1px solid var(--line);
   background:var(--panel2); color:var(--txt); font-size:14px; line-height:1; cursor:pointer; flex:none}
 .zovl-zoom button:hover{border-color:var(--accent,#4a78e0)}
