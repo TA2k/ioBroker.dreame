@@ -539,6 +539,7 @@ class Dreame extends utils.Adapter {
     this._waterboxRemovalTimers = {};
     this.subscribeStates('*.remote.*');
     this.subscribeStates('*.shortcuts.*.start');
+    this.subscribeStates('*.status.shortcuts');
     this.subscribeStates('*.cleanset.*');
     this.subscribeStates('*.map.maps.*.mapName');
     this.subscribeStates('*.config.tank.*');
@@ -558,6 +559,18 @@ class Dreame extends utils.Adapter {
         }
       }
       await this.updateDevicesViaSpec();
+      // Startup-Rebuild fuer Shortcuts: get_properties liefert den aktuellen
+      // Wert von status.shortcuts, aber ioBroker feuert bei setState mit
+      // identischem Wert kein Change-Event, daher greift der State-Subscribe
+      // beim Adapter-Restart nicht. Explizit rebuilden fuer alle Vacuums/Mower.
+      for (const device of this.deviceArray) {
+        if (this.isMower(device) || this.isVacuum(device)) {
+          const st = await this.getStateAsync(device.did + '.status.shortcuts');
+          if (st && st.val) {
+            this.parseShortcuts(device.did, st.val);
+          }
+        }
+      }
       await this.connectMqtt();
       this.updateInterval = setInterval(
         async () => {
@@ -4027,7 +4040,7 @@ class Dreame extends utils.Adapter {
             this.parseVacuumAutoSwitch(did, element.value);
           }
           // Shortcuts (4-48): parse base64 names and running state
-          if (this.isMower(device) && element.siid === 4 && element.piid === 48) {
+          if ((this.isMower(device) || this.isVacuum(device)) && element.siid === 4 && element.piid === 48) {
             this.parseShortcuts(did, element.value);
           }
           // Lazy create + setState für Properties mit bekannter Metadaten-Definition
@@ -5437,10 +5450,25 @@ class Dreame extends utils.Adapter {
     }
   }
 
-  parseShortcuts(did, value) {
+  async parseShortcuts(did, value) {
     try {
       const shortcuts = typeof value === 'string' ? JSON.parse(value) : value;
       if (!Array.isArray(shortcuts)) return;
+      // Cleanup verwaister Kanaele: Shortcuts, die im neuen Payload nicht mehr
+      // vorkommen (z.B. in der App geloescht), aus dem Objektbaum entfernen.
+      // Laeuft nur bei einem gueltigen Array (siehe Check oben), damit ein
+      // kaputter/leerer Push nicht versehentlich alle Kanaele loescht.
+      const currentIds = new Set(shortcuts.map((sc) => String(sc.id)));
+      const existingNameStates = await this.getStatesAsync(`${did}.shortcuts.*.name`);
+      for (const fullId of Object.keys(existingNameStates || {})) {
+        const idParts = fullId.split('.');
+        const scId = idParts[idParts.length - 2];
+        if (!currentIds.has(scId)) {
+          const orphanPath = `${did}.shortcuts.${scId}`;
+          await this.delObjectAsync(orphanPath, { recursive: true });
+          this.log.info(`Shortcut ${scId} nicht mehr vorhanden, Kanal ${orphanPath} entfernt`);
+        }
+      }
       for (const sc of shortcuts) {
         const name = Buffer.from(sc.name, 'base64').toString('utf-8');
         const running = sc.state === '0' || sc.state === '1';
@@ -5816,6 +5844,17 @@ class Dreame extends utils.Adapter {
         }
         return;
       }
+      // Rebuild der Shortcut-Objekte bei Aenderung von status.shortcuts
+      // (deckt initialen Poll, MQTT-Push und Adapter-Restart einheitlich ab)
+      if (id.endsWith('.status.shortcuts') && state && state.ack) {
+        const parts = id.split('.');
+        const did = parts[2];
+        const device = this.deviceArray && this.deviceArray.find((d) => d.did === did);
+        if (device && (this.isMower(device) || this.isVacuum(device))) {
+          this.parseShortcuts(did, state.val);
+        }
+        return;
+      }
       if (!state.ack) {
         const deviceId = id.split('.')[2];
         const folder = id.split('.')[3];
@@ -5868,7 +5907,7 @@ class Dreame extends utils.Adapter {
           const stateObjSc = await this.getObjectAsync(id);
           if (stateObjSc && stateObjSc.native && stateObjSc.native.shortcutId !== undefined) {
             const device = this.deviceArray.find((obj) => obj.did === deviceId);
-            if (!device || !this.isMower(device)) return;
+            if (!device || (!this.isMower(device) && !this.isVacuum(device))) return;
             const scId = String(stateObjSc.native.shortcutId);
             this.log.info(`Starting shortcut ${scId} for ${device.model}`);
             await this.sendCommand({
