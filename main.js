@@ -542,6 +542,7 @@ class Dreame extends utils.Adapter {
     this.subscribeStates('*.shortcuts.*.start');
     this.subscribeStates('*.status.shortcuts');
     this.subscribeStates('*.status.schedule');
+    this.subscribeStates('*.schedule.*.enabled');
     this.subscribeStates('*.cleanset.*');
     this.subscribeStates('*.map.maps.*.mapName');
     this.subscribeStates('*.config.tank.*');
@@ -6041,6 +6042,53 @@ class Dreame extends utils.Adapter {
             });
             return;
           }
+        }
+        // Termin-Toggle (schedule.<id>.enabled): schreibt Feld[1] im status.schedule-Blob
+        if (id.includes('.schedule.') && id.endsWith('.enabled')) {
+          const device = this.deviceArray.find((obj) => obj.did === deviceId);
+          if (!device || (!this.isMower(device) && !this.isVacuum(device))) return;
+          const idParts = id.split('.');
+          const scheduleId = idParts[idParts.length - 2];
+          // Orphan-Schutz: verweist der Termin auf einen geloeschten Shortcut, blockiert
+          // auch die App den Toggle client-seitig (siehe SHORTCUTS_SCHEDULE_ANALYSE.md
+          // Runde 2 Block 4b) - hier spiegeln statt an ein ungueltiges Ziel zu schreiben.
+          const orphanState = await this.getStateAsync(`${deviceId}.schedule.${scheduleId}.orphan`);
+          if (orphanState && orphanState.val) {
+            this.log.warn(
+              `Termin ${scheduleId} verweist auf einen geloeschten Shortcut (verwaist) - Toggle wird nicht ans Geraet gesendet`,
+            );
+            await this.setState(id, state.val, false);
+            return;
+          }
+          const scheduleSt = await this.getStateAsync(`${deviceId}.status.schedule`);
+          const oldBlob = (scheduleSt && scheduleSt.val) || '';
+          const segments = oldBlob.split(';');
+          const idx = segments.findIndex((seg) => seg.split('-')[0] === scheduleId);
+          if (idx === -1) {
+            this.log.warn(`Termin ${scheduleId} nicht in status.schedule gefunden, Toggle abgebrochen`);
+            await this.setState(id, state.val, false);
+            return;
+          }
+          // Rollback-Sicherung: alten Blob VOR dem Schreiben sichern.
+          await this.setState(`${deviceId}.schedule._backup`, oldBlob, true);
+          const fields = segments[idx].split('-');
+          fields[1] = state.val ? '1' : '0';
+          segments[idx] = fields.join('-');
+          const newBlob = segments.join(';');
+          const result = await this.sendCommand({
+            did: deviceId,
+            method: 'set_properties',
+            params: [{ did: deviceId, siid: 8, piid: 2, value: newBlob }],
+          });
+          const ok = result && Array.isArray(result.result) && result.result[0] && result.result[0].code === 0;
+          if (ok) {
+            this.log.info(`Termin ${scheduleId} enabled=${state.val}`);
+            await this.setState(id, state.val, true);
+          } else {
+            this.log.error(`Termin ${scheduleId} Toggle fehlgeschlagen: ${JSON.stringify(result)}`);
+            await this.setState(id, state.val, false);
+          }
+          return;
         }
         // custom-room-cleaning: bidirectional sync between checkboxes and customCommand
         if (id.includes('.remote.custom-room-cleaning.')) {
