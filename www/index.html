@@ -81,8 +81,14 @@
                 <button type="button" id="zovlGroessePlus" aria-label="Vergrößern">+</button>
               </span>
             </label>
-            <label class="zovl-feld"><span>Menü-Breite <span class="zovl-wert" id="zovlBreiteWert"></span></span>
-              <input type="range" id="zovlBreite" min="250" max="500" step="10">
+            <!-- Zahlenfeld statt Schieberegler, gleiches Muster wie der UI-Zoom darueber
+                 (Begruendung siehe main.js bei wendeUndSchreibeBreite). -->
+            <label class="zovl-feld"><span>Menü-Breite</span>
+              <span class="zovl-zoom">
+                <button type="button" id="zovlBreiteMinus" aria-label="Schmaler">−</button>
+                <input type="number" id="zovlBreite" min="250" max="500" step="5"><span class="zovl-zoom-pct">px</span>
+                <button type="button" id="zovlBreitePlus" aria-label="Breiter">+</button>
+              </span>
             </label>
           </section>
           <section class="zovl-sektion" id="zovlPanels">

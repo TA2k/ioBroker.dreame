@@ -268,7 +268,6 @@ function initAussehenSektion(config) {
   const breite = L.width || 275;
   document.documentElement.style.setProperty('--leiste-breite', breite + 'px');
   document.getElementById('zovlBreite').value = breite;
-  fuelleBreite();
 }
 
 document.getElementById('zovlTheme').onchange = e => {
@@ -322,21 +321,29 @@ document.getElementById('zovlGroessePlus').onclick = () => wendeUndSchreibeGroes
 // Menue-Breite (Etappe E2c, Nachtrag 3): nutzt das seit E2a im Schema stehende, bisher nie
 // verdrahtete config.widget.layout.width + die zugehoerige --leiste-breite-CSS-Variable
 // (.side{width:calc(var(--leiste-breite) * var(--ui))}, siehe layout.css) -- bewusst kein
-// neues Feld, David-Entscheidung. input (Ziehen): nur live anwenden + Fuellstand/Anzeige
-// aktualisieren, kein Schreiben. change (Loslassen): persistieren -- gleiches Muster wie
-// der Wetness-Slider in reinigung.js.
+// neues Feld, David-Entscheidung.
+//
+// Zahlenfeld + Minus/Plus statt Schieberegler -- gleiches Muster wie der UI-Zoom darueber,
+// und aus demselben Grund. Der Regler war hier naemlich kaum bedienbar: Das
+// Einstellungs-Overlay haengt am Rand des Kartenbereichs (.zovl{right:var(--conn-rand)},
+// bei linker Leiste spiegelbildlich left:var(--umschalter-rand)). Wird die Leiste breiter,
+// wird der Kartenbereich schmaler -- das Overlay wandert also samt Regler zur Seite,
+// WAEHREND man ihn zieht (live gemessen: 250 px Versatz ueber den Reglerbereich, bei nur
+// 140 px Reglerbreite, in beiden Leistenlagen spiegelbildlich). Der Schiebeknopf lief
+// dadurch unter dem Zeiger weg. Mit Zahlenfeld/Tasten gibt es kein Ziehen mehr, und pro
+// Klick verschiebt sich das Overlay nur um die Schrittweite.
+// Schrittweite 5 statt 10, weil man mit 10er-Schritten die passende Breite oft nicht trifft.
 const zovlBreiteEl = document.getElementById('zovlBreite');
-const zovlBreiteWertEl = document.getElementById('zovlBreiteWert');
-function fuelleBreite() {
-  const pct = (Number(zovlBreiteEl.value) - Number(zovlBreiteEl.min)) / (Number(zovlBreiteEl.max) - Number(zovlBreiteEl.min)) * 100;
-  zovlBreiteEl.style.setProperty('--fill', pct + '%');
-  zovlBreiteWertEl.textContent = zovlBreiteEl.value + ' px';
+function wendeUndSchreibeBreite(px) {
+  const geklemmt = Math.min(500, Math.max(250, Math.round(px) || 275)); // wie beim Zoom:
+  // HTML5 min/max greift meist selbst, das Klemmen hier faengt "abc"/leer/Tippfehler ab
+  zovlBreiteEl.value = geklemmt;
+  document.documentElement.style.setProperty('--leiste-breite', geklemmt + 'px');
+  schreibeLayout('width', geklemmt);
 }
-zovlBreiteEl.oninput = () => {
-  document.documentElement.style.setProperty('--leiste-breite', zovlBreiteEl.value + 'px');
-  fuelleBreite();
-};
-zovlBreiteEl.onchange = () => schreibeLayout('width', Number(zovlBreiteEl.value));
+zovlBreiteEl.onchange = () => wendeUndSchreibeBreite(Number(zovlBreiteEl.value));
+document.getElementById('zovlBreiteMinus').onclick = () => wendeUndSchreibeBreite(Number(zovlBreiteEl.value) - 5);
+document.getElementById('zovlBreitePlus').onclick = () => wendeUndSchreibeBreite(Number(zovlBreiteEl.value) + 5);
 
 // ===== Panels-Sektion im Einstellungs-Overlay (Etappe E2d): Sichtbarkeit-Toggle pro Panel
 // (Ebene 1 aus WIDGET_UMBAU_PLAN.md Abschnitt 8.2 -- Feld-Sichtbarkeit "versteckt" ist
