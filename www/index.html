@@ -74,7 +74,13 @@
                 <span class="zovl-switch-txt" id="zovlLeisteTxt">Rechts</span>
               </span>
             </label>
-            <label class="zovl-feld"><span>UI-Zoom</span>
+            <!-- for="zovlGroesse" ist PFLICHT, nicht Kosmetik: ohne das Attribut gilt das
+                 erste bedienbare Element im <label> als sein Bedienelement -- und das ist hier
+                 der Minus-Knopf, nicht das Zahlenfeld. Folge waere (live nachgestellt): ein
+                 Klick auf die Beschriftung, auf "%" oder ins Leere der Zeile drueckt Minus,
+                 und beim Zeigen auf irgendeinen Teil der Zeile spiegelt der Browser :hover
+                 zusaetzlich auf den Minus-Knopf, der dadurch mit aufleuchtet. -->
+            <label class="zovl-feld" for="zovlGroesse"><span>UI-Zoom</span>
               <span class="zovl-zoom">
                 <button type="button" id="zovlGroesseMinus" aria-label="Verkleinern">−</button>
                 <input type="number" id="zovlGroesse" min="70" max="150" step="5"><span class="zovl-zoom-pct">%</span>
@@ -82,8 +88,9 @@
               </span>
             </label>
             <!-- Zahlenfeld statt Schieberegler, gleiches Muster wie der UI-Zoom darueber
-                 (Begruendung siehe main.js bei wendeUndSchreibeBreite). -->
-            <label class="zovl-feld"><span>Menü-Breite</span>
+                 (Begruendung siehe main.js bei wendeUndSchreibeBreite) -- einschliesslich des
+                 dort erklaerten for-Attributs. -->
+            <label class="zovl-feld" for="zovlBreite"><span>Menü-Breite</span>
               <span class="zovl-zoom">
                 <button type="button" id="zovlBreiteMinus" aria-label="Schmaler">−</button>
                 <input type="number" id="zovlBreite" min="250" max="500" step="5"><span class="zovl-zoom-pct">px</span>
