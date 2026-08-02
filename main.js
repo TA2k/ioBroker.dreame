@@ -32,6 +32,7 @@ const { decodeMultiMapData } = require('./lib/dreame');
 const mapController = require('./lib/mapController');
 
 const { getRoomDisplayName, buildSegmentTypeMap } = require('./lib/cleanset');
+const { parseScheduleBlob } = require('./lib/schedule');
 
 const BRAND_CONFIG = {
   dreame: {
@@ -5494,6 +5495,84 @@ class Dreame extends utils.Adapter {
       }
     } catch (e) {
       this.log.debug(`parseShortcuts error: ${e.message}`);
+    }
+  }
+
+  async parseSchedule(did, value) {
+    try {
+      const termine = parseScheduleBlob(value);
+      this.extendObject(`${did}.schedule._backup`, {
+        type: 'state',
+        common: { name: 'Letzter Termine-Blob (Rollback)', type: 'string', role: 'json', read: true, write: false },
+        native: {},
+      });
+      for (const termin of termine) {
+        const path = `${did}.schedule.${termin.id}`;
+        const displayName = `${termin.time} - ${termin.weekdays || 'nie'}`;
+        this.extendObject(path, { type: 'channel', common: { name: displayName }, native: {} });
+        this.extendObject(`${path}.enabled`, {
+          type: 'state',
+          common: { name: 'Aktiv', type: 'boolean', role: 'switch', read: true, write: true },
+          native: {},
+        });
+        this.setState(`${path}.enabled`, termin.enabled, true);
+        this.extendObject(`${path}.time`, {
+          type: 'state',
+          common: { name: 'Uhrzeit', type: 'string', role: 'text', read: true, write: false },
+          native: {},
+        });
+        this.setState(`${path}.time`, termin.time, true);
+        this.extendObject(`${path}.weekdays`, {
+          type: 'state',
+          common: { name: 'Wochentage', type: 'string', role: 'text', read: true, write: false },
+          native: {},
+        });
+        this.setState(`${path}.weekdays`, termin.weekdays, true);
+        this.extendObject(`${path}.type`, {
+          type: 'state',
+          common: { name: 'Termin-Typ', type: 'string', role: 'text', read: true, write: false },
+          native: {},
+        });
+        this.setState(`${path}.type`, termin.type, true);
+        this.extendObject(`${path}.raw`, {
+          type: 'state',
+          common: { name: 'Raw-Segment (Debug)', type: 'string', role: 'text', read: true, write: false },
+          native: {},
+        });
+        this.setState(`${path}.raw`, termin.raw, true);
+
+        if (termin.type === 'shortcut') {
+          this.extendObject(`${path}.shortcutId`, {
+            type: 'state',
+            common: { name: 'Shortcut-ID', type: 'number', role: 'value', read: true, write: false },
+            native: {},
+          });
+          this.setState(`${path}.shortcutId`, termin.shortcutId, true);
+          const shortcutObj = await this.getObjectAsync(`${did}.shortcuts.${termin.shortcutId}`);
+          this.extendObject(`${path}.orphan`, {
+            type: 'state',
+            common: { name: 'Shortcut fehlt (verwaist)', type: 'boolean', role: 'indicator', read: true, write: false },
+            native: {},
+          });
+          this.setState(`${path}.orphan`, !shortcutObj, true);
+        } else if (termin.type === 'rooms') {
+          this.extendObject(`${path}.rooms`, {
+            type: 'state',
+            common: { name: 'Raeume', type: 'string', role: 'json', read: true, write: false },
+            native: {},
+          });
+          this.setState(`${path}.rooms`, JSON.stringify(termin.rooms), true);
+        } else if (termin.type === 'all_rooms') {
+          this.extendObject(`${path}.parameters`, {
+            type: 'state',
+            common: { name: 'Parameter', type: 'string', role: 'json', read: true, write: false },
+            native: {},
+          });
+          this.setState(`${path}.parameters`, JSON.stringify(termin.parameters), true);
+        }
+      }
+    } catch (e) {
+      this.log.debug(`parseSchedule error: ${e.message}`);
     }
   }
 
