@@ -5510,6 +5510,22 @@ class Dreame extends utils.Adapter {
     }
   }
 
+  // Loest einen Termin-Raum (segmentId aus decodeRoomsWord) zu einem Anzeigenamen auf.
+  // Gleiche Drei-Fall-Logik wie _setCustomRoomCleaningMap (main.js:2957-2972), aber
+  // mit I18n.translate() statt getTranslatedObject() - hier wird ein einzelner String
+  // fuer die aktuelle Adapter-Sprache gebraucht (JSON-Datenfeld), kein common.name.
+  _resolveRoomName(did, segmentId) {
+    const areaEntry = this._areaInfoByDid[did]?.[String(segmentId)];
+    const roomResult = getRoomDisplayName(String(segmentId), areaEntry);
+    if (roomResult.type === 'custom') {
+      return roomResult.value;
+    } else if (roomResult.type === 'predefined') {
+      const translated = I18n.translate(roomResult.nameKey);
+      return roomResult.indexSuffix > 0 ? `${translated} ${roomResult.indexSuffix}` : translated;
+    }
+    return roomResult.value;
+  }
+
   async parseSchedule(did, value) {
     try {
       const termine = parseScheduleBlob(value);
@@ -5588,7 +5604,11 @@ class Dreame extends utils.Adapter {
             common: { name: 'Raeume', type: 'string', role: 'json', read: true, write: false },
             native: {},
           });
-          this.setState(`${path}.rooms`, JSON.stringify(termin.rooms), true);
+          const roomsWithNames = termin.rooms.map((room) => ({
+            ...room,
+            roomName: this._resolveRoomName(did, room.segmentId),
+          }));
+          this.setState(`${path}.rooms`, JSON.stringify(roomsWithNames), true);
         } else if (termin.type === 'all_rooms') {
           this.extendObject(`${path}.parameters`, {
             type: 'state',
