@@ -541,6 +541,7 @@ class Dreame extends utils.Adapter {
     this.subscribeStates('*.remote.*');
     this.subscribeStates('*.shortcuts.*.start');
     this.subscribeStates('*.status.shortcuts');
+    this.subscribeStates('*.status.schedule');
     this.subscribeStates('*.cleanset.*');
     this.subscribeStates('*.map.maps.*.mapName');
     this.subscribeStates('*.config.tank.*');
@@ -569,6 +570,16 @@ class Dreame extends utils.Adapter {
           const st = await this.getStateAsync(device.did + '.status.shortcuts');
           if (st && st.val) {
             this.parseShortcuts(device.did, st.val);
+          }
+        }
+      }
+      // Startup-Rebuild fuer Termine: gleicher Grund wie bei Shortcuts (kein
+      // Change-Event bei identischem Wert nach Adapter-Neustart).
+      for (const device of this.deviceArray) {
+        if (this.isMower(device) || this.isVacuum(device)) {
+          const st = await this.getStateAsync(device.did + '.status.schedule');
+          if (st && st.val) {
+            this.parseSchedule(device.did, st.val);
           }
         }
       }
@@ -5931,6 +5942,17 @@ class Dreame extends utils.Adapter {
         const device = this.deviceArray && this.deviceArray.find((d) => d.did === did);
         if (device && (this.isMower(device) || this.isVacuum(device))) {
           this.parseShortcuts(did, state.val);
+        }
+        return;
+      }
+      // Rebuild der Termin-Objekte bei Aenderung von status.schedule
+      // (deckt initialen Poll, MQTT-Push und Adapter-Restart einheitlich ab)
+      if (id.endsWith('.status.schedule') && state && state.ack) {
+        const parts = id.split('.');
+        const did = parts[2];
+        const device = this.deviceArray && this.deviceArray.find((d) => d.did === did);
+        if (device && (this.isMower(device) || this.isVacuum(device))) {
+          this.parseSchedule(did, state.val);
         }
         return;
       }
