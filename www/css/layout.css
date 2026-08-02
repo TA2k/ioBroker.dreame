@@ -523,14 +523,43 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
 /* Reinigungs-Panel Kachel-Grid (Etappe C, Commit C5): direkte <select>-Elemente statt
    Ricardos Auswahl-Overlay (openPicker/openSlider existieren im modularen Widget noch
    nicht -- siehe reinigung.js-Kommentarkopf). */
-.rraum{font-size:12.5px;opacity:.75;margin-bottom:8px}
+/* min-height/zentriert, damit die Statuszeile GENAU so hoch ist wie der Editor-Kopf
+   (.rfokuskopf) -- beide tauschen (reinigung.js _zeigeBereich), gleiche Hoehe = kein
+   Hoehensprung des Panels beim Oeffnen/Schliessen des Raum-Editors. */
+.rraum{font-size:12.5px;opacity:.75;margin-bottom:8px;min-height:30px;display:flex;align-items:center}
+/* display:flex ist staerker als [hidden] -- ohne diese Zeile bliebe die Statuszeile im
+   Raum-Editor sichtbar (reinigung.js _zeigeBereich setzt hidden), zusaetzlich zum Editor-Kopf,
+   und das Panel waere um eine Zeilenhoehe hoeher. Gleiche Falle wie bei .rgrid/.rfokuskopf. */
+.rraum[hidden]{display:none}
 .rgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+/* Ohne diese Zeile bleibt ein .rgrid trotz hidden-Attribut sichtbar: display:grid ist
+   staerker als die Browser-Regel hinter [hidden]. Betrifft das Umschalten global<->Raum-
+   Editor (reinigung.js _zeigeBereich), sonst stehen beide Grids gleichzeitig da. */
+.rgrid[hidden]{display:none}
 .rkarte{display:flex;flex-direction:column;gap:3px;font-size:11.5px;opacity:.85;min-width:0}
+/* Wie bei .rgrid/.rfokuskopf: display:flex ist staerker als [hidden]. Betrifft die
+   modusabhaengig aus-/eingeblendeten Editor-Kacheln (Saugstaerke/Route/Feuchtigkeit) und
+   die bereits vorhandene Feuchtigkeits-Kachel (reinigungWasserKarte). */
+.rkarte[hidden]{display:none}
 .rkarte select{font:inherit;font-size:12.5px;font-weight:700;padding:6px 8px;border-radius:8px;
   border:1px solid var(--line);background:var(--knoepfe);color:var(--txt);min-width:0}
 .rkarte select:disabled{opacity:.4;cursor:not-allowed}
 .rkarte input[type=range]:disabled{opacity:.4;cursor:not-allowed}
 .rk .rkwert{font-weight:800;color:var(--accent,#4a78e0)}
+/* Kopf des Pro-Raum-Editors: "← <Raumname>" ueber den Editor-Kacheln. Ersetzt die
+   .rraum-Zeile, solange ein Raum bearbeitet wird. */
+.rfokuskopf{display:flex;align-items:center;gap:8px;margin-bottom:8px;min-height:30px}
+/* Wie bei .rgrid: display:flex ist staerker als [hidden], sonst bleibt der Editor-Kopf
+   nach dem Zurueck-Knopf stehen. */
+.rfokuskopf[hidden]{display:none}
+/* Icon-Button (Chevron-links aus UI_ICONS, in reinigung.js _renderFokus injiziert) --
+   line-height:0 + inline-flex, damit das SVG sauber mittig sitzt und der Button nicht
+   hoeher wird als noetig. */
+.rzurueck{display:inline-flex;align-items:center;justify-content:center;line-height:0;
+  padding:3px 6px;cursor:pointer;border:1px solid var(--line);border-radius:8px;
+  background:var(--knoepfe);color:var(--txt)}
+.rzurueck:hover{border-color:var(--accent,#4a78e0)}
+.rfokusname{font-size:12.5px;font-weight:800}
 /* Abstand zwischen den Gruppen. Der Wert von 10 px zwischen Auswahl und Steuerung
    bildet den frueheren Zustand nach, als beide noch in einem Block mit gap:10 lagen. */
 .gruppe + .gruppe{margin-top:18px}

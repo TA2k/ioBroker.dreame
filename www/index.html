@@ -147,7 +147,13 @@
           <h2>Reinigung</h2>
         </div>
         <div class="rraum" id="reinigungRaum">Raum antippen zum Wählen</div>
-        <div class="rgrid">
+        <!-- Kopf des Pro-Raum-Editors: erscheint statt der globalen Kacheln, wenn ein Raum
+             ueber sein Zahnrad-Badge zum Bearbeiten geoeffnet ist (reinigung.js _fokus). -->
+        <div class="rfokuskopf" id="reinigungFokusKopf" hidden>
+          <button class="rzurueck" id="reinigungZurueck" type="button" aria-label="Zurück"></button>
+          <span class="rfokusname" id="reinigungFokusName"></span>
+        </div>
+        <div class="rgrid" id="reinigungGlobalGrid">
           <label class="rkarte" id="reinigungBetriebKarte">
             <span class="rk">Reinigung</span>
             <select id="reinigungBetrieb"></select>
@@ -167,6 +173,38 @@
           <label class="rkarte" id="reinigungWasserKarte">
             <span class="rk">Feuchtigkeit <span class="rkwert" id="reinigungWasserWert"></span></span>
             <input type="range" id="reinigungWasser" min="1" max="32" step="1">
+          </label>
+        </div>
+        <!-- Pro-Raum-Editor: dieselben Kacheln wie global, aber gebunden an das gespeicherte
+             cleanset EINES Raums (reinigung.js schreibt map.cleanset.<id>.*). Sichtbar nur,
+             wenn ein Raum zum Bearbeiten geoeffnet ist. Feld-Sichtbarkeit je Raum-Modus:
+             Saugstaerke weg bei "nur wischen", Wassermenge weg bei "nur saugen", Route nur
+             bei reinem Wischen -- 1:1 wie HA (segment_available_fn). -->
+        <!-- Kartenreihenfolge EXAKT wie das globale Grid (reinigungGlobalGrid):
+             Zelle 0 = die je Ansicht einzige Sonderkarte (global "Reinigung"=Betriebsart,
+             hier "Wiederholung"), Zellen 1-4 = Modus, Route, Saugstärke, Feuchtigkeit --
+             identisch platziert. Dadurch wandert beim Umschalten global<->Editor KEIN
+             gemeinsames Bedienelement, nur die Sonderkarte auf Zelle 0 wechselt den Inhalt. -->
+        <div class="rgrid" id="reinigungFokusGrid" hidden>
+          <label class="rkarte" id="fokusWdhKarte">
+            <span class="rk">Wiederholung</span>
+            <select id="fokusWdh"></select>
+          </label>
+          <label class="rkarte" id="fokusModusKarte">
+            <span class="rk">Modus</span>
+            <select id="fokusModus"></select>
+          </label>
+          <label class="rkarte" id="fokusRouteKarte">
+            <span class="rk">Route</span>
+            <select id="fokusRoute"></select>
+          </label>
+          <label class="rkarte" id="fokusSaugKarte">
+            <span class="rk">Saugstärke</span>
+            <select id="fokusSaug"></select>
+          </label>
+          <label class="rkarte" id="fokusWasserKarte">
+            <span class="rk">Feuchtigkeit <span class="rkwert" id="fokusWasserWert"></span></span>
+            <input type="range" id="fokusWasser" min="1" max="32" step="1">
           </label>
         </div>
       </section>

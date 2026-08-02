@@ -14,6 +14,7 @@ window.UI_ICONS = {
   stop: '<rect width="18" height="18" x="3" y="3" rx="2"/>',
   home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   weiter: '<path d="m9 18 6-6-6-6"/>',
+  zurueck: '<path d="m15 18-6-6 6-6"/>',
   anAn: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
   anAus: '<circle cx="12" cy="12" r="10"/>',
   wasser: '<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',

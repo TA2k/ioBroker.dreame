@@ -59,7 +59,7 @@
  * Betriebsart.
  */
 
-/* global Panel, Trigger, Daten, geraetGestartet, updateRoomBadges, drawFills, updateLabels */
+/* global Panel, uiIcon, Trigger, Daten, geraetGestartet, updateRoomBadges, drawFills, updateLabels, roomName, META */
 
 // ===== Reinigungsmodus: EINE Auswahl aus vier, wie das Geraet es kennt (remote.cleaning-mode,
 // vom Adapter bereits auf 0-3 dekodiert — siehe lib/specs/cleaning.js CLEANING_MODE_DECODE). =====
@@ -87,6 +87,34 @@ const routenFuer = m => ((m === 0 || m === 2) ? CLEAN_ROUTES.filter(r => r.id !=
 
 const SUCT_NAMES = ['Leise', 'Standard', 'Stark', 'Turbo'];
 
+// ===== Pro-Raum-Editor (Individuell-Betrieb): das je Raum gespeicherte cleanset bearbeiten.
+// "Wischen nach Saugen" (Modus 3) gibt es hier NICHT -- das ist ein Ablauf fuer die ganze
+// Wohnung, kein Raum-Modus (1:1 HA device.py 745-747, entfernt MOPPING_AFTER_SWEEPING aus
+// der Segment-Liste).
+//
+// WICHTIG -- die Modus-IDs stehen hier ROH, ohne den 0<->2-Tausch fuer Geraete mit
+// Mopp-Anhebung. Der Tausch gilt nur fuer den GLOBALEN cleaning-mode: den dekodiert/kodiert
+// der Adapter ueber die Spec (lib/specs/cleaning.js CLEANING_MODE_DECODE, angewandt in
+// main.js ueber deviceHasMopPadLifting). Der cleanset-CleaningMode laeuft dagegen ungetauscht
+// durch (main.js onStateChange -> UpdateRoomSettings ChangeType 4 -> customeClean).
+// Live geprueft an einem X40 Ultra (Waschstation 4-25 + Absaugstation 15-5, also Tausch beim
+// globalen Modus aktiv): was hier im Editor eingestellt wird, zeigt die Dreame-App fuer
+// denselben Raum unveraendert an. Hier also NICHT "der Einheitlichkeit halber" tauschen --
+// das wuerde Saugen und Saugen+Wischen je Raum vertauschen. =====
+const ROOM_MODES = [
+  { id: 0, name: 'Saugen' },
+  { id: 1, name: 'Wischen' },
+  { id: 2, name: 'Saugen und Wischen' },
+];
+// Route je Raum: dieselbe Liste wie global, aber ohne "Schnell" -- HA nimmt QUICK bei der
+// Segment-Route heraus (device.py 760-763, segment_slow_clean_route).
+const RAUM_ROUTEN = CLEAN_ROUTES.filter(r => r.id !== 4);
+const ROOM_REPEATS = [
+  { id: 1, name: '1×' },
+  { id: 2, name: '2×' },
+  { id: 3, name: '3×' },
+];
+
 // ===== Globale Bruecken-Werte fuer den Karten-Layer (render.js' baueBadge()/updateRoomBadges(),
 // seit B2/B5 unveraendert) — ERSETZEN main.js' B5-Platzhalter, siehe Kommentarkopf oben. =====
 // selectedRooms zog mit Etappe C5.5 (Commit 3) von main.js hierher um: seit C5.5-2 ist es
@@ -99,13 +127,19 @@ let customizedCleaning = false;
 let globalSaug = 1;
 let globalWasser = 3;
 let cleanMode = 0;
-// Punkt 2 im Kommentarkopf: kein Pro-Raum-Editor in diesem Commit, daher immer der globale
-// Wert — unabhaengig davon, ob customizedCleaning an oder aus ist.
-const raumSaugt = () => modeSaugt(cleanMode);
-const raumWischt = () => modeWischt(cleanMode);
-const raumWdh = () => 1;
-const raumSaug = () => globalSaug;
-const raumWasser = () => globalWasser;
+// Pro-Raum-cleanset fuer die Karten-Badges: raumId -> RoomSettings-Array
+// [Level, WaterVolume, Repeat, RoomOrder, CleaningMode, Route] (Reihenfolge live verifiziert
+// an map.cleanset.<id>.RoomSettings, z.B. [1,15,1,5,2,1]). Befuellt durch das cleanset-
+// Muster-Abo (_merkeCleanset/_ladeCleansets unten).
+const roomCleanset = {};
+// Im Individuell-Betrieb zeigen die Badges die je Raum gespeicherten Werte, sonst (einheitlich
+// oder cleanset noch nicht geladen) den globalen. render.js' baueBadge() ruft diese mit der
+// Raum-ID auf und entscheidet selbst zwischen einheitlich (globalSaug/-Wasser) und individuell.
+const raumSaugt = id => { const cs = roomCleanset[id]; return (customizedCleaning && cs) ? modeSaugt(Number(cs[4])) : modeSaugt(cleanMode); };
+const raumWischt = id => { const cs = roomCleanset[id]; return (customizedCleaning && cs) ? modeWischt(Number(cs[4])) : modeWischt(cleanMode); };
+const raumWdh = id => { const cs = roomCleanset[id]; return (customizedCleaning && cs) ? (Number(cs[2]) || 1) : 1; };
+const raumSaug = id => { const cs = roomCleanset[id]; return (customizedCleaning && cs) ? Number(cs[0]) : globalSaug; };
+const raumWasser = id => { const cs = roomCleanset[id]; return (customizedCleaning && cs) ? Number(cs[1]) : globalWasser; };
 
 class ReinigungPanel extends Panel {
   constructor(id, container) {
@@ -122,6 +156,10 @@ class ReinigungPanel extends Panel {
     this._mapId = null;
     this._raumMuster = null;
     this._raumVonState = {}; // State-ID -> numerische Raum-ID (native.roomId)
+    // Pro-Raum-Editor: _fokus = gerade bearbeiteter Raum (null = globale Ansicht),
+    // _fokusCS = dessen cleanset als { Level, WaterVolume, CleaningMode, Repeat, Route }.
+    this._fokus = null;
+    this._fokusCS = null;
   }
 
   benoetigteStates(did) {
@@ -134,9 +172,20 @@ class ReinigungPanel extends Panel {
     return [this._idModus, this._idRoute, this._idSaug, this._idWasser, this._idCustom, this._idActiveMap];
   }
 
+  /** Pro-Raum-cleanset (RoomSettings aller Raeume) fuer die Karten-Badges abonnieren. Das
+   * Raum-Checkbox-Muster kommt dynamisch dazu (_aktualisiereRaumMuster, haengt an der aktiven
+   * Karte); das cleanset haengt an der aktuellen Karte generell, deshalb hier statisch. */
+  benoetigteMuster(did) {
+    this._idCleansetMuster = `dreame.0.${did}.map.cleanset.*.RoomSettings`;
+    return [this._idCleansetMuster];
+  }
+
   init(did) {
     reinigungInstanz = this; // Bruecke fuer updateCleanPanel(), siehe Kommentarkopf
-    return super.init(did);
+    // Nach dem Basis-Init die aktuellen cleanset-Werte einmal nachladen -- das Muster-Abo
+    // liefert nur kuenftige Aenderungen, die Badges brauchen aber sofort die gespeicherten
+    // Raum-Werte (gleicher Grund wie das getState() fuer feste States in Panel.init()).
+    return super.init(did).then(() => this._ladeCleansets(did));
   }
 
   neueDaten(stateId, wert) {
@@ -198,11 +247,32 @@ class ReinigungPanel extends Panel {
     this.render();
   }
 
+  /** Ein RoomSettings-State in roomCleanset uebernehmen. Wert ist ein Array (oder dessen
+   * JSON-Text) [Level, WaterVolume, Repeat, RoomOrder, CleaningMode, Route]. Liefert true,
+   * wenn es ein cleanset-State war (dann NICHT als Raum-Checkbox weiterbehandeln). */
+  _merkeCleanset(stateId, wert) {
+    const m = stateId.match(/\.map\.cleanset\.(\d+)\.RoomSettings$/);
+    if (!m) return false;
+    let arr = wert;
+    if (typeof arr === 'string') { try { arr = JSON.parse(arr); } catch (e) { return true; } }
+    if (Array.isArray(arr)) roomCleanset[m[1]] = arr;
+    return true;
+  }
+
+  /** Aktuelle cleanset-Werte aller Raeume einmal laden (Startwerte, s. init()). */
+  async _ladeCleansets(did) {
+    const werte = await Daten.getStates(`dreame.0.${did}.map.cleanset.*.RoomSettings`);
+    for (const [stateId, st] of Object.entries(werte || {})) this._merkeCleanset(stateId, st && st.val);
+    updateRoomBadges();
+  }
+
   /** Eingehende Checkbox-Aenderung (Klick am Adapter, Objekt-Editor, Skript, ...) in die
    * lokale Auswahl uebernehmen und die Karte neu zeichnen. Bewusst NICHT auf
    * document.activeElement/eigene Klicks pruefen wie bei _renderWasser() -- hier gibt es
    * (noch) kein Eingabeelement, das waehrend der Eingabe verfaelscht werden koennte. */
   neueDatenMuster(stateId, wert) {
+    // Erst pruefen, ob es ein cleanset-State ist (fuer die Badges), sonst Raum-Checkbox.
+    if (this._merkeCleanset(stateId, wert)) { updateRoomBadges(); return; }
     const raumId = this._raumVonState[stateId];
     if (raumId === undefined) return;
     if (wert) selectedRooms.add(raumId); else selectedRooms.delete(raumId);
@@ -237,13 +307,153 @@ class ReinigungPanel extends Panel {
 
   render() {
     if (!this.container) return;
-    this._renderBetrieb();
-    this._renderRaum();
-    this._renderModus();
-    this._renderRoute();
-    this._renderSaug();
-    this._renderWasser();
+    // Pro-Raum-Editor nur im Individuell-Betrieb und nicht waehrend der Fahrt. Aendert sich
+    // eins davon, waehrend der Editor offen ist, zurueck zur globalen Ansicht.
+    if (this._fokus != null && (!customizedCleaning || geraetGestartet())) this._fokus = null;
+    const imEditor = this._fokus != null;
+    this._zeigeBereich(imEditor);
+    if (imEditor) {
+      this._renderFokus();
+    } else {
+      this._renderBetrieb();
+      this._renderRaum();
+      this._renderModus();
+      this._renderRoute();
+      this._renderSaug();
+      this._renderWasser();
+    }
     updateRoomBadges();
+  }
+
+  /** Umschalten der Panel-Ansicht: globale Kacheln vs. Pro-Raum-Editor. Dieselben DOM-Bloecke
+   * bleiben stehen, nur ihre Sichtbarkeit wechselt -- kein Neuaufbau, kein Popup. */
+  _zeigeBereich(imEditor) {
+    const setzeSichtbar = (id, sichtbar) => { const el = document.getElementById(id); if (el) el.hidden = !sichtbar; };
+    setzeSichtbar('reinigungGlobalGrid', !imEditor);
+    setzeSichtbar('reinigungRaum', !imEditor);
+    setzeSichtbar('reinigungFokusKopf', imEditor);
+    setzeSichtbar('reinigungFokusGrid', imEditor);
+  }
+
+  /** Einen Raum zum Bearbeiten oeffnen (Klick auf sein Zahnrad-Badge, main.js). Laedt das
+   * gespeicherte cleanset des Raums und zeigt den Editor. Nur im Individuell-Betrieb und nicht
+   * waehrend der Fahrt -- ausserhalb davon traegt das Badge ohnehin kein Zahnrad (render.js
+   * baueBadge nurAnzeige). */
+  async bearbeiteRaum(seg) {
+    if (!customizedCleaning || geraetGestartet() || this.did == null) return;
+    const basis = `dreame.0.${this.did}.map.cleanset.${seg}.`;
+    const werte = await Daten.getStates(basis + '*');
+    if (this.did == null) return; // waehrenddessen abgebaut
+    const val = feld => { const st = werte[basis + feld]; return st == null ? null : st.val; };
+    this._fokusCS = {
+      Level: Number(val('Level') ?? 1),
+      WaterVolume: Number(val('WaterVolume') ?? 3),
+      CleaningMode: Number(val('CleaningMode') ?? 0),
+      Repeat: Number(val('Repeat') ?? 1),
+      Route: Number(val('Route') || 1), // 0 = nicht gesetzt -> Standard, wie HA (select.py 683)
+    };
+    this._fokus = seg;
+    this.render();
+  }
+
+  /** Zurueck zur globalen Ansicht (← -Knopf). */
+  schliesseRaum() {
+    this._fokus = null;
+    this._fokusCS = null;
+    this.render();
+  }
+
+  /** Position eines cleanset-Feldes im RoomSettings-Array (siehe _merkeCleanset):
+   * [Level, WaterVolume, Repeat, RoomOrder, CleaningMode, Route]. */
+  static CS_INDEX = { Level: 0, WaterVolume: 1, Repeat: 2, RoomOrder: 3, CleaningMode: 4, Route: 5 };
+
+  /** Ein Feld des fokussierten Raums schreiben. Der Adapter (UpdateRoomSettings) liest die
+   * uebrigen Felder dazu und uebertraegt alle sechs ans Geraet. Lokalen Wert sofort nachziehen,
+   * damit die Modus-abhaengige Sichtbarkeit ohne Wartezeit auf den Round-Trip stimmt.
+   * Dasselbe fuer roomCleanset: daraus speisen sich die Badges auf der Karte, und die haengen
+   * am RoomSettings-Abo -- schreibt man nur das Einzelfeld, bliebe das Badge bis zum (evtl.
+   * ausbleibenden) RoomSettings-Update auf dem alten Wert stehen. */
+  _schreibeCS(feld, wert) {
+    if (this._fokus == null || !this._fokusCS) return;
+    Trigger.setCleansetFeld(this.did, this._fokus, feld, wert);
+    this._fokusCS[feld] = wert;
+    const arr = roomCleanset[this._fokus];
+    const idx = ReinigungPanel.CS_INDEX[feld];
+    if (Array.isArray(arr) && idx !== undefined) arr[idx] = wert;
+    this.render(); // ruft am Ende updateRoomBadges()
+  }
+
+  /** Editor-Ansicht fuellen: Name im Kopf, dann die Kacheln aus dem cleanset des Raums.
+   * Welche Felder fuer den Raum-Modus gelten, haengt am Modus -- 1:1 wie global bzw. HA
+   * segment_available_fn: Saugstaerke nur wenn der Raum saugt, Wassermenge nur wenn er wischt,
+   * Route nur bei reinem Wischen. Unpassende Felder werden NICHT versteckt, sondern ausgegraut
+   * mit "nicht verfügbar" (siehe _fokusSelect/_fokusWasser) -- damit die Kachelzahl konstant
+   * bleibt und beim Oeffnen/Moduswechsel nichts springt. */
+  _renderFokus() {
+    const cs = this._fokusCS; if (!cs) return;
+    const zurueck = document.getElementById('reinigungZurueck');
+    if (zurueck && !zurueck.dataset.gefuellt) { zurueck.dataset.gefuellt = '1'; zurueck.innerHTML = uiIcon('zurueck', 20); zurueck.onclick = () => this.schliesseRaum(); }
+    const nameEl = document.getElementById('reinigungFokusName');
+    if (nameEl) nameEl.textContent = roomName(this._fokus, META && META.seg_inf);
+
+    const m = cs.CleaningMode;
+    this._fokusSelect('fokusModus', ROOM_MODES, m, true, v => this._schreibeCS('CleaningMode', v));
+    this._fokusSelect('fokusSaug', SUCT_NAMES.map((n, i) => ({ id: i, name: n })), cs.Level, modeSaugt(m), v => this._schreibeCS('Level', v));
+    this._fokusSelect('fokusRoute', RAUM_ROUTEN, cs.Route, m === 1, v => this._schreibeCS('Route', v));
+    this._fokusSelect('fokusWdh', ROOM_REPEATS, cs.Repeat, true, v => this._schreibeCS('Repeat', v));
+    this._fokusWasser(modeWischt(m));
+  }
+
+  /** Ein <select> im Editor fuellen/spiegeln. Gilt das Feld fuer den Raum-Modus nicht
+   * (anwendbar=false), bleibt die Kachel stehen, wird aber gesperrt und zeigt
+   * "nicht verfügbar" -- gleiche ruhige Darstellung wie die einheitliche Ansicht, die
+   * unpassende Kacheln ebenfalls nur ausgraut statt zu verstecken. So bleibt die Zahl der
+   * Kacheln konstant und das Raster springt beim Oeffnen des Editors bzw. beim Moduswechsel
+   * nicht (Davids Kiosk-Vorgabe: keine wandernde Anzeige). */
+  _fokusSelect(selId, optionen, wert, anwendbar, onWahl) {
+    const el = document.getElementById(selId);
+    if (!el) return;
+    if (!anwendbar) {
+      el.innerHTML = '<option>nicht verfügbar</option>';
+      el.dataset.schluessel = '';   // beim Wiederfreischalten Optionen neu fuellen
+      el.disabled = true;
+      el.onchange = null;
+      return;
+    }
+    el.disabled = false;
+    const schluessel = optionen.map(o => o.id).join(',');
+    if (el.dataset.schluessel !== schluessel) {
+      el.innerHTML = optionen.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+      el.dataset.schluessel = schluessel;
+    }
+    if (wert != null && optionen.some(o => o.id === Number(wert))) el.value = String(wert);
+    el.onchange = () => onWahl(Number(el.value));
+  }
+
+  /** Feuchtigkeits-Regler im Editor (1-32), analog _renderWasser, ans cleanset gebunden.
+   * Wischt der Raum nicht (anwendbar=false), bleibt die Kachel stehen, der Regler ist
+   * gesperrt und der Wert zeigt "nicht verfügbar" -- wie _fokusSelect, damit die Anzeige
+   * stabil bleibt statt eine Kachel wegfallen zu lassen. */
+  _fokusWasser(anwendbar) {
+    const el = document.getElementById('fokusWasser');
+    const wertEl = document.getElementById('fokusWasserWert');
+    if (!el) return;
+    if (!anwendbar) {
+      el.disabled = true;
+      el.style.setProperty('--fill', '0%');
+      if (wertEl) wertEl.textContent = 'nicht verfügbar';
+      return;
+    }
+    el.disabled = false;
+    const fuellen = () => {
+      const pct = (Number(el.value) - Number(el.min)) / (Number(el.max) - Number(el.min)) * 100;
+      el.style.setProperty('--fill', pct + '%');
+      if (wertEl) wertEl.textContent = el.value;
+    };
+    if (document.activeElement !== el) el.value = String(this._fokusCS.WaterVolume);
+    fuellen();
+    el.oninput = fuellen;
+    el.onchange = () => this._schreibeCS('WaterVolume', Number(el.value));
   }
 
   /** Betriebsart-Umschalter (remote.customized-cleaning). Aus = einheitlich, an = individuell.
@@ -274,16 +484,19 @@ class ReinigungPanel extends Panel {
     el.textContent = n === 0 ? 'Alle Räume aktiv' : (n === 1 ? '1 Raum gewählt' : n + ' Räume gewählt');
   }
 
-  /** Bei Raum-Auswahl waehlt das X40 den Modus pro Raum selbst und ignoriert den globalen
-   * remote.cleaning-mode (live verifiziert, siehe WIDGET_SESSION_STATUS.md Etappe C5.5-Test
-   * "X40-Eigenheit, kein Bug"). Die Kachel bliebe sonst bedienbar, obwohl die Einstellung beim
-   * Start wirkungslos ist -- deshalb hier ausgegraut + Tooltip statt stillschweigend falscher
-   * Anzeige (Plan Abschnitt 6, Commit C6-3). Tooltip sitzt auf der umschliessenden .rkarte,
-   * nicht auf dem <select> selbst: disabled-Formelemente feuern in den meisten Browsern keine
-   * hover-Events, ein title auf dem <select> wuerde also nie sichtbar werden. */
+  /** Der globale Modus wird NUR im Individuell-Betrieb gesperrt -- dort gilt je Raum der im
+   * Cleanset gespeicherte Modus (im Editor bearbeitbar), der globale hat keine Wirkung.
+   *
+   * Frueher war die Kachel zusaetzlich gesperrt, sobald ueberhaupt ein Raum ausgewaehlt war
+   * ("bei Raum-Reinigung waehlt das Geraet den Modus selbst"). Das stimmt fuer den
+   * Einheitlich-Betrieb NICHT: der globale Modus wirkt dort auch bei Raum-Auswahl -- live
+   * gegengeprueft (zwei Raeume ausgewaehlt, global "Wischen" -> beide gewischt). Der Adapter
+   * schickt den globalen Modus vor jedem Raum-Start ohnehin nochmal mit
+   * (_preSendCleaningProperties), was das bestaetigt. Route/Saugstaerke/Wassermenge waren bei
+   * Raum-Auswahl nie gesperrt -- die Sonderbehandlung des Modus war also auch in sich
+   * inkonsistent. Deshalb hier entfernt. */
   _renderModus() {
     const el = document.getElementById('reinigungModus');
-    const karte = document.getElementById('reinigungModusKarte');
     if (!el) return;
     if (!el.dataset.gefuellt) {
       el.innerHTML = CLEAN_MODES.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
@@ -291,9 +504,7 @@ class ReinigungPanel extends Panel {
       el.onchange = () => Trigger.setCleaningMode(this.did, Number(el.value));
     }
     if (this.modus != null) el.value = String(this.modus);
-    const raumAktiv = selectedRooms.size > 0;
-    el.disabled = customizedCleaning || geraetGestartet() || raumAktiv;
-    if (karte) karte.title = raumAktiv ? 'Bei Raum-Reinigung wählt das Gerät den Modus selbst' : '';
+    el.disabled = customizedCleaning || geraetGestartet();
   }
 
   _renderRoute() {
@@ -365,3 +576,8 @@ function updateCleanPanel() { if (reinigungInstanz) reinigungInstanz.render(); }
 // render.js' selectRoom() ruft das statt eines lokalen Set-Toggles auf, gleiches
 // Bruecken-Muster wie updateCleanPanel() direkt darueber.
 function raumUmschalten(seg) { if (reinigungInstanz) reinigungInstanz.raumUmschalten(seg); }
+
+// Bruecke fuer den Pro-Raum-Editor: render.js/main.js ruft das beim Tap auf ein
+// Zahnrad-Badge auf (Feature A -- Tap auf die Raumflaeche waehlt weiter aus, Tap aufs Badge
+// oeffnet den Editor). Gleiches Bruecken-Muster wie raumUmschalten() direkt darueber.
+function bearbeiteRaum(seg) { if (reinigungInstanz) reinigungInstanz.bearbeiteRaum(seg); }

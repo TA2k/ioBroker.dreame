@@ -26,7 +26,7 @@
  * Siehe WIDGET_SESSION_STATUS.md fuer die vollstaendige Herleitung dieser Entscheidung.
  */
 
-/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel, ReinigungPanel, FehlerPanel, WasserMoppPanel, uiIcon */
+/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel, ReinigungPanel, FehlerPanel, WasserMoppPanel, uiIcon, bearbeiteRaum */
 
 // ===== Zustand (verbatim aus www/legacy.html "Zustand"-Bereich uebernommen, minus SOCK —
 // die alte direkte Socket.io-Sendefunktion cmd() wird nicht mehr gebraucht, Trigger/Daten
@@ -625,7 +625,7 @@ function zeigeVerbindung(wert) {
 // clamp, applyT, hitRoom, selectRoom aus overlays.js/render.js), nur ohne die UI-Chrome. =====
 function initZoomPan() {
   stage.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.15 : 1 / 1.15); }, { passive: false });
-  let drag = false, lx = 0, ly = 0, sx0 = 0, sy0 = 0;
+  let drag = false, lx = 0, ly = 0, sx0 = 0, sy0 = 0, downT = null;
   // #devName ausgenommen seit Etappe E1 (Roboter-Umschalter): sonst faengt
   // setPointerCapture() jeden Klick darauf als Kartendrag/Raumklick ab, bevor
   // devNameEl.onclick ueberhaupt feuert -- gleiches Prinzip wie bei .zoom oben.
@@ -633,6 +633,9 @@ function initZoomPan() {
     || t.closest('#zahnradBtn') || t.closest('#zahnradOvl')));
   stage.addEventListener('pointerdown', e => {
     if (aufBedienung(e.target)) return;
+    // Ziel HIER merken: setPointerCapture() leitet spaetere Events (pointerup) auf `stage`
+    // um, dann waere das getippte Badge nicht mehr am e.target erkennbar.
+    downT = e.target;
     drag = true; lx = e.clientX; ly = e.clientY; sx0 = e.clientX; sy0 = e.clientY;
     wrap.classList.add('drag'); stage.setPointerCapture(e.pointerId);
   });
@@ -642,7 +645,13 @@ function initZoomPan() {
     drag = false; wrap.classList.remove('drag');
     const moved = Math.hypot(e.clientX - sx0, e.clientY - sy0);
     const schwelle = (e.pointerType === 'touch' || e.pointerType === 'pen') ? 12 : 5;
-    if (moved < schwelle) { const seg = hitRoom(e.clientX, e.clientY); if (seg != null) selectRoom(seg); }
+    if (moved < schwelle) {
+      // Tap aufs Zahnrad-Badge (nur im Individuell-Betrieb vorhanden, Klasse ohne "starr")
+      // oeffnet den Pro-Raum-Editor; ein Tap NEBEN das Badge auf die Raumflaeche waehlt aus.
+      const bdg = downT && downT.closest && downT.closest('.rbadge:not(.starr)');
+      if (bdg) bearbeiteRaum(+bdg.dataset.raum);
+      else { const seg = hitRoom(e.clientX, e.clientY); if (seg != null) selectRoom(seg); }
+    }
   });
   const ctr = () => { const r = stage.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
   document.getElementById('z-in').onclick = () => zoomAt(...ctr(), 1.3);
