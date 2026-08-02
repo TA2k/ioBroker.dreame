@@ -237,12 +237,30 @@ class ReinigungPanel extends Panel {
 
   render() {
     if (!this.container) return;
+    this._renderBetrieb();
     this._renderRaum();
     this._renderModus();
     this._renderRoute();
     this._renderSaug();
     this._renderWasser();
     updateRoomBadges();
+  }
+
+  /** Betriebsart-Umschalter (remote.customized-cleaning). Aus = einheitlich, an = individuell.
+   * Bestimmt, ob die globalen Kacheln (Modus/Route/Saug/Wasser) gelten oder das je Raum
+   * gespeicherte cleanset -- deshalb werden die Kacheln bei "individuell" ausgegraut
+   * (customizedCleaning-Pruefung in _renderModus/_renderRoute/_renderSaug/_renderWasser).
+   * Waehrend einer Fahrt gesperrt: die Betriebsart legt fest, WAS fuer ein Auftrag laeuft. */
+  _renderBetrieb() {
+    const el = document.getElementById('reinigungBetrieb');
+    if (!el) return;
+    if (!el.dataset.gefuellt) {
+      el.innerHTML = '<option value="0">Einheitlich</option><option value="1">Individuell pro Raum</option>';
+      el.dataset.gefuellt = '1';
+      el.onchange = () => Trigger.setCustomizedCleaning(this.did, el.value === '1');
+    }
+    if (this.custom != null) el.value = this.custom ? '1' : '0';
+    el.disabled = geraetGestartet();
   }
 
   // Etappe C6-4 (WIDGET_UMBAU_PLAN.md Abschnitt 6.4): "aktiv" vs. "gewählt" ist bewusst
