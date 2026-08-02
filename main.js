@@ -5512,6 +5512,21 @@ class Dreame extends utils.Adapter {
   async parseSchedule(did, value) {
     try {
       const termine = parseScheduleBlob(value);
+      // Cleanup verwaister Kanaele: Termine, die im neuen Payload nicht mehr
+      // vorkommen (z.B. in der App geloescht), aus dem Objektbaum entfernen.
+      // Bei leerem Payload ist currentIds leer -> alle bestehenden Termin-Kanaele
+      // werden entfernt, der _backup-State bleibt davon unberuehrt (eigener Pfad).
+      const currentIds = new Set(termine.map((t) => String(t.id)));
+      const existingRawStates = await this.getStatesAsync(`${did}.schedule.*.raw`);
+      for (const fullId of Object.keys(existingRawStates || {})) {
+        const idParts = fullId.split('.');
+        const scheduleId = idParts[idParts.length - 2];
+        if (!currentIds.has(scheduleId)) {
+          const orphanPath = `${did}.schedule.${scheduleId}`;
+          await this.delObjectAsync(orphanPath, { recursive: true });
+          this.log.info(`Termin ${scheduleId} nicht mehr vorhanden, Kanal ${orphanPath} entfernt`);
+        }
+      }
       this.extendObject(`${did}.schedule._backup`, {
         type: 'state',
         common: { name: 'Letzter Termine-Blob (Rollback)', type: 'string', role: 'json', read: true, write: false },
