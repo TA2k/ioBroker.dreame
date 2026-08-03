@@ -139,16 +139,25 @@ class ShortcutsPanel extends Panel {
    * praktisch unsichtbar trotz display:block.
    * KACHEL_LUFT_PX (Live-Test-Fix 2026-08-03): die reine min-content-Messung liefert die
    * Breite, bei der die Schrift gerade noch so hineinpasst -- optisch klebt der Text dann
-   * am Rahmen. Kleiner fester Aufschlag auf die gemessene Breite fuer sichtbaren Abstand. */
+   * am Rahmen. Kleiner fester Aufschlag auf die gemessene Breite fuer sichtbaren Abstand.
+   * WICHTIG (Live-Test-Fix 2026-08-03, Nachtrag): .kbkachel hat seit der Zeilen-Fuellen-
+   * Korrektur flex-grow:1 (layout.css). Wuerde man beim Zuruecksetzen einfach nur width=''
+   * setzen, waechst die Kachel SOFORT auf ihren Anteil an der verfuegbaren Zeilenbreite --
+   * getBoundingClientRect() misst dann nicht mehr die natuerliche Text-Mindestbreite,
+   * sondern die bereits durch flex-grow aufgeblaehte Breite (deshalb landeten zuvor alle
+   * Kacheln bei "volle Breite"). flex-grow waehrend der Messung per Inline-Style auf 0
+   * setzen, NACH der Messung wieder entfernen (leerer String faellt zurueck auf die
+   * CSS-Klassenregel flex-grow:1) -- erst DANN darf die Kachel wachsen, mit der jetzt
+   * korrekt gemessenen Breite als Mindestmass (flex-basis via width). */
   _vereinheitlicheKachelBreite(liste) {
     const KACHEL_LUFT_PX = 16;
     const kacheln = Array.from(liste.querySelectorAll('.kbkachel'));
     if (!kacheln.length) return;
     const sichtbare = kacheln.filter(el => !el.classList.contains('kb-versteckt'));
     const zielListe = sichtbare.length ? sichtbare : kacheln; // Randfall: alles versteckt
-    for (const el of zielListe) el.style.width = '';
+    for (const el of zielListe) { el.style.flexGrow = '0'; el.style.width = ''; }
     const maxBreite = Math.max(...zielListe.map(el => el.getBoundingClientRect().width)) + KACHEL_LUFT_PX;
-    for (const el of kacheln) el.style.width = `${maxBreite}px`;
+    for (const el of kacheln) { el.style.width = `${maxBreite}px`; el.style.flexGrow = ''; }
   }
 
   /** Persistiert ueber die main.js-Bruecke (siehe Datei-Kommentarkopf), rendert danach
