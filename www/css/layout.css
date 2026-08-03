@@ -523,18 +523,20 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
    verwendet (Start-Knopf + kleines Auge fuer Sichtbarkeit-Toggle je Shortcut, siehe
    shortcuts.js-Kommentarkopf) -- eigener Wrapper noetig, damit das Auge frei auf der
    Kachel positioniert werden kann, statt im gleichen Flex-Rahmen wie der Start-Knopf.
-   Breiten-Strategie (Live-Test, mehrere Nachbesserungen 2026-08-03): shortcuts.js misst
-   nach jedem render() den laengsten Namen und setzt ALLEN Kacheln dieselbe inline width
-   (Mindestmass, + etwas Luft, siehe _vereinheitlicheKachelBreite()) -- das ist die
-   Mindestbreite (flex-basis via width), NICHT die Endbreite. flex:1 1 auto (Grow WIEDER
-   an, anders als ein frueherer Zwischenstand) verteilt pro Zeile (.saktionen{flex-wrap:
-   wrap} macht jede umgebrochene Zeile zu einer eigenen Flex-Line) den uebrigen Platz
-   gleichmaessig auf die Kacheln DIESER Zeile -- bei 2 Kacheln in einer 500px-Zeile z.B.
-   je ~250px (abzueglich .saktionen-gap), bei 3 je ~500px/3, ohne dass eine Kachel je unter
-   ihre in JS gemessene Mindestbreite schrumpft (die alte Fehlerquelle war NICHT das
-   Wachsen, sondern eine zu kleine, textunabhaengige min-width -- die ist jetzt korrekt
-   text-basiert, Wachsen darueber hinaus ist unproblematisch). */
-.kbkachel{position:relative;flex:1 1 auto;min-width:max(56px, min-content)}
+   Breiten-Strategie (Live-Test, mehrere Nachbesserungen 2026-08-03): CSS GRID statt
+   Flexbox fuer #shortcutsListe, ID-Selektor ueberschreibt bewusst nur hier die generische
+   .saktionen{display:flex}-Regel (Station/Frischwasser bleiben Flexbox, unangetastet).
+   Grund fuer den Wechsel: mit Flexbox verteilt flex-grow den Restplatz PRO ZEILE
+   unabhaengig -- eine einzelne uebrig gebliebene Kachel in einer nicht vollen letzten
+   Zeile haette dadurch IMMER die gesamte Zeilenbreite fuer sich allein bekommen (David-
+   Live-Test-Befund). Bei CSS Grid teilen sich dagegen ALLE Zeilen dieselben Spalten
+   (repeat(auto-fill, minmax(--kb-min, 1fr))) -- eine Kachel allein in der letzten Zeile
+   bekommt nur EINE Spaltenbreite, genau wie die Kacheln in vollen Zeilen, der Rest der
+   Zeile bleibt leer statt gestreckt. --kb-min (CSS-Custom-Property auf #shortcutsListe)
+   kommt aus shortcuts.js' _vereinheitlicheKachelBreite() -- misst den laengsten Namen +
+   etwas Luft, siehe dort. */
+#shortcutsListe{display:grid;grid-template-columns:repeat(auto-fill, minmax(var(--kb-min, 84px), 1fr));gap:8px}
+.kbkachel{position:relative}
 .kbkachel .saktion{width:100%;min-width:0}
 .kbkachel .saktion span{white-space:nowrap}
 /* Nur sichtbar, waehrend das Zahnrad-Overlay offen ist (:root[data-einstellungen="an"],

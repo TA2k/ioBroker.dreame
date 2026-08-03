@@ -119,45 +119,43 @@ class ShortcutsPanel extends Panel {
     }
   }
 
-  /** Alle Kacheln auf dieselbe Breite bringen -- David-Vorgabe nach Live-Test: einheitliche
-   * Groesse fuer alle Shortcuts, bemessen am laengsten Namen (nicht individuell pro Kachel,
-   * wie ein reiner CSS min-content/white-space:nowrap-Ansatz es liefern wuerde). CSS allein
-   * kann "alle Elemente in einem Wrap-Flex-Layout gleich breit wie das breiteste" nicht
-   * zuverlaessig ohne Grid-Spalten-Vorwissen abbilden -- deshalb hier gemessen: erst jede
-   * Kachel ihre natuerliche (Text-bestimmte) Breite einnehmen lassen (inline width
-   * zuruecksetzen, sonst wuerde ein inzwischen kuerzerer laengster Name die alte, zu grosse
-   * Breite fuer immer einfrieren), dann die groesste gemessene Breite auf alle anwenden.
+  /** Spaltenbreite fuer #shortcutsListe (CSS Grid, siehe layout.css) setzen -- David-Vorgabe
+   * nach mehreren Live-Test-Runden: alle Kacheln gleich gross (bemessen am laengsten
+   * Namen), UND wenn in einer Zeile nur 2 oder 3 hinpassen, sollen die sich die volle
+   * Zeilenbreite teilen -- ABER eine einzelne uebrig gebliebene Kachel in einer nicht
+   * vollen letzten Zeile darf NICHT die ganze Zeile fuer sich allein bekommen, sondern
+   * bleibt genauso gross wie die Kacheln in den vollen Zeilen.
+   * Mit Flexbox (fruehere Zwischenstaende) ist das NICHT zuverlaessig loesbar: flex-grow
+   * verteilt Restplatz pro Zeile unabhaengig, eine Solo-Kachel in der letzten Zeile
+   * bekommt dadurch immer 100% davon. CSS Grid (repeat(auto-fill, minmax(--kb-min,1fr)))
+   * loest das strukturell: alle Zeilen teilen sich dieselben Spalten, eine Solo-Kachel
+   * bekommt nur EINE Spaltenbreite, der Rest der Zeile bleibt leer statt gestreckt.
+   * Deshalb wird hier nur noch --kb-min auf dem Container gesetzt (Mindestbreite jeder
+   * Spalte), keine Breite mehr pro Kachel einzeln.
+   * Messung: waehrend der Messung bekommt jede sichtbare Kachel justify-self:start --
+   * das verhindert das Ausfuellen ihrer (aktuellen, moeglicherweise noch von einer
+   * frueheren Messung stammenden) Grid-Spalte, sodass getBoundingClientRect() die
+   * natuerliche (Text-bestimmte) Breite liefert statt einer bereits gestreckten. Danach
+   * wird der Override entfernt (faellt zurueck auf den Grid-Default stretch) -- erst DANN
+   * darf die Kachel ihre (jetzt korrekt bemessene) Spalte ausfuellen.
+   * Nur SICHTBARE Kacheln fliessen in die max()-Berechnung ein (versteckte sind per CSS
+   * display:none, solange das Zahnrad zu ist -- ihre Breite waere sonst immer 0).
+   * +16px fester Aufschlag (Live-Test-Fix): reine min-content-Messung liefert die Breite,
+   * bei der die Schrift gerade noch so hineinpasst, ohne sichtbaren Abstand zum Rahmen.
    * Bekannte Grenze: misst nur bei render() (State-Aenderung), nicht bei reiner
    * Fenstergroessen-/Zoom-Aenderung (kein ResizeObserver) -- z.B. die Menue-Breite live im
    * offenen Zahnrad zu verstellen (F1) macht die gemessene Breite erst beim naechsten
-   * render() wieder passend. Nicht Teil dieser Korrektur, nur dokumentiert.
-   * WICHTIG: versteckte Kacheln (.kb-versteckt) sind per CSS display:none, solange das
-   * Zahnrad zu ist (siehe layout.css) -- ihre Breite waere in diesem Zustand immer 0.
-   * Deshalb fliessen nur SICHTBARE Kacheln in die max()-Berechnung ein, aber die
-   * resultierende Breite wird trotzdem auf ALLE (auch versteckte) angewendet -- sonst
-   * stuende eine im Zahnrad wieder aufgetauchte versteckte Kachel mit 0px Breite da,
-   * praktisch unsichtbar trotz display:block.
-   * KACHEL_LUFT_PX (Live-Test-Fix 2026-08-03): die reine min-content-Messung liefert die
-   * Breite, bei der die Schrift gerade noch so hineinpasst -- optisch klebt der Text dann
-   * am Rahmen. Kleiner fester Aufschlag auf die gemessene Breite fuer sichtbaren Abstand.
-   * WICHTIG (Live-Test-Fix 2026-08-03, Nachtrag): .kbkachel hat seit der Zeilen-Fuellen-
-   * Korrektur flex-grow:1 (layout.css). Wuerde man beim Zuruecksetzen einfach nur width=''
-   * setzen, waechst die Kachel SOFORT auf ihren Anteil an der verfuegbaren Zeilenbreite --
-   * getBoundingClientRect() misst dann nicht mehr die natuerliche Text-Mindestbreite,
-   * sondern die bereits durch flex-grow aufgeblaehte Breite (deshalb landeten zuvor alle
-   * Kacheln bei "volle Breite"). flex-grow waehrend der Messung per Inline-Style auf 0
-   * setzen, NACH der Messung wieder entfernen (leerer String faellt zurueck auf die
-   * CSS-Klassenregel flex-grow:1) -- erst DANN darf die Kachel wachsen, mit der jetzt
-   * korrekt gemessenen Breite als Mindestmass (flex-basis via width). */
+   * render() wieder passend. Nicht Teil dieser Korrektur, nur dokumentiert. */
   _vereinheitlicheKachelBreite(liste) {
     const KACHEL_LUFT_PX = 16;
     const kacheln = Array.from(liste.querySelectorAll('.kbkachel'));
     if (!kacheln.length) return;
     const sichtbare = kacheln.filter(el => !el.classList.contains('kb-versteckt'));
     const zielListe = sichtbare.length ? sichtbare : kacheln; // Randfall: alles versteckt
-    for (const el of zielListe) { el.style.flexGrow = '0'; el.style.width = ''; }
+    for (const el of zielListe) el.style.justifySelf = 'start';
     const maxBreite = Math.max(...zielListe.map(el => el.getBoundingClientRect().width)) + KACHEL_LUFT_PX;
-    for (const el of kacheln) { el.style.width = `${maxBreite}px`; el.style.flexGrow = ''; }
+    for (const el of zielListe) el.style.justifySelf = '';
+    liste.style.setProperty('--kb-min', `${maxBreite}px`);
   }
 
   /** Persistiert ueber die main.js-Bruecke (siehe Datei-Kommentarkopf), rendert danach
