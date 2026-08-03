@@ -95,16 +95,6 @@
                  -- Reihenfolge folgt automatisch der Registrierungsreihenfolge. -->
             <div id="zovlPanelsListe"></div>
           </section>
-          <!-- Termine-Sektion (F5, WIDGET_FEATURE_PLAN.md): Knopf im Style der Panel-
-               Aktionsknoepfe (.saktion/.saktionen, siehe frischwasser.js "Tank gefuellt
-               zuruecksetzen"), NICHT die .zovl-link-btn-Optik der Link/Sonstiges-Sektionen
-               -- Plan-Vorgabe. Text/Icon werden von termine.js gesetzt (Termine.initTexte()). -->
-          <section class="zovl-sektion" id="zovlTermine">
-            <h3>Termine</h3>
-            <div class="saktionen">
-              <button type="button" id="zovlTermineBtn" class="saktion"></button>
-            </div>
-          </section>
           <section class="zovl-sektion" id="zovlLink">
             <h3>Link</h3>
             <button type="button" id="zovlLinkGenerieren" class="zovl-link-btn">Link generieren</button>
@@ -131,12 +121,19 @@
            wurde nie portiert, die CSS-Klassen standen bislang ungenutzt bereit). z-index:200
            liegt damit automatisch ueber dem Zahnrad-Overlay (z-index:7) -- Termine ueber dem
            weiterhin offenen Zahnrad zu zeigen ist bewusst kein Problem, kein Schliessen
-           des Zahnrads noetig. -->
+           des Zahnrads noetig.
+           Kopfzeile (Titel + X) bewusst NICHT Teil des scrollenden Inhalts (anders als der
+           erste F5-Commit, Live-Test-Fund: bei vielen Terminen wanderte der Schliessen-Knopf
+           unten aus dem sichtbaren Bereich) -- .tovlbox macht die Box selbst zur Flex-Spalte,
+           .tkopf bleibt fest stehen (flex:none), nur .tliste scrollt (analog zu
+           .zovl-kopf/.zovl-body beim Zahnrad-Overlay). -->
       <div id="termineOvl" class="ovl">
-        <div class="ovlbox" id="termineBox">
-          <h3 id="termineTitel"></h3>
-          <div id="termineListe"></div>
-          <button type="button" id="termineSchliessen" class="ovlclose"></button>
+        <div class="ovlbox tovlbox" id="termineBox">
+          <div class="tkopf">
+            <h3 id="termineTitel"></h3>
+            <button type="button" id="termineSchliessen" class="zovl-x" aria-label="Schließen">✕</button>
+          </div>
+          <div id="termineListe" class="tliste"></div>
         </div>
       </div>
     </div>
@@ -203,6 +200,17 @@
         </div>
         <div class="saktionen" id="shortcutsListe"></div>
       </section>
+      <!-- Termine-Panel (F5, WIDGET_FEATURE_PLAN.md, nach Live-Test-Feedback auf ein
+           normales Panel umgestellt statt Zahnrad-Abschnitt): Knopf ueber die volle
+           Panel-Breite, oeffnet das Termine-Modal weiter unten (#termineOvl). Panel wird
+           ueber die normale Panels-Sichtbarkeit-Liste im Zahnrad aus-/eingeblendet (wie
+           jedes andere Panel), zusaetzlich blendet termine.js das ganze Panel aus, solange
+           kein Termin fuer das aktive Geraet existiert (wie shortcuts.js). -->
+      <section class="gruppe g-termine" id="panel-termine">
+        <div class="saktionen">
+          <button type="button" id="termineBtn" class="saktion"></button>
+        </div>
+      </section>
       <!-- Wartungs-Panel (Etappe C, Commit C2): Verschleiss + Reset, optional Saugbeutel. -->
       <section class="gruppe g-wartung" id="panel-wartung">
         <div class="abschnitt">
@@ -264,16 +272,13 @@
 <script src="js/panels/kopf.js"></script>
 <script src="js/panels/reinigung.js"></script>
 <script src="js/panels/shortcuts.js"></script>
+<script src="js/panels/termine.js"></script>
 <script src="js/panels/wartung.js"></script>
 <script src="js/panels/statistik.js"></script>
 <script src="js/panels/station.js"></script>
 <script src="js/panels/fehler.js"></script>
 <script src="js/panels/frischwasser.js"></script>
 <script src="js/panels/mopp.js"></script>
-
-<!-- Termine-Modal (F5, WIDGET_FEATURE_PLAN.md) -- kein Panel (kein PanelRegistry-Eintrag),
-     braucht aber Daten/t/uiIcon, deshalb nach den Panels und vor main.js. -->
-<script src="js/termine.js"></script>
 
 <!-- Startpunkt (Etappe B, Commit B5). -->
 <script src="js/main.js"></script>

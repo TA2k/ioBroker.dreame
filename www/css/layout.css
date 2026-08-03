@@ -617,8 +617,17 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
   color:var(--txt);font-size:13px;font-weight:700;cursor:pointer;margin-top:4px}
 /* Termine-Modal (F5): tabellenartiger Inhalt braucht mehr Breite als das 420px-Standardmass
    der uebrigen Overlays (Farb-/Aussehen-Picker), deshalb eigener Breiten-Override auf der
-   ID statt der .ovlbox-Klasse. */
+   ID statt der .ovlbox-Klasse.
+   .tovlbox macht die Box zur Flex-Spalte und ueberschreibt das overflow-y:auto der
+   .ovlbox-Basisregel (das wuerde sonst Kopfzeile+Liste gemeinsam scrollen) -- .tkopf bleibt
+   fest stehen (flex:none), nur .tliste scrollt. Live-Test-Fix: vorher (ganze Box scrollt)
+   wanderte der Schliessen-Knopf bei vielen Terminen unten aus dem sichtbaren Bereich. */
 #termineBox{max-width:560px}
+.tovlbox{display:flex;flex-direction:column;overflow-y:hidden}
+.tkopf{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none;
+  margin-bottom:10px}
+.tkopf h3{margin:0}
+.tliste{overflow-y:auto;flex:1;min-height:0}
 .tcard{border:1.5px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:8px;
   background:var(--panel2)}
 .tcard-kopf{display:flex;align-items:center;gap:8px}

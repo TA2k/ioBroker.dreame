@@ -26,7 +26,7 @@
  * Siehe WIDGET_SESSION_STATUS.md fuer die vollstaendige Herleitung dieser Entscheidung.
  */
 
-/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel, ReinigungPanel, FehlerPanel, WasserMoppPanel, ShortcutsPanel, uiIcon */
+/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel, ReinigungPanel, FehlerPanel, WasserMoppPanel, ShortcutsPanel, TerminePanel, uiIcon */
 
 // ===== Zustand (verbatim aus www/legacy.html "Zustand"-Bereich uebernommen, minus SOCK —
 // die alte direkte Socket.io-Sendefunktion cmd() wird nicht mehr gebraucht, Trigger/Daten
@@ -63,6 +63,9 @@ PanelRegistry.registriere('reinigung', ReinigungPanel);
 // PanelRegistry.alle bestimmt Zahnrad-Reihenfolge; die sichtbare Sidebar-Reihenfolge kommt
 // ausschliesslich aus der index.html-Reihenfolge der <section>-Elemente.
 PanelRegistry.registriere('shortcuts', ShortcutsPanel);
+// F5 (WIDGET_FEATURE_PLAN.md, nach Live-Test-Feedback): direkt nach shortcuts registriert +
+// in index.html direkt danach im DOM -- David-Vorgabe "Termine-Knopf unter den Kurzbefehlen".
+PanelRegistry.registriere('termine', TerminePanel);
 PanelRegistry.registriere('wartung', WartungPanel);
 PanelRegistry.registriere('frischwasser', WasserMoppPanel);
 PanelRegistry.registriere('statistik', StatistikPanel);
@@ -370,10 +373,11 @@ document.getElementById('zovlBreitePlus').onclick =
 // Liste kommt aus PanelRegistry.alle (nicht hartcodierte Reihenfolge) -- sortiert sich die
 // Registry um, folgen die Toggles automatisch. Nur die Anzeige-Namen sind hier gepflegt,
 // weil es keine zentrale "Titel"-Eigenschaft je Panel-Klasse gibt. Bleiben bewusst als
-// hartcodierte deutsche Strings stehen (nicht t()) -- PANEL_LABEL deckt alle sechs Panels
-// ab, aber nur reinigung/shortcuts haben bisher eigene i18n-Keys (F3/F4); volle Umstellung
-// dieser Zahnrad-Liste folgt mit F6-F9, wenn jedes Panel seine eigenen Keys bekommt. =====
-const PANEL_LABEL = { reinigung: 'Reinigung', shortcuts: 'Kurzbefehle', wartung: 'Wartung', frischwasser: 'Wasser & Mopp', statistik: 'Statistik', station: 'Station' };
+// hartcodierte deutsche Strings stehen (nicht t()) -- PANEL_LABEL deckt alle sieben Panels
+// ab, aber nur reinigung/shortcuts/termine haben bisher eigene i18n-Keys (F3/F4/F5); volle
+// Umstellung dieser Zahnrad-Liste folgt mit F6-F9, wenn jedes Panel seine eigenen Keys
+// bekommt. =====
+const PANEL_LABEL = { reinigung: 'Reinigung', shortcuts: 'Kurzbefehle', termine: 'Termine', wartung: 'Wartung', frischwasser: 'Wasser & Mopp', statistik: 'Statistik', station: 'Station' };
 const zovlPanelsListe = document.getElementById('zovlPanelsListe');
 
 /** Baut die Panels-Toggle-Liste im Zahnrad-Overlay, inkl. Sub-Toggle-Zeilen fuer
@@ -895,7 +899,6 @@ async function ladeGeraet(did) {
   renderGeraeteAuswahl(geraet);
 
   await baueAktivePanels(config, did, geraet && geraet.typ);
-  await Termine.setDid(did); // F5: Termine-Modal auf das jetzt aktive Geraet umstellen
 
   aktCloudId = `dreame.0.${did}.map.mergedCloud`;
   aktRobotId = `dreame.0.${did}.map.robot`;
@@ -931,9 +934,6 @@ async function ladeGeraet(did) {
     // ebenfalls erst nach I18n.laden() laufen, spaetestens vor initPanelsSektion()
     // (in ladeGeraet(), noch weiter unten in dieser Sequenz).
     baueZovlPanelsListe();
-    // F5: uebersetzt Knopf/Titel/Schliessen-Text des Termine-Modals -- gleiche
-    // I18n.laden()-Abhaengigkeit wie baueZovlPanelsListe() direkt darueber.
-    Termine.initTexte();
 
     const geraet = await Geraete.starten();
     if (!geraet) {
