@@ -37,5 +37,6 @@
   "termine.leer": "Keine Termine angelegt.",
   "termine.verwaist": "Kurzbefehl existiert nicht mehr",
   "termine.schliessen": "Schließen",
-  "termine.route-praefix": "Route:"
+  "termine.route-praefix": "Route:",
+  "termine.feuchtigkeit-praefix": "Feuchtigkeit:"
 }

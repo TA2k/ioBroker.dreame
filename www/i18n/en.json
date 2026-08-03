@@ -37,5 +37,6 @@
   "termine.leer": "No schedules set up.",
   "termine.verwaist": "Shortcut no longer exists",
   "termine.schliessen": "Close",
-  "termine.route-praefix": "Route:"
+  "termine.route-praefix": "Route:",
+  "termine.feuchtigkeit-praefix": "Moisture:"
 }

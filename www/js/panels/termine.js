@@ -132,16 +132,20 @@ class TerminePanel extends Panel {
     return null;
   }
 
-  /** Eine Zeile "Modus, Saugstaerke, Nx, Feuchtigkeit%[, Route: ...]" -- gemeinsames Format
-   * fuer Raum-Zeilen (rooms) und die einzelne Parameter-Zeile (all_rooms). mode/suction/
-   * route sind bereits adapterseitig uebersetzte Strings, kein escapeHtml() an dieser Stelle
-   * noetig (fester Key-Katalog, kein freier Nutzertext) -- der Aufrufer escaped das
-   * Gesamtergebnis trotzdem mit, s.u. */
+  /** Eine Zeile "Modus, Saugstaerke, Nx, Feuchtigkeit: Lvl[, Route: ...]" -- gemeinsames
+   * Format fuer Raum-Zeilen (rooms) und die einzelne Parameter-Zeile (all_rooms). mode/
+   * suction/route sind bereits adapterseitig uebersetzte Strings, kein escapeHtml() an
+   * dieser Stelle noetig (fester Key-Katalog, kein freier Nutzertext) -- der Aufrufer
+   * escaped das Gesamtergebnis trotzdem mit, s.u.
+   * moisture ist eine Stufe 1-32 (remote.wetness-level, SIID 28-1), kein Prozentwert --
+   * David-Live-Test-Fund: `${moisture}%` suggerierte faelschlich einen Prozentsatz, siehe
+   * reinigung.js/frischwasser.js, die denselben State ebenfalls als bloße Stufenzahl ohne
+   * Einheit anzeigen. */
   _formatEinstellungen({ mode, suction, cycles, route, moisture }) {
     const teile = [
       mode, suction,
       cycles != null ? `${cycles}×` : null,
-      moisture != null ? `${moisture}%` : null,
+      moisture != null ? `${t('termine.feuchtigkeit-praefix')} ${moisture}` : null,
       route ? `${t('termine.route-praefix')} ${route}` : null,
     ];
     return teile.filter(Boolean).join(', ');
