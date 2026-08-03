@@ -290,13 +290,19 @@ class ReinigungPanel extends Panel {
       : (n === 1 ? t('panel.reinigung.raum.gewaehlt-eins') : `${n} ${t('panel.reinigung.raum.gewaehlt-mehrere')}`);
   }
 
-  /** Bei Raum-Auswahl waehlt das X40 den Modus pro Raum selbst und ignoriert den globalen
-   * remote.cleaning-mode (live verifiziert, siehe WIDGET_SESSION_STATUS.md Etappe C5.5-Test
-   * "X40-Eigenheit, kein Bug"). Die Kachel bliebe sonst bedienbar, obwohl die Einstellung beim
-   * Start wirkungslos ist -- deshalb hier ausgegraut + Tooltip statt stillschweigend falscher
-   * Anzeige (Plan Abschnitt 6, Commit C6-3). Tooltip sitzt auf der umschliessenden .rkarte,
-   * nicht auf dem <select> selbst: disabled-Formelemente feuern in den meisten Browsern keine
-   * hover-Events, ein title auf dem <select> wuerde also nie sichtbar werden. */
+  /** C6-3 (WIDGET_UMBAU_PLAN.md Abschnitt 6) hatte die Kachel zusaetzlich gesperrt, sobald
+   * Raeume ausgewaehlt sind: live verifiziert mit Modus "Saugen+Wischen", dass das X40 dann
+   * pro Raum selbst entscheidet und den globalen remote.cleaning-mode ignoriert (siehe
+   * WIDGET_SESSION_STATUS.md Etappe C5.5-Test "X40-Eigenheit, kein Bug") -- die Kachel waere
+   * sonst bedienbar, obwohl die Einstellung wirkungslos ist.
+   * Issue #103 (RicardoHipp, TA2k/ioBroker.dreame) + Live-Gegentest (2026-08-03, David, X40):
+   * mit reinem Modus "Wischen" statt des kombinierten Modus wird die Raumauswahl SEHR WOHL
+   * beachtet -- die Ignorier-Eigenheit tritt also nur beim kombinierten Modus auf, nicht
+   * generell bei jeder Raumauswahl. Die pauschale Sperre nahm damit unnoetig die Modus-Wahl
+   * weg, auch dort, wo sie wirkt.
+   * David-Entscheidung: Sperre vorerst komplett deaktivieren (auskommentiert statt entfernt,
+   * schnell reaktivierbar) statt sofort auf eine kombinierte-Modi-only-Regel zu verfeinern --
+   * bei Beschwerden/weiteren Gegenbeispielen wird das nochmal angepasst. */
   _renderModus() {
     const el = document.getElementById('reinigungModus');
     const karte = document.getElementById('reinigungModusKarte');
@@ -308,9 +314,9 @@ class ReinigungPanel extends Panel {
       el.onchange = () => Trigger.setCleaningMode(this.did, Number(el.value));
     }
     if (this.modus != null) el.value = String(this.modus);
-    const raumAktiv = selectedRooms.size > 0;
-    el.disabled = customizedCleaning || geraetGestartet() || raumAktiv;
-    if (karte) karte.title = raumAktiv ? t('panel.reinigung.modus.raum-hinweis') : '';
+    // const raumAktiv = selectedRooms.size > 0; // siehe Kommentar oben -- Sperre deaktiviert
+    el.disabled = customizedCleaning || geraetGestartet();
+    if (karte) karte.title = '';
   }
 
   _renderRoute() {
