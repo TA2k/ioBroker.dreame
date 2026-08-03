@@ -723,8 +723,12 @@ function initZoomPan() {
   // #devName ausgenommen seit Etappe E1 (Roboter-Umschalter): sonst faengt
   // setPointerCapture() jeden Klick darauf als Kartendrag/Raumklick ab, bevor
   // devNameEl.onclick ueberhaupt feuert -- gleiches Prinzip wie bei .zoom oben.
+  // #termineOvl (F5, WIDGET_FEATURE_PLAN.md) ergaenzt: liegt als eigenes Overlay ebenfalls
+  // innerhalb von .stage (siehe index.html), ohne diesen Eintrag faengt setPointerCapture()
+  // jeden Klick/Checkbox-Toggle im Termine-Modal als Kartendrag/Raumklick ab, bevor dessen
+  // eigene Handler ueberhaupt feuern -- gleiches Prinzip wie bei #zahnradOvl.
   const aufBedienung = t => !!(t && t.closest && (t.closest('.zoom') || t.closest('#devName')
-    || t.closest('#zahnradBtn') || t.closest('#zahnradOvl')));
+    || t.closest('#zahnradBtn') || t.closest('#zahnradOvl') || t.closest('#termineOvl')));
   stage.addEventListener('pointerdown', e => {
     if (aufBedienung(e.target)) return;
     drag = true; lx = e.clientX; ly = e.clientY; sx0 = e.clientX; sy0 = e.clientY;

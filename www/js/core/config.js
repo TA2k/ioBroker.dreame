@@ -79,16 +79,44 @@ function defaultWidgetConfig() {
 const Config = (() => {
   const konfigId = did => `dreame.0.${did}.config.widget`;
 
+  /** Panel-Merge auf Feld-Ebene (nicht nur pro Panel-ID) - seit configVersion 3 hat jedes
+   * Panel mehrere Felder (sichtbar, versteckt). Ein flacher Merge wie
+   * { ...std.panels, ...gespeichert.panels } wuerde bei einem vom Nutzer bereits
+   * individualisierten Panel (z.B. sichtbar:false) das komplette Sub-Objekt ersetzen und
+   * damit das neue versteckt-Default verlieren - daher pro ID: Default-Panel ueberschrieben
+   * von den tatsaechlich gespeicherten Feldern. Ausgelagert, weil das SOWOHL beim
+   * Versionssprung ALS AUCH beim gleichversionierten Fast-Path unten noetig ist (siehe
+   * Kommentar dort). */
+  function mergePanels(std, gespeichert) {
+    const alleIds = new Set([...Object.keys(std.panels), ...Object.keys((gespeichert && gespeichert.panels) || {})]);
+    const panels = {};
+    for (const id of alleIds) {
+      panels[id] = { ...(std.panels[id] || { sichtbar: true, versteckt: [] }), ...(((gespeichert && gespeichert.panels) || {})[id]) };
+    }
+    return panels;
+  }
+
   /** Gespeicherte Config gegen den aktuellen Stand auffuellen (neue Panels/Felder
    * bekommen ihren Default, vorhandene Nutzer-Werte bleiben erhalten). */
   function migriere(gespeichert) {
     const std = defaultWidgetConfig();
     if (!gespeichert || typeof gespeichert !== 'object') return std;
-    if (gespeichert.configVersion === WIDGET_CONFIG_VERSION) return gespeichert;
     if (gespeichert.configVersion > WIDGET_CONFIG_VERSION) {
       console.warn('[config] widgetConfig-Version', gespeichert.configVersion,
         'ist neuer als dieses Widget (', WIDGET_CONFIG_VERSION, ') — wird unveraendert genutzt.');
       return gespeichert;
+    }
+    if (gespeichert.configVersion === WIDGET_CONFIG_VERSION) {
+      // Neue Panel-Klassen (main.js PanelRegistry.registriere()) bekommen ihren
+      // Config-Eintrag automatisch, OHNE configVersion-Bump (Kommentar in
+      // defaultWidgetConfig() oben) -- das gilt aber nur, wenn dieser Merge auch dann
+      // laeuft, wenn die Version schon uebereinstimmt. Live-Test-Fund (F5): eine VOR der
+      // Termine-Registrierung gespeicherte v5-Config kam hier vorher unveraendert durch
+      // (frueher: `if (configVersion === WIDGET_CONFIG_VERSION) return gespeichert`),
+      // aktiveWidgetConfig.panels.termine blieb dadurch undefined -- der Sichtbarkeit-
+      // Toggle im Zahnrad (main.js `aktiveWidgetConfig.panels[id].sichtbar = ...`) griff
+      // ins Leere (TypeError auf undefined, Handler brach ab, Checkbox ohne Wirkung).
+      return { ...gespeichert, panels: mergePanels(std, gespeichert) };
     }
     // v1->v2: Namespace "aussehen" in "layout" umbenannt (Etappe E). Alten Wert 1:1
     // uebernehmen, BEVOR unten mit dem Default gemerged wird - sonst wuerden bestehende
@@ -114,21 +142,10 @@ const Config = (() => {
     }
     const gespeichertOhneAussehen = { ...gespeichert };
     delete gespeichertOhneAussehen.aussehen;
-    // Panel-Merge auf Feld-Ebene (nicht nur pro Panel-ID) - seit configVersion 3 hat jedes
-    // Panel mehrere Felder (sichtbar, versteckt). Ein flacher Merge wie beim alten
-    // { ...std.panels, ...gespeichert.panels } wuerde bei einem vom Nutzer bereits
-    // individualisierten Panel (z.B. sichtbar:false) das komplette Sub-Objekt ersetzen und
-    // damit das neue versteckt-Default verlieren - analog zum layout-Merge unten daher
-    // pro ID: Default-Panel ueberschrieben von den tatsaechlich gespeicherten Feldern.
-    const alleIds = new Set([...Object.keys(std.panels), ...Object.keys(gespeichert.panels || {})]);
-    const panels = {};
-    for (const id of alleIds) {
-      panels[id] = { ...(std.panels[id] || { sichtbar: true, versteckt: [] }), ...((gespeichert.panels || {})[id]) };
-    }
     return {
       ...std,
       ...gespeichertOhneAussehen,
-      panels,
+      panels: mergePanels(std, gespeichert),
       layout: { ...std.layout, ...(_altesLayout || {}) },
       configVersion: WIDGET_CONFIG_VERSION,
       adapterVersion: WIDGET_ADAPTER_VERSION,
