@@ -268,7 +268,6 @@ function initAussehenSektion(config) {
   const breite = L.width || 275;
   document.documentElement.style.setProperty('--leiste-breite', breite + 'px');
   document.getElementById('zovlBreite').value = breite;
-  fuelleBreite();
 }
 
 document.getElementById('zovlTheme').onchange = e => {
@@ -319,24 +318,29 @@ zovlGroesseEl.onchange = () => wendeUndSchreibeGroesse(Number(zovlGroesseEl.valu
 document.getElementById('zovlGroesseMinus').onclick = () => wendeUndSchreibeGroesse(Number(zovlGroesseEl.value) - 5);
 document.getElementById('zovlGroessePlus').onclick = () => wendeUndSchreibeGroesse(Number(zovlGroesseEl.value) + 5);
 
-// Menue-Breite (Etappe E2c, Nachtrag 3): nutzt das seit E2a im Schema stehende, bisher nie
-// verdrahtete config.widget.layout.width + die zugehoerige --leiste-breite-CSS-Variable
-// (.side{width:calc(var(--leiste-breite) * var(--ui))}, siehe layout.css) -- bewusst kein
-// neues Feld, David-Entscheidung. input (Ziehen): nur live anwenden + Fuellstand/Anzeige
-// aktualisieren, kein Schreiben. change (Loslassen): persistieren -- gleiches Muster wie
-// der Wetness-Slider in reinigung.js.
+// Menue-Breite (F1, WIDGET_FEATURE_PLAN.md): Zahlenfeld + Minus/Plus statt Slider, exakt
+// dasselbe Muster wie der UI-Zoom direkt darueber (Etappe E2c, Nachtrag 2) -- kein
+// separates input-Live-Preview-Event, onchange (Enter/Tab/Blur) UND die beiden Knoepfe
+// wenden sofort an UND persistieren in einem Schritt. Ersetzt den vorherigen
+// input[type=range] (Etappe E2c, Nachtrag 3) -- config.widget.layout.width war und bleibt
+// ein px-Wert, keine Migration noetig (siehe Plan-Korrektur 2026-08-03).
+const MENUE_BREITE_SCHRITT_PX = 10;
+const MENUE_BREITE_MIN_PX = 250;
+const MENUE_BREITE_MAX_PX = 500;
 const zovlBreiteEl = document.getElementById('zovlBreite');
-const zovlBreiteWertEl = document.getElementById('zovlBreiteWert');
-function fuelleBreite() {
-  const pct = (Number(zovlBreiteEl.value) - Number(zovlBreiteEl.min)) / (Number(zovlBreiteEl.max) - Number(zovlBreiteEl.min)) * 100;
-  zovlBreiteEl.style.setProperty('--fill', pct + '%');
-  zovlBreiteWertEl.textContent = zovlBreiteEl.value + ' px';
+function wendeUndSchreibeBreite(px) {
+  const geklemmt = Math.min(MENUE_BREITE_MAX_PX,
+    Math.max(MENUE_BREITE_MIN_PX, Math.round(px) || MENUE_BREITE_MIN_PX)); // HTML5 min/max
+  // greift meist schon selbst, zusaetzliches Klemmen hier gegen "abc"/leer/Tippfehler
+  zovlBreiteEl.value = geklemmt;
+  document.documentElement.style.setProperty('--leiste-breite', geklemmt + 'px');
+  schreibeLayout('width', geklemmt);
 }
-zovlBreiteEl.oninput = () => {
-  document.documentElement.style.setProperty('--leiste-breite', zovlBreiteEl.value + 'px');
-  fuelleBreite();
-};
-zovlBreiteEl.onchange = () => schreibeLayout('width', Number(zovlBreiteEl.value));
+zovlBreiteEl.onchange = () => wendeUndSchreibeBreite(Number(zovlBreiteEl.value));
+document.getElementById('zovlBreiteMinus').onclick =
+  () => wendeUndSchreibeBreite(Number(zovlBreiteEl.value) - MENUE_BREITE_SCHRITT_PX);
+document.getElementById('zovlBreitePlus').onclick =
+  () => wendeUndSchreibeBreite(Number(zovlBreiteEl.value) + MENUE_BREITE_SCHRITT_PX);
 
 // ===== Panels-Sektion im Einstellungs-Overlay (Etappe E2d): Sichtbarkeit-Toggle pro Panel
 // (Ebene 1 aus WIDGET_UMBAU_PLAN.md Abschnitt 8.2 -- Feld-Sichtbarkeit "versteckt" ist

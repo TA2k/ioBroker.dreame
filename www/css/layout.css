@@ -243,12 +243,6 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
   background:var(--panel2); color:var(--txt); font-size:14px; line-height:1; cursor:pointer; flex:none}
 .zovl-zoom button:hover{border-color:var(--accent,#4a78e0)}
 .zovl-zoom button:active{transform:scale(.93)}
-.zovl-wert{color:var(--muted); font-weight:400}
-/* Menue-Breite (Etappe E2c, Nachtrag 3): generische input[type=range]-Optik weiter unten
-   in dieser Datei ist width:100% (fuers Reinigungs-Panel gedacht) -- in der schmalen 320px-
-   Spalte hier neben einem Label wuerde das den Platz sprengen, gleiches Prinzip wie beim
-   inzwischen entfernten UI-Zoom-Slider. */
-.zovl-feld input[type=range]{width:140px; flex:none}
 
 /* Link-Sektion (Etappe E2e): Button oben ueber die volle Sektionsbreite, darunter das
    readonly-Textfeld, darunter eine Zeile mit Checkbox links / Kopieren-Button rechts. Kein
