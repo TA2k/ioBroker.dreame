@@ -525,6 +525,11 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
 .rraum{font-size:12.5px;opacity:.75;margin-bottom:8px}
 .rgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 .rkarte{display:flex;flex-direction:column;gap:3px;font-size:11.5px;opacity:.85;min-width:0}
+/* F3-Live-Test-Fix: gleicher Fall wie #zahnradBtn oben (Nachtrag E2e) -- die display:flex-
+   Regel darueber ist eine Autor-Regel und schlaegt den UA-Default [hidden]{display:none}
+   immer, unabhaengig von Spezifitaet. karte.hidden=true (feldVersteckt(), reinigung.js)
+   blieb dadurch optisch wirkungslos, obwohl das hidden-Attribut korrekt gesetzt wurde. */
+.rkarte[hidden]{display:none}
 .rkarte select{font:inherit;font-size:12.5px;font-weight:700;padding:6px 8px;border-radius:8px;
   border:1px solid var(--line);background:var(--knoepfe);color:var(--txt);min-width:0}
 .rkarte select:disabled{opacity:.4;cursor:not-allowed}
