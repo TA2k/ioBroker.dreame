@@ -63,5 +63,18 @@
   "panel.station.hinweis.kein-wischpad": "No mop pad inserted",
   "panel.station.hinweis.trocknung-abbrechen": "Cancel the running drying cycle",
   "panel.station.hinweis.wischpad-trocknen": "Dry the mop pad",
-  "panel.station.hinweis.erst-nach-reinigung": "Only after cleaning"
+  "panel.station.hinweis.erst-nach-reinigung": "Only after cleaning",
+
+  "panel.wartung.titel": "Maintenance",
+  "panel.wartung.hauptbuerste.label": "Main brush",
+  "panel.wartung.seitenbuerste.label": "Side brush",
+  "panel.wartung.filter.label": "Filter",
+  "panel.wartung.sensoren.label": "Sensors",
+  "panel.wartung.saugbeutel.label": "Dust bag",
+  "panel.wartung.zuruecksetzen": "Reset",
+
+  "panel.wartung.saugbeutel.installiert": "Installed",
+  "panel.wartung.saugbeutel.nicht-installiert": "Not installed",
+  "panel.wartung.saugbeutel.ueberpruefen": "Check",
+  "panel.wartung.saugbeutel.status-unbekannt": "Status"
 }

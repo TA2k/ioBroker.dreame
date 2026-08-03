@@ -63,5 +63,18 @@
   "panel.station.hinweis.kein-wischpad": "Kein Wischpad eingesetzt",
   "panel.station.hinweis.trocknung-abbrechen": "Laufende Trocknung abbrechen",
   "panel.station.hinweis.wischpad-trocknen": "Wischpad trocknen",
-  "panel.station.hinweis.erst-nach-reinigung": "Erst nach der Reinigung"
+  "panel.station.hinweis.erst-nach-reinigung": "Erst nach der Reinigung",
+
+  "panel.wartung.titel": "Wartung",
+  "panel.wartung.hauptbuerste.label": "Hauptbürste",
+  "panel.wartung.seitenbuerste.label": "Seitenbürste",
+  "panel.wartung.filter.label": "Filter",
+  "panel.wartung.sensoren.label": "Sensoren",
+  "panel.wartung.saugbeutel.label": "Saugbeutel",
+  "panel.wartung.zuruecksetzen": "Zurücksetzen",
+
+  "panel.wartung.saugbeutel.installiert": "Installiert",
+  "panel.wartung.saugbeutel.nicht-installiert": "Nicht installiert",
+  "panel.wartung.saugbeutel.ueberpruefen": "Überprüfen",
+  "panel.wartung.saugbeutel.status-unbekannt": "Status"
 }

@@ -377,9 +377,9 @@ document.getElementById('zovlBreitePlus').onclick =
 // Registry um, folgen die Toggles automatisch. Nur die Anzeige-Namen sind hier gepflegt,
 // weil es keine zentrale "Titel"-Eigenschaft je Panel-Klasse gibt. Bleiben bewusst als
 // hartcodierte deutsche Strings stehen (nicht t()) -- PANEL_LABEL deckt alle sieben Panels
-// ab, aber nur reinigung/shortcuts/termine/station haben bisher eigene i18n-Keys
-// (F3/F4/F5/F6); volle Umstellung dieser Zahnrad-Liste folgt mit F7-F9, wenn jedes Panel
-// seine eigenen Keys bekommt. =====
+// ab, aber nur reinigung/shortcuts/termine/station/wartung haben bisher eigene i18n-Keys
+// (F3/F4/F5/F6/F7a); volle Umstellung dieser Zahnrad-Liste folgt mit F7b-F9, wenn jedes
+// Panel seine eigenen Keys bekommt. =====
 const PANEL_LABEL = { reinigung: 'Reinigung', shortcuts: 'Kurzbefehle', termine: 'Termine', wartung: 'Wartung', frischwasser: 'Wasser & Mopp', statistik: 'Statistik', station: 'Station' };
 const zovlPanelsListe = document.getElementById('zovlPanelsListe');
 
