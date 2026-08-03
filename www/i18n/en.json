@@ -82,5 +82,22 @@
   "panel.statistik.reinigungen.label": "Cleanings",
   "panel.statistik.flaeche.label": "Area",
   "panel.statistik.dauer.label": "Duration",
-  "panel.statistik.seit.label": "Since"
+  "panel.statistik.seit.label": "Since",
+
+  "panel.frischwasser.titel": "Water & Mop",
+  "panel.frischwasser.fuellstand.label": "Water level",
+  "panel.frischwasser.wasch-zyklen.label": "Wash cycles",
+  "panel.frischwasser.wasch-zyklen.verbraucht": "used",
+  "panel.frischwasser.wasch-zyklen.uebrig": "left",
+  "panel.frischwasser.tank-status.label": "Tank",
+  "panel.frischwasser.tank-status.eingesetzt": "inserted ✓",
+  "panel.frischwasser.tank-status.draussen": "removed ✗",
+  "panel.frischwasser.mopp-montiert.label": "Mop attached",
+  "panel.frischwasser.mopp-in-station.label": "Mop in station",
+  "panel.frischwasser.feuchtigkeit.label": "Moisture",
+  "panel.frischwasser.temperatur.label": "Temperature",
+  "panel.frischwasser.temperatur.stufe-praefix": "Level",
+  "panel.frischwasser.warnung.warn": "Refill water soon",
+  "panel.frischwasser.warnung.critical": "Refill water urgently — risk of malfunction!",
+  "panel.frischwasser.reset-knopf": "Reset tank filled"
 }

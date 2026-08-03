@@ -82,5 +82,22 @@
   "panel.statistik.reinigungen.label": "Reinigungen",
   "panel.statistik.flaeche.label": "Fläche",
   "panel.statistik.dauer.label": "Dauer",
-  "panel.statistik.seit.label": "Seit"
+  "panel.statistik.seit.label": "Seit",
+
+  "panel.frischwasser.titel": "Wasser & Mopp",
+  "panel.frischwasser.fuellstand.label": "Füllstand",
+  "panel.frischwasser.wasch-zyklen.label": "Wasch-Zyklen",
+  "panel.frischwasser.wasch-zyklen.verbraucht": "verbraucht",
+  "panel.frischwasser.wasch-zyklen.uebrig": "übrig",
+  "panel.frischwasser.tank-status.label": "Tank",
+  "panel.frischwasser.tank-status.eingesetzt": "eingesetzt ✓",
+  "panel.frischwasser.tank-status.draussen": "draußen ✗",
+  "panel.frischwasser.mopp-montiert.label": "Mopp montiert",
+  "panel.frischwasser.mopp-in-station.label": "Mopp in Station",
+  "panel.frischwasser.feuchtigkeit.label": "Feuchtigkeit",
+  "panel.frischwasser.temperatur.label": "Temperatur",
+  "panel.frischwasser.temperatur.stufe-praefix": "Stufe",
+  "panel.frischwasser.warnung.warn": "Wasser bald nachfüllen",
+  "panel.frischwasser.warnung.critical": "Wasser dringend nachfüllen — Störungsgefahr!",
+  "panel.frischwasser.reset-knopf": "Tank gefüllt zurücksetzen"
 }

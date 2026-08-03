@@ -9,7 +9,7 @@
 
 /* global Daten, PanelRegistry */
 
-const WIDGET_CONFIG_VERSION = 5;
+const WIDGET_CONFIG_VERSION = 6;
 const WIDGET_ADAPTER_VERSION = '0.4.0'; // Zielversion dieses Umbaus, siehe WIDGET_UMBAU_PLAN.md Kopf
 
 function defaultWidgetConfig() {
@@ -140,12 +140,24 @@ const Config = (() => {
     if (_altesLayout.custom) {
       _altesLayout.custom = { ...std.layout.custom, ..._altesLayout.custom };
     }
-    const gespeichertOhneAussehen = { ...gespeichert };
+    // v5->v6 (F8, WIDGET_FEATURE_PLAN.md): Panel Mopp entfernt (www/js/panels/mopp.js war
+    // ein nie eingebundener, toter Platzhalter -- die eigentliche Mopp-Anzeige steckt schon
+    // im Frischwasser-Panel, siehe dessen Klassenname WasserMoppPanel). 'mopp' war NIE ein
+    // von PanelRegistry registrierter Panel-Name, mergePanels() wuerde einen dennoch
+    // vorhandenen Alt-Eintrag also fuer immer als unbekannte ID durchreichen (Union aus
+    // std- UND gespeichert-Keys, siehe dort) -- hier deshalb einmalig explizit entfernt,
+    // BEVOR gemerged wird, statt auf den generischen Mechanismus zu vertrauen.
+    let gespeichertOhnePanelMopp = gespeichert;
+    if (gespeichert.panels && gespeichert.panels.mopp) {
+      gespeichertOhnePanelMopp = { ...gespeichert, panels: { ...gespeichert.panels } };
+      delete gespeichertOhnePanelMopp.panels.mopp;
+    }
+    const gespeichertOhneAussehen = { ...gespeichertOhnePanelMopp };
     delete gespeichertOhneAussehen.aussehen;
     return {
       ...std,
       ...gespeichertOhneAussehen,
-      panels: mergePanels(std, gespeichert),
+      panels: mergePanels(std, gespeichertOhnePanelMopp),
       layout: { ...std.layout, ...(_altesLayout || {}) },
       configVersion: WIDGET_CONFIG_VERSION,
       adapterVersion: WIDGET_ADAPTER_VERSION,
