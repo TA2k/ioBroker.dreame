@@ -15,6 +15,7 @@ const crypto = require('node:crypto');
 const mqtt = require('mqtt');
 const zlib = require('node:zlib');
 const { buildGoToPointIn, parsePositionPair } = require('./lib/go-to-point');
+const { ReachabilityTracker } = require('./lib/reachability');
 //check if canvas is available because is optional dependency
 let createCanvas;
 let ImageData;
@@ -448,6 +449,7 @@ class Dreame extends utils.Adapter {
         this.log.error(`Request failed after 3 retries: ${error.message}`);
       },
     });
+    this.reachability = new ReachabilityTracker();
     this.remoteCommands = {};
     this.specStatusDict = {};
     this.specPropsToIdDict = {};
@@ -845,6 +847,26 @@ class Dreame extends utils.Adapter {
               type: 'device',
               common: {
                 name: device.customName || device.deviceInfo.displayName || device.model,
+                // Links the device to its reachability state so Admin and VIS
+                // render the status indicator on the device itself.
+                statusStates: { onlineId: `${this.namespace}.${device.did}.info.online` },
+              },
+              native: {},
+            });
+            await this.extendObject(device.did + '.info', {
+              type: 'channel',
+              common: { name: 'Information' },
+              native: {},
+            });
+            await this.extendObject(device.did + '.info.online', {
+              type: 'state',
+              common: {
+                name: 'Device reachable',
+                type: 'boolean',
+                role: 'indicator.reachable',
+                read: true,
+                write: false,
+                def: false,
               },
               native: {},
             });
@@ -982,6 +1004,33 @@ class Dreame extends utils.Adapter {
       .catch((error) => {
         this.log.debug('updateDeviceStatusSummary failed: ' + (error && error.message));
       });
+  }
+
+  /**
+   * Feed a request outcome into the reachability tracker. Writes
+   * <did>.info.online and logs exactly once per transition, so a device that is
+   * unreachable for hours produces one line instead of one per failed request.
+   *
+   * @param {object} device device record from the device list
+   * @param {boolean} reachable whether the device answered the request
+   */
+  async _updateReachability(device, reachable) {
+    if (!device || device.did === undefined) return;
+    const previous = this.reachability.isOnline(device.did);
+    const changed = reachable
+      ? this.reachability.recordSuccess(device.did)
+      : this.reachability.recordFailure(device.did);
+    if (!changed) return;
+    await this.setStateAsync(`${device.did}.info.online`, reachable, true).catch(() => undefined);
+    const label = `${device.customName || (device.deviceInfo && device.deviceInfo.displayName) || device.model} (${device.did})`;
+    if (!reachable) {
+      this.log.warn(`Device ${label} is not reachable — it will be retried with the next update`);
+    } else if (previous === false) {
+      // Only a real recovery is worth a line. The first result after a start is
+      // just the initial determination and would otherwise announce "reachable
+      // again" on every restart, without the device ever having been away.
+      this.log.info(`Device ${label} is reachable again`);
+    }
   }
 
   async fetchSpecs() {
@@ -3747,6 +3796,10 @@ class Dreame extends utils.Adapter {
             .then(async (res) => {
               if (res.data.code !== 0) {
                 if (res.data.code === -8 || res.data.code === 80001) {
+                  // Device did not answer — this is the offline signal (80001 is
+                  // "device may be offline, command timed out"). Stays on debug;
+                  // the single user-facing line comes from the state transition.
+                  await this._updateReachability(device, false);
                   this.log.debug(
                     `Error getting spec update for ${device.name || device.model} (${device.did}) with ${JSON.stringify(data)}`,
                   );
@@ -3760,6 +3813,8 @@ class Dreame extends utils.Adapter {
                 this.log.debug(JSON.stringify(res.data));
                 return;
               }
+              // Device answered — reachability confirmed.
+              await this._updateReachability(device, true);
               this.log.debug(JSON.stringify(res.data));
               for (const element of res.data.data.result) {
                 const path = await this._lazyCreateState(
@@ -5408,6 +5463,11 @@ class Dreame extends utils.Adapter {
 
         if (res.data.code !== 0) {
           if (res.data.code === 80001) {
+            // Same offline signal as in the property poll. Feeding it in here as
+            // well means a device that goes quiet between two poll cycles is
+            // noticed as soon as the user tries to control it.
+            const timedOutDevice = this.deviceArray.find((d) => String(d.did) === String(data.did));
+            timedOutDevice && this._updateReachability(timedOutDevice, false).catch(() => undefined);
             this.log.debug('Command timeout: ' + JSON.stringify(res.data));
           } else {
             this.log.warn('Command failed: ' + JSON.stringify(res.data));
