@@ -76,5 +76,11 @@
   "panel.wartung.saugbeutel.installiert": "Installiert",
   "panel.wartung.saugbeutel.nicht-installiert": "Nicht installiert",
   "panel.wartung.saugbeutel.ueberpruefen": "Überprüfen",
-  "panel.wartung.saugbeutel.status-unbekannt": "Status"
+  "panel.wartung.saugbeutel.status-unbekannt": "Status",
+
+  "panel.statistik.titel": "Statistik",
+  "panel.statistik.reinigungen.label": "Reinigungen",
+  "panel.statistik.flaeche.label": "Fläche",
+  "panel.statistik.dauer.label": "Dauer",
+  "panel.statistik.seit.label": "Seit"
 }
