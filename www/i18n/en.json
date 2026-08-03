@@ -25,5 +25,10 @@
 
   "panel.reinigung.raum.alle": "All rooms active",
   "panel.reinigung.raum.gewaehlt-eins": "1 room selected",
-  "panel.reinigung.raum.gewaehlt-mehrere": "rooms selected"
+  "panel.reinigung.raum.gewaehlt-mehrere": "rooms selected",
+
+  "panel.shortcuts.titel": "Shortcuts",
+  "panel.shortcuts.ausblenden": "Hide",
+  "panel.shortcuts.einblenden": "Show",
+  "panel.shortcuts.laeuft": "running"
 }

@@ -26,7 +26,7 @@
  * Siehe WIDGET_SESSION_STATUS.md fuer die vollstaendige Herleitung dieser Entscheidung.
  */
 
-/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel, ReinigungPanel, FehlerPanel, WasserMoppPanel, uiIcon */
+/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel, ReinigungPanel, FehlerPanel, WasserMoppPanel, ShortcutsPanel, uiIcon */
 
 // ===== Zustand (verbatim aus www/legacy.html "Zustand"-Bereich uebernommen, minus SOCK —
 // die alte direkte Socket.io-Sendefunktion cmd() wird nicht mehr gebraucht, Trigger/Daten
@@ -55,6 +55,14 @@ let kartenDrehung = 0; // wird nach Config.laden() aus config.layout.drehung ges
 PanelRegistry.registriere('kopf', KopfPanel);
 PanelRegistry.registriere('fehler', FehlerPanel);
 PanelRegistry.registriere('reinigung', ReinigungPanel);
+// F4 (WIDGET_FEATURE_PLAN.md): direkt nach reinigung registriert -- Ziel-Reihenfolge laut
+// Plan "erst alle Bedienelemente, dann Statusanzeigen"; station wandert hier erst mit F6
+// nach vorne (siehe main.js-Kommentar bei den restlichen registriere()-Aufrufen unten).
+// WICHTIG: Reihenfolge hier UND die DOM-Reihenfolge der <section>-Panels in index.html
+// muessen uebereinstimmen -- main.js verschiebt beim Bauen keine DOM-Knoten, nur
+// PanelRegistry.alle bestimmt Zahnrad-Reihenfolge; die sichtbare Sidebar-Reihenfolge kommt
+// ausschliesslich aus der index.html-Reihenfolge der <section>-Elemente.
+PanelRegistry.registriere('shortcuts', ShortcutsPanel);
 PanelRegistry.registriere('wartung', WartungPanel);
 PanelRegistry.registriere('frischwasser', WasserMoppPanel);
 PanelRegistry.registriere('statistik', StatistikPanel);
@@ -352,10 +360,10 @@ document.getElementById('zovlBreitePlus').onclick =
 // Liste kommt aus PanelRegistry.alle (nicht hartcodierte Reihenfolge) -- sortiert sich die
 // Registry um, folgen die Toggles automatisch. Nur die Anzeige-Namen sind hier gepflegt,
 // weil es keine zentrale "Titel"-Eigenschaft je Panel-Klasse gibt. Bleiben bewusst als
-// hartcodierte deutsche Strings stehen (nicht t()) -- PANEL_LABEL deckt alle fuenf Panels
-// ab, aber nur reinigung hat mit F3 schon i18n-Keys; volle Umstellung folgt mit F6-F9,
-// wenn jedes Panel seine eigenen Keys bekommt. =====
-const PANEL_LABEL = { reinigung: 'Reinigung', wartung: 'Wartung', frischwasser: 'Wasser & Mopp', statistik: 'Statistik', station: 'Station' };
+// hartcodierte deutsche Strings stehen (nicht t()) -- PANEL_LABEL deckt alle sechs Panels
+// ab, aber nur reinigung/shortcuts haben bisher eigene i18n-Keys (F3/F4); volle Umstellung
+// dieser Zahnrad-Liste folgt mit F6-F9, wenn jedes Panel seine eigenen Keys bekommt. =====
+const PANEL_LABEL = { reinigung: 'Reinigung', shortcuts: 'Kurzbefehle', wartung: 'Wartung', frischwasser: 'Wasser & Mopp', statistik: 'Statistik', station: 'Station' };
 const zovlPanelsListe = document.getElementById('zovlPanelsListe');
 
 /** Baut die Panels-Toggle-Liste im Zahnrad-Overlay, inkl. Sub-Toggle-Zeilen fuer
@@ -395,20 +403,47 @@ function initPanelsSektion(config) {
 
 // Delegated Listener statt einzelner Handler pro Checkbox: die Checkboxen werden oben zur
 // Laufzeit generiert, ihre Zahl/Reihenfolge kann sich mit der PanelRegistry aendern. Kein
-// Minimum erzwungen -- alle fuenf Panels gleichzeitig aus ist erlaubt (David-Vorgabe),
+// Minimum erzwungen -- alle Panels gleichzeitig aus ist erlaubt (David-Vorgabe),
 // Sidebar bleibt dann einfach leer/leer bis auf kopf/fehler. Ein Handler fuer beide Ebenen
 // (Panel UND Feld) -- data-panel-feld wird zuerst geprueft, sonst waere jeder Feld-Klick
 // zusaetzlich (faelschlich) als Panel-Sichtbarkeit-Aenderung interpretierbar, weil
 // dataset.panel bei verschachtelten data-*-Attributen sonst leicht verwechselt wird.
+/** Setzt/loescht feldId in aktiveWidgetConfig.panels.<panelId>.versteckt -- rein
+ * synchrone Mutation, keine Persistenz. Gemeinsam genutzt vom Zahnrad-Sub-Toggle-Handler
+ * unten (F3) und der schreibePanelFeldVersteckt()-Bruecke (F4) fuer Panels mit dynamischer
+ * Feld-Liste, siehe dort. */
+function setzeFeldVersteckt(panelId, feldId, versteckt) {
+  const eintrag = aktiveWidgetConfig.panels[panelId] || (aktiveWidgetConfig.panels[panelId] = { sichtbar: true, versteckt: [] });
+  if (!Array.isArray(eintrag.versteckt)) eintrag.versteckt = [];
+  const idx = eintrag.versteckt.indexOf(feldId);
+  if (versteckt) { if (idx === -1) eintrag.versteckt.push(feldId); }
+  else if (idx !== -1) eintrag.versteckt.splice(idx, 1);
+}
+
+/** Bruecke fuer Panels mit dynamischer (nicht zur Ladezeit bekannter) Feld-Liste (F4,
+ * z.B. ShortcutsPanel) -- Panel.versteckbareFelder (F3) setzt eine feste, beim Bau der
+ * Zahnrad-Liste bereits bekannte Liste voraus, was fuer pro Geraet unterschiedlich viele/
+ * benannte Elemente (Shortcuts) nicht passt. Solche Panels bieten ihre
+ * Sichtbarkeit-Bedienung direkt am Element an (z.B. Auge-Icon je Kachel, siehe
+ * shortcuts.js) und rufen diese Bruecke zum Mutieren+Persistieren auf, statt selbst
+ * Config/Geraete zu kennen -- gleiches Schichten-Prinzip wie raumUmschalten()/
+ * updateCleanPanel() zwischen render.js und reinigung.js.
+ * setzeFeldVersteckt() mutiert aktiveWidgetConfig SYNCHRON (vor dem ersten await hier) --
+ * ein direkt anschliessendes this.render() im aufrufenden Panel sieht den neuen Wert also
+ * bereits, ohne auf Config.speichern() zu warten (gleiches "visuell zuerst, Persistenz
+ * async danach"-Prinzip wie main.js' schreibeLayout()). Absichtlich nicht awaitet beim
+ * Aufruf, wie bei schreibeLayout() ueblich -- kein panelsAbbauen()/baueAktivePanels()-
+ * Rundlauf noetig, weil nur das eine, bereits laufende Panel betroffen ist. */
+async function schreibePanelFeldVersteckt(panelId, feldId, versteckt) {
+  setzeFeldVersteckt(panelId, feldId, versteckt);
+  await Config.speichern(Geraete.aktiveDid, aktiveWidgetConfig);
+}
+
 zovlPanelsListe.addEventListener('change', async e => {
   const panelFeld = e.target.dataset.panelFeld;
   if (panelFeld) {
     const [panelId, feldId] = panelFeld.split('.');
-    const eintrag = aktiveWidgetConfig.panels[panelId] || (aktiveWidgetConfig.panels[panelId] = { sichtbar: true, versteckt: [] });
-    if (!Array.isArray(eintrag.versteckt)) eintrag.versteckt = [];
-    const idx = eintrag.versteckt.indexOf(feldId);
-    if (e.target.checked) { if (idx !== -1) eintrag.versteckt.splice(idx, 1); }
-    else if (idx === -1) eintrag.versteckt.push(feldId);
+    setzeFeldVersteckt(panelId, feldId, !e.target.checked);
     panelsAbbauen();
     const geraetFeld = Geraete.aktuelles();
     await baueAktivePanels(aktiveWidgetConfig, Geraete.aktiveDid, geraetFeld && geraetFeld.typ);

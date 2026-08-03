@@ -170,6 +170,15 @@
           </label>
         </div>
       </section>
+      <!-- Kurzbefehle-Panel (F4, WIDGET_FEATURE_PLAN.md): Kachel-Liste der App-seitig
+           angelegten Shortcuts. shortcuts.js blendet das ganze Panel aus, solange kein
+           Shortcut fuer das aktive Geraet existiert (siehe render() dort). -->
+      <section class="gruppe g-shortcuts" id="panel-shortcuts">
+        <div class="abschnitt">
+          <h2 id="shortcutsTitel" hidden>Kurzbefehle</h2>
+        </div>
+        <div class="saktionen" id="shortcutsListe"></div>
+      </section>
       <!-- Wartungs-Panel (Etappe C, Commit C2): Verschleiss + Reset, optional Saugbeutel. -->
       <section class="gruppe g-wartung" id="panel-wartung">
         <div class="abschnitt">
@@ -230,6 +239,7 @@
 <script src="js/panels/panel.js"></script>
 <script src="js/panels/kopf.js"></script>
 <script src="js/panels/reinigung.js"></script>
+<script src="js/panels/shortcuts.js"></script>
 <script src="js/panels/wartung.js"></script>
 <script src="js/panels/statistik.js"></script>
 <script src="js/panels/station.js"></script>

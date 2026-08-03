@@ -25,5 +25,10 @@
 
   "panel.reinigung.raum.alle": "Alle Räume aktiv",
   "panel.reinigung.raum.gewaehlt-eins": "1 Raum gewählt",
-  "panel.reinigung.raum.gewaehlt-mehrere": "Räume gewählt"
+  "panel.reinigung.raum.gewaehlt-mehrere": "Räume gewählt",
+
+  "panel.shortcuts.titel": "Kurzbefehle",
+  "panel.shortcuts.ausblenden": "Ausblenden",
+  "panel.shortcuts.einblenden": "Einblenden",
+  "panel.shortcuts.laeuft": "läuft"
 }

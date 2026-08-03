@@ -519,6 +519,17 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
 .saktion:active{filter:brightness(.9)}
 .saktion:disabled{opacity:.4;cursor:not-allowed}
 .saktion:disabled:hover{border-color:var(--line)}
+/* Kurzbefehle-Panel (F4, WIDGET_FEATURE_PLAN.md): .saktion wird hier zu zweit pro Kachel
+   verwendet (Start-Knopf + kleines Auge fuer Sichtbarkeit-Toggle je Shortcut, siehe
+   shortcuts.js-Kommentarkopf) -- eigener Wrapper noetig, damit das Auge frei auf der
+   Kachel positioniert werden kann, statt im gleichen Flex-Rahmen wie der Start-Knopf. */
+.kbkachel{position:relative;flex:1;min-width:84px}
+.kbkachel .saktion{width:100%;min-width:0}
+.kbauge{position:absolute;top:2px;right:2px;width:20px;height:20px;padding:0;border:none;
+  border-radius:50%;background:transparent;color:var(--muted);font-size:12px;line-height:20px;
+  cursor:pointer;-webkit-tap-highlight-color:transparent}
+.kbauge:hover{color:var(--txt);background:color-mix(in srgb, var(--txt) 12%, transparent)}
+.kb-versteckt .saktion{opacity:.35}
 /* Reinigungs-Panel Kachel-Grid (Etappe C, Commit C5): direkte <select>-Elemente statt
    Ricardos Auswahl-Overlay (openPicker/openSlider existieren im modularen Widget noch
    nicht -- siehe reinigung.js-Kommentarkopf). */
