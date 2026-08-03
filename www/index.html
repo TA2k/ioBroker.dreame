@@ -74,14 +74,18 @@
                 <span class="zovl-switch-txt" id="zovlLeisteTxt">Rechts</span>
               </span>
             </label>
-            <label class="zovl-feld"><span>UI-Zoom</span>
+            <!-- for="zovlGroesse"/"zovlBreite" (Issue #104, RicardoHipp): ohne explizites for
+                 gilt als "gelabeltes Element" der erste labelfaehige Nachfahre in Tree-Order --
+                 das ist hier der Minus-Knopf, nicht das Zahlenfeld. Klick auf die Beschriftung
+                 aktivierte dadurch den Minus-Knopf (optisch) statt nur das Feld zu fokussieren. -->
+            <label class="zovl-feld" for="zovlGroesse"><span>UI-Zoom</span>
               <span class="zovl-zoom">
                 <button type="button" id="zovlGroesseMinus" aria-label="Verkleinern">−</button>
                 <input type="number" id="zovlGroesse" min="70" max="150" step="5"><span class="zovl-zoom-pct">%</span>
                 <button type="button" id="zovlGroessePlus" aria-label="Vergrößern">+</button>
               </span>
             </label>
-            <label class="zovl-feld"><span>Menü-Breite</span>
+            <label class="zovl-feld" for="zovlBreite"><span>Menü-Breite</span>
               <span class="zovl-zoom">
                 <button type="button" id="zovlBreiteMinus" aria-label="Schmaler">−</button>
                 <input type="number" id="zovlBreite" min="250" max="500" step="10"><span class="zovl-zoom-pct">px</span>
