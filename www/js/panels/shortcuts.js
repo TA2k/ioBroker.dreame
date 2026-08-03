@@ -136,14 +136,18 @@ class ShortcutsPanel extends Panel {
    * Deshalb fliessen nur SICHTBARE Kacheln in die max()-Berechnung ein, aber die
    * resultierende Breite wird trotzdem auf ALLE (auch versteckte) angewendet -- sonst
    * stuende eine im Zahnrad wieder aufgetauchte versteckte Kachel mit 0px Breite da,
-   * praktisch unsichtbar trotz display:block. */
+   * praktisch unsichtbar trotz display:block.
+   * KACHEL_LUFT_PX (Live-Test-Fix 2026-08-03): die reine min-content-Messung liefert die
+   * Breite, bei der die Schrift gerade noch so hineinpasst -- optisch klebt der Text dann
+   * am Rahmen. Kleiner fester Aufschlag auf die gemessene Breite fuer sichtbaren Abstand. */
   _vereinheitlicheKachelBreite(liste) {
+    const KACHEL_LUFT_PX = 16;
     const kacheln = Array.from(liste.querySelectorAll('.kbkachel'));
     if (!kacheln.length) return;
     const sichtbare = kacheln.filter(el => !el.classList.contains('kb-versteckt'));
     const zielListe = sichtbare.length ? sichtbare : kacheln; // Randfall: alles versteckt
     for (const el of zielListe) el.style.width = '';
-    const maxBreite = Math.max(...zielListe.map(el => el.getBoundingClientRect().width));
+    const maxBreite = Math.max(...zielListe.map(el => el.getBoundingClientRect().width)) + KACHEL_LUFT_PX;
     for (const el of kacheln) el.style.width = `${maxBreite}px`;
   }
 
