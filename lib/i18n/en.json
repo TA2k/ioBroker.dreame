@@ -264,6 +264,10 @@
 
   "vacuum.schedule.mode.mop-after-vacuum": "Mop after Vacuum",
 
+  "vacuum.schedule.type.rooms":     "Rooms",
+  "vacuum.schedule.type.all-rooms": "All Rooms",
+  "vacuum.schedule.type.shortcut":  "Shortcut",
+
   "vacuum.wider-corner.off":       "Off",
   "vacuum.wider-corner.high-freq": "HighFreq",
   "vacuum.wider-corner.low-freq":  "LowFreq",

@@ -60,6 +60,14 @@ const SCHEDULE_ROUTE_KEYS = Object.freeze({
   deep: 'vacuum.cleaning-route.deep',
   quick: 'vacuum.cleaning-route.quick',
 });
+// termin.type ('rooms'/'shortcut'/'all_rooms', siehe lib/schedule.js detectScheduleType)
+// war urspruenglich als technisches Feld gedacht, wird aber live im Objektbaum angezeigt -
+// auf Wunsch (Live-Test-Feedback) ebenfalls uebersetzt statt roher Slug.
+const SCHEDULE_TYPE_KEYS = Object.freeze({
+  rooms: 'vacuum.schedule.type.rooms',
+  all_rooms: 'vacuum.schedule.type.all-rooms',
+  shortcut: 'vacuum.schedule.type.shortcut',
+});
 
 const BRAND_CONFIG = {
   dreame: {
@@ -5613,7 +5621,7 @@ class Dreame extends utils.Adapter {
           common: { name: 'Termin-Typ', type: 'string', role: 'text', read: true, write: false },
           native: {},
         });
-        this.setState(`${path}.type`, termin.type, true);
+        this.setState(`${path}.type`, this._translateScheduleEnum(SCHEDULE_TYPE_KEYS, termin.type), true);
         this.extendObject(`${path}.raw`, {
           type: 'state',
           common: { name: 'Raw-Segment (Debug)', type: 'string', role: 'text', read: true, write: false },
