@@ -542,6 +542,14 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
   line-height:20px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 :root[data-einstellungen="an"] .kbauge{display:block}
 .kbauge:hover{color:var(--txt);background:color-mix(in srgb, var(--txt) 12%, transparent)}
+/* Live-Test-Korrektur (2026-08-03): "versteckt" hiess bisher nur ausgegraut, aber weiter
+   sichtbar -- David-Klarstellung: bei geschlossenem Zahnrad soll ein versteckter Shortcut
+   komplett verschwinden (als waere er nicht vorhanden), NICHT nur gedimmt. Erst bei
+   geoeffnetem Zahnrad (Bearbeiten-Ansicht) taucht er wieder auf, dann ausgegraut + mit
+   Auge zum Zurueckholen -- exakt gleiches Sichtbarkeits-Gating wie .kbauge oben, nur auf
+   die ganze Kachel statt nur das Auge angewendet. */
+.kb-versteckt{display:none}
+:root[data-einstellungen="an"] .kb-versteckt{display:block}
 .kb-versteckt .saktion{opacity:.35}
 /* Reinigungs-Panel Kachel-Grid (Etappe C, Commit C5): direkte <select>-Elemente statt
    Ricardos Auswahl-Overlay (openPicker/openSlider existieren im modularen Widget noch

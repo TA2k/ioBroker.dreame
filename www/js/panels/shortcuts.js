@@ -130,12 +130,20 @@ class ShortcutsPanel extends Panel {
    * Bekannte Grenze: misst nur bei render() (State-Aenderung), nicht bei reiner
    * Fenstergroessen-/Zoom-Aenderung (kein ResizeObserver) -- z.B. die Menue-Breite live im
    * offenen Zahnrad zu verstellen (F1) macht die gemessene Breite erst beim naechsten
-   * render() wieder passend. Nicht Teil dieser Korrektur, nur dokumentiert. */
+   * render() wieder passend. Nicht Teil dieser Korrektur, nur dokumentiert.
+   * WICHTIG: versteckte Kacheln (.kb-versteckt) sind per CSS display:none, solange das
+   * Zahnrad zu ist (siehe layout.css) -- ihre Breite waere in diesem Zustand immer 0.
+   * Deshalb fliessen nur SICHTBARE Kacheln in die max()-Berechnung ein, aber die
+   * resultierende Breite wird trotzdem auf ALLE (auch versteckte) angewendet -- sonst
+   * stuende eine im Zahnrad wieder aufgetauchte versteckte Kachel mit 0px Breite da,
+   * praktisch unsichtbar trotz display:block. */
   _vereinheitlicheKachelBreite(liste) {
     const kacheln = Array.from(liste.querySelectorAll('.kbkachel'));
     if (!kacheln.length) return;
-    for (const el of kacheln) el.style.width = '';
-    const maxBreite = Math.max(...kacheln.map(el => el.getBoundingClientRect().width));
+    const sichtbare = kacheln.filter(el => !el.classList.contains('kb-versteckt'));
+    const zielListe = sichtbare.length ? sichtbare : kacheln; // Randfall: alles versteckt
+    for (const el of zielListe) el.style.width = '';
+    const maxBreite = Math.max(...zielListe.map(el => el.getBoundingClientRect().width));
     for (const el of kacheln) el.style.width = `${maxBreite}px`;
   }
 
