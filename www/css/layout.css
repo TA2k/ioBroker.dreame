@@ -523,15 +523,18 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
    verwendet (Start-Knopf + kleines Auge fuer Sichtbarkeit-Toggle je Shortcut, siehe
    shortcuts.js-Kommentarkopf) -- eigener Wrapper noetig, damit das Auge frei auf der
    Kachel positioniert werden kann, statt im gleichen Flex-Rahmen wie der Start-Knopf.
-   Live-Test-Fix (2026-08-03): KEIN flex-grow (anders als die generische .saktion-Regel
-   oben, die fuer Station/Frischwasser mit wenigen, kurzen, festen Texten weiterhin passt) --
-   bei vielen Shortcuts unterschiedlicher Namenslaenge hatte flex:1 alle Kacheln gleich breit
-   gemacht, unabhaengig vom tatsaechlichen Text, dadurch war der Name in schmalen Kacheln
-   nicht mehr lesbar. min-width:max(56px, min-content) + white-space:nowrap am Namen sorgt
-   dafuer, dass jede Kachel schrumpft (flex-shrink bleibt Standard 1, alle gleichmaessig),
-   aber nie unter die eigene Text-Breite (oder ein 56px-Mindestmass fuers Touch-Ziel) --
-   .saktionen{flex-wrap:wrap} bricht dann automatisch um, sobald eine Zeile voll ist. */
-.kbkachel{position:relative;flex:0 1 auto;min-width:max(56px, min-content)}
+   Breiten-Strategie (Live-Test, mehrere Nachbesserungen 2026-08-03): shortcuts.js misst
+   nach jedem render() den laengsten Namen und setzt ALLEN Kacheln dieselbe inline width
+   (Mindestmass, + etwas Luft, siehe _vereinheitlicheKachelBreite()) -- das ist die
+   Mindestbreite (flex-basis via width), NICHT die Endbreite. flex:1 1 auto (Grow WIEDER
+   an, anders als ein frueherer Zwischenstand) verteilt pro Zeile (.saktionen{flex-wrap:
+   wrap} macht jede umgebrochene Zeile zu einer eigenen Flex-Line) den uebrigen Platz
+   gleichmaessig auf die Kacheln DIESER Zeile -- bei 2 Kacheln in einer 500px-Zeile z.B.
+   je ~250px (abzueglich .saktionen-gap), bei 3 je ~500px/3, ohne dass eine Kachel je unter
+   ihre in JS gemessene Mindestbreite schrumpft (die alte Fehlerquelle war NICHT das
+   Wachsen, sondern eine zu kleine, textunabhaengige min-width -- die ist jetzt korrekt
+   text-basiert, Wachsen darueber hinaus ist unproblematisch). */
+.kbkachel{position:relative;flex:1 1 auto;min-width:max(56px, min-content)}
 .kbkachel .saktion{width:100%;min-width:0}
 .kbkachel .saktion span{white-space:nowrap}
 /* Nur sichtbar, waehrend das Zahnrad-Overlay offen ist (:root[data-einstellungen="an"],
