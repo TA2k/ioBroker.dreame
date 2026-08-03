@@ -31,7 +31,7 @@
  * KopfPanel-Instanz zeigen (es gibt zu jedem Zeitpunkt hoechstens eine).
  */
 
-/* global Trigger, Panel, uiIcon, NS, ICON, ICON_SIZE, robotMk, chargerMk, selectedRooms */
+/* global Trigger, Panel, uiIcon, NS, ICON, ICON_SIZE, robotMk, chargerMk, selectedRooms, t */
 
 // ===== Roboter-Status (HA device.robot_status / station_status, 1:1 geportet) =====
 
@@ -104,33 +104,54 @@ function istGestartet(vst) {
 }
 
 // ===== Status-Text (DreameVacuumState, Detail) =====
-const STATE_DE = {
-  '-1': 'Unbekannt', 1: 'Reinigung', 2: 'Standby', 3: 'Pausiert', 4: 'Fehler',
-  5: 'Zurück zum Aufladen', 6: 'Laden', 7: 'Wischen', 8: 'Mopp-Trocknung', 9: 'Mopp-Reinigung',
-  10: 'Rückkehr zum Reinigen', 11: 'Eine Karte wird erstellt', 12: 'Beim Reinigen', 13: 'Laden beendet',
-  14: 'Aktualisieren', 15: 'Reinigung rufen', 16: 'Automatische Reparatur der Basisstation',
-  17: 'Zurückkehren zum Installieren des Wischmopps', 18: 'Zurückkehren, um das Wischpad zu entfernen',
-  19: 'Selbsttest Wasserzufuhr/-abfluss läuft', 20: 'Wischmopp reinigen und Wasser nachfüllen',
-  21: 'Mopp-Reinigung pausiert', 22: 'Automatische Entleerung', 23: 'Ferngesteuerte Reinigung',
-  24: 'Intelligentes Aufladen', 25: 'Zweite Reinigung läuft', 26: 'Folgend', 27: 'Partielle Reinigung',
-  28: 'Rückfahrt zur Staubsammlung', 29: 'Auf Aufgaben warten', 30: 'Reinigung der Waschplattenbasis',
-  31: 'Rückfahrt zum Wasserablassen', 32: 'Wasser wird abgelassen',
-  33: 'Wasserzufuhr/-ableitung: Entleeren', 34: 'Staubbehälter wird entleert',
-  35: 'Trocknung von Staubbehälter und -beutel',
-  36: 'Trocknen von Staubbehälter/-beutel angehalten', 37: 'Weiter zum zusätzlichen Reinigungsbereich',
-  38: 'Zusätzliche Reinigung läuft', 95: 'Haustiersuche pausiert', 96: 'Haustiersuche',
-  97: 'Shortcut läuft', 98: 'Kameraüberwachung läuft', 99: 'Kameraüberwachung pausiert',
-  101: 'Anfängliche Tiefenreinigung läuft', 102: 'Anfängliche Tiefenreinigung pausiert',
-  103: 'Desinfizieren', 104: 'Desinfizieren mit Trocknen', 105: 'Wischmopp wird gewechselt',
-  106: 'Umschalten des Wischmopps pausiert', 107: 'Pflege im Gange', 108: 'Pflege pausiert',
-  109: 'Gegenstand wird aufgenommen', 113: 'Gegenstände werden einsortiert',
-  114: 'Haustier-Überwachung', 115: 'Haustier-Überwachung pausiert',
-  116: 'Wischmopp wird angebracht', 117: 'Wischmopp wird abgenommen',
-  118: 'Intelligentes Nachladen', 120: 'Unterstützte Reinigung',
-  121: 'Fährt in die Station', 122: 'Verlässt die Station',
-  140: 'Fährt zum Treppensteiger', 141: 'Dockt am Treppensteiger an', 142: 'Am Treppensteiger angedockt',
-  143: 'Treppensteiger navigiert', 144: 'Steigt Treppen', 145: 'Treppensteigen beendet',
-  146: 'Treppensteiger an der Station', 147: 'Treppensteiger verlässt die Station',
+// F9 (WIDGET_FEATURE_PLAN.md): Werte -> i18n-Keys statt fester deutscher Strings (die Codes
+// selbst kommen 1:1 aus der HA-Referenz, siehe Kommentarkopf -- NICHT ueber die Adapter-i18n
+// (status.state hat kein `states:`-Mapping in main.js/lib/specs, anders als z.B.
+// remote.water-temperature bei frischwasser.js) -- deshalb hier, wie jedes andere
+// Panel-eigene Vokabular, ueber die Widget-eigene i18n-Tabelle).
+const STATUS_TEXT_KEY = {
+  '-1': 'panel.kopf.status.unbekannt', 1: 'panel.kopf.status.reinigung', 2: 'panel.kopf.status.standby',
+  3: 'panel.kopf.status.pausiert', 4: 'panel.kopf.status.fehler',
+  5: 'panel.kopf.status.zurueck-zum-aufladen', 6: 'panel.kopf.status.laden', 7: 'panel.kopf.status.wischen',
+  8: 'panel.kopf.status.mopp-trocknung', 9: 'panel.kopf.status.mopp-reinigung',
+  10: 'panel.kopf.status.rueckkehr-zum-reinigen', 11: 'panel.kopf.status.karte-wird-erstellt',
+  12: 'panel.kopf.status.beim-reinigen', 13: 'panel.kopf.status.laden-beendet',
+  14: 'panel.kopf.status.aktualisieren', 15: 'panel.kopf.status.reinigung-rufen',
+  16: 'panel.kopf.status.automatische-reparatur',
+  17: 'panel.kopf.status.zurueckkehren-mopp-installieren',
+  18: 'panel.kopf.status.zurueckkehren-mopp-entfernen',
+  19: 'panel.kopf.status.selbsttest-wasser',
+  20: 'panel.kopf.status.wischmopp-reinigen-wasser-nachfuellen',
+  21: 'panel.kopf.status.mopp-reinigung-pausiert', 22: 'panel.kopf.status.automatische-entleerung',
+  23: 'panel.kopf.status.ferngesteuerte-reinigung', 24: 'panel.kopf.status.intelligentes-aufladen',
+  25: 'panel.kopf.status.zweite-reinigung', 26: 'panel.kopf.status.folgend',
+  27: 'panel.kopf.status.partielle-reinigung', 28: 'panel.kopf.status.rueckfahrt-staubsammlung',
+  29: 'panel.kopf.status.auf-aufgaben-warten', 30: 'panel.kopf.status.reinigung-waschplattenbasis',
+  31: 'panel.kopf.status.rueckfahrt-wasserablassen', 32: 'panel.kopf.status.wasser-wird-abgelassen',
+  33: 'panel.kopf.status.wasserzufuhr-ableitung-entleeren',
+  34: 'panel.kopf.status.staubbehaelter-wird-entleert',
+  35: 'panel.kopf.status.trocknung-staubbehaelter-beutel',
+  36: 'panel.kopf.status.trocknen-staubbehaelter-beutel-angehalten',
+  37: 'panel.kopf.status.weiter-zusaetzlicher-reinigungsbereich',
+  38: 'panel.kopf.status.zusaetzliche-reinigung', 95: 'panel.kopf.status.haustiersuche-pausiert',
+  96: 'panel.kopf.status.haustiersuche', 97: 'panel.kopf.status.shortcut-laeuft',
+  98: 'panel.kopf.status.kamerauberwachung-laeuft', 99: 'panel.kopf.status.kamerauberwachung-pausiert',
+  101: 'panel.kopf.status.anfaengliche-tiefenreinigung',
+  102: 'panel.kopf.status.anfaengliche-tiefenreinigung-pausiert',
+  103: 'panel.kopf.status.desinfizieren', 104: 'panel.kopf.status.desinfizieren-mit-trocknen',
+  105: 'panel.kopf.status.wischmopp-wird-gewechselt',
+  106: 'panel.kopf.status.umschalten-wischmopp-pausiert', 107: 'panel.kopf.status.pflege-im-gange',
+  108: 'panel.kopf.status.pflege-pausiert', 109: 'panel.kopf.status.gegenstand-wird-aufgenommen',
+  113: 'panel.kopf.status.gegenstaende-werden-einsortiert',
+  114: 'panel.kopf.status.haustier-ueberwachung', 115: 'panel.kopf.status.haustier-ueberwachung-pausiert',
+  116: 'panel.kopf.status.wischmopp-wird-angebracht', 117: 'panel.kopf.status.wischmopp-wird-abgenommen',
+  118: 'panel.kopf.status.intelligentes-nachladen', 120: 'panel.kopf.status.unterstuetzte-reinigung',
+  121: 'panel.kopf.status.faehrt-in-die-station', 122: 'panel.kopf.status.verlaesst-die-station',
+  140: 'panel.kopf.status.faehrt-zum-treppensteiger', 141: 'panel.kopf.status.dockt-am-treppensteiger-an',
+  142: 'panel.kopf.status.am-treppensteiger-angedockt', 143: 'panel.kopf.status.treppensteiger-navigiert',
+  144: 'panel.kopf.status.steigt-treppen', 145: 'panel.kopf.status.treppensteigen-beendet',
+  146: 'panel.kopf.status.treppensteiger-an-der-station',
+  147: 'panel.kopf.status.treppensteiger-verlaesst-die-station',
 };
 
 // ===== Badges auf Roboter-/Ladestations-Marker (Karten-Layer, siehe Kommentarkopf) =====
@@ -221,16 +242,19 @@ class KopfPanel extends Panel {
   }
 
   _renderStatus() {
-    const t = document.getElementById('stateText'), s = document.getElementById('stateSub');
-    if (!t) return;
+    // Lokale Variable bewusst NICHT "t" genannt (wie zuvor) -- kollidiert sonst mit der
+    // globalen Uebersetzungsfunktion t() aus core/i18n.js, die hier jetzt gebraucht wird.
+    const stateEl = document.getElementById('stateText'), s = document.getElementById('stateSub');
+    if (!stateEl) return;
     const vst = this.vst;
-    t.textContent = (vst.state != null && STATE_DE[vst.state]) ? STATE_DE[vst.state] : (vst.state != null ? 'Status ' + vst.state : '–');
+    stateEl.textContent = (vst.state != null && STATUS_TEXT_KEY[vst.state]) ? t(STATUS_TEXT_KEY[vst.state])
+      : (vst.state != null ? `${t('panel.kopf.status.unbekannter-code-praefix')} ${vst.state}` : '–');
     // Akku/Reinigungsfortschritt/Flaeche stehen seit der Info-Reihe (_renderInfo) nicht
     // mehr hier -- nur noch, was dort keinen Platz hat (Dauer, Trocknungsfortschritt).
     const teile = [];
     const laeuftAehnlich = [1, 7, 12, 21, 25, 27, 37, 38, 101, 102].includes(vst.state);
     if (laeuftAehnlich && vst.ctime > 0) teile.push(vst.ctime + ' min');
-    if ((vst.state === 8 || vst.state === 35) && vst.dprog > 0) teile.push('Trocknung ' + vst.dprog + ' %');
+    if ((vst.state === 8 || vst.state === 35) && vst.dprog > 0) teile.push(`${t('panel.kopf.trocknung-praefix')} ${vst.dprog} %`);
     s.innerHTML = teile.length ? teile.join(' · ') : '–';
   }
 
@@ -273,7 +297,7 @@ class KopfPanel extends Panel {
     const stop = document.getElementById('c-stop');
     const home = document.getElementById('c-home');
     if (!start || !stop || !home) return;
-    start.innerHTML = uiIcon('start', 18) + '<span class="abtext">Start</span>';
+    start.innerHTML = uiIcon('start', 18) + `<span class="abtext">${t('panel.kopf.start-knopf')}</span>`;
     start.onclick = () => {
       if (selectedRooms.size === 0) Trigger.startCleaning(this.did);
       else Trigger.startCustomRoomCleaning(this.did);

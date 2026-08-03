@@ -34,7 +34,8 @@ const VERSCHLEISS = [
 
 // Saugbeutel-Status (lib/specs/station.js dust-bag-status, SIID 27/PIID 3): 0=installiert,
 // 1=nicht installiert, 2=pruefen. Texte waren 1:1 aus lib/i18n/de.json common.* uebernommen
-// (Begruendung wie FEHLER_DE in kopf.js: sonst driften Adapter- und Widget-Text auseinander) --
+// (Begruendung wie urspruenglich bei FEHLER_DE in fehler.js, seit F9 selbst FEHLER_TEXT_KEY:
+// sonst driften Adapter- und Widget-Text auseinander) --
 // jetzt eigene panel.wartung.saugbeutel.*-Keys (F7a), EN-Uebersetzung dafuer eigenstaendig,
 // keine harte Kopplung mehr an die Adapter-i18n-Tabelle. Kein Reset-Trigger vorgesehen: der
 // Beutel wird gewechselt, nicht zurueckgesetzt — anders als bei den vier Verschleissteilen
