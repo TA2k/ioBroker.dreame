@@ -71,3 +71,12 @@ const I18n = (() => {
 })();
 
 function t(key) { return I18n.t(key); }
+
+/** Locale-Kuerzel fuer toLocaleString()/toLocaleDateString(), aus der Widget-Sprache
+ * abgeleitet -- gemeinsam genutzt von statistik.js und frischwasser.js (F7b/F8,
+ * WIDGET_FEATURE_PLAN.md), deshalb hier zentral statt zweimal dupliziert (Live-Test-Fund:
+ * zwei identische `const localeFuerZahlen`-Deklarationen in unterschiedlichen <script>-
+ * Dateien kollidieren im gemeinsamen globalen Scope -- SyntaxError "redeclaration of
+ * const", der die komplette Datei am Parsen hindert, siehe WIDGET_SESSION_STATUS.md). Nur
+ * en/de unterstuetzt (wie t() selbst), siehe Kommentarkopf oben. */
+function localeFuerZahlen() { return I18n.sprache === 'en' ? 'en-US' : 'de-DE'; }

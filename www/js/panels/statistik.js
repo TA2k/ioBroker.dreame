@@ -16,12 +16,12 @@
  * Knopf/Overlay noetig — openPicker()/oeffneOvl() werden hier nicht gebraucht.
  */
 
-/* global Panel, t, I18n */
+/* global Panel, t, localeFuerZahlen */
 
 // F7b (WIDGET_FEATURE_PLAN.md): toLocaleString()/toLocaleDateString() liefen bisher hart auf
 // 'de-DE' -- ein EN-Nutzer sah trotz uebersetzter Zeilennamen weiterhin deutsch formatierte
-// Zahlen/Datumsangaben (Tausenderpunkt statt -komma usw.). Jetzt an I18n.sprache gekoppelt.
-const localeFuerZahlen = () => (I18n.sprache === 'en' ? 'en-US' : 'de-DE');
+// Zahlen/Datumsangaben (Tausenderpunkt statt -komma usw.). Jetzt an I18n.sprache gekoppelt
+// (localeFuerZahlen(), core/i18n.js -- gemeinsam mit frischwasser.js genutzt, siehe dort).
 
 // ===== Statistik-Zeilen: Objekt/Name/Formatierung. State-Namen und Einheiten (min, m²) aus
 // lib/specs/statistics.js verifiziert. first-cleaning-date liefert einen Unix-Zeitstempel in

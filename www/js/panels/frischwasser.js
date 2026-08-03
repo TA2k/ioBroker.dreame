@@ -11,11 +11,12 @@
  * Station-Panel (station.js).
  */
 
-/* global Panel, Trigger, Daten, uiIcon, t, I18n */
+/* global Panel, Trigger, Daten, uiIcon, t, localeFuerZahlen */
 
 // F8 (WIDGET_FEATURE_PLAN.md): toLocaleString() lief bisher hart auf 'de-DE', gleicher Fund
-// wie bei statistik.js (F7b).
-const localeFuerZahlen = () => (I18n.sprache === 'en' ? 'en-US' : 'de-DE');
+// wie bei statistik.js (F7b) -- localeFuerZahlen() liegt deshalb zentral in core/i18n.js
+// (Live-Test-Fund: zwei identische lokale Deklarationen kollidierten im gemeinsamen
+// globalen Scope, siehe WIDGET_SESSION_STATUS.md).
 
 // Farben ueber vorhandene CSS-Custom-Properties (theme.css) statt neuer Klassen -- der
 // Balken braucht drei Zustaende (ok/warn/critical), die bestehenden .vrow.warn/.vrow.bad-Regeln
