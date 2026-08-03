@@ -632,14 +632,14 @@ class Dreame extends utils.Adapter {
         }
       }
       await this.connectMqtt();
-      this.updateInterval = setInterval(
+      this.updateInterval = this.setInterval(
         async () => {
           await this.updateDeviceStatusSummary();
           await this.updateDevicesViaSpec();
         },
         this.config.interval * 60 * 1000,
       );
-      this.refreshTokenInterval = setInterval(
+      this.refreshTokenInterval = this.setInterval(
         async () => {
           await this.refreshToken();
         },
@@ -3344,7 +3344,7 @@ class Dreame extends utils.Adapter {
   // verhindern.
   async _preSendCleaningProperties(did) {
     const PAUSE_MS = 150;
-    const pause = () => new Promise((resolve) => setTimeout(resolve, PAUSE_MS));
+    const pause = () => new Promise((resolve) => this.setTimeout(resolve, PAUSE_MS));
 
     await this._sendCleaningProperty(did, 'suction-level', 1); // 1 = Standard
     await pause();
@@ -3845,8 +3845,8 @@ class Dreame extends utils.Adapter {
               if (error.response && error.response.status === 401) {
                 this.log.debug(JSON.stringify(error.response.data));
                 this.log.info('Receive 401 error. Refresh Token in 60 seconds');
-                this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
-                this.refreshTokenTimeout = setTimeout(() => {
+                this.refreshTokenTimeout && this.clearTimeout(this.refreshTokenTimeout);
+                this.refreshTokenTimeout = this.setTimeout(() => {
                   this.refreshToken();
                 }, 1000 * 60);
               }
@@ -4207,15 +4207,15 @@ class Dreame extends utils.Adapter {
             if (isMowing && !this.mowerMapInterval) {
               this.log.info(`Mower ${did} started mowing (status=${element.value}), starting map polling`);
               this.getMowerMap(device);
-              this.mowerMapInterval = setInterval(() => {
+              this.mowerMapInterval = this.setInterval(() => {
                 this.getMowerMap(device);
               }, 30 * 1000);
             } else if (!isMowing && this.mowerMapInterval) {
               this.log.info(`Mower ${did} stopped mowing (status=${element.value}), stopping map polling`);
-              clearInterval(this.mowerMapInterval);
+              this.clearInterval(this.mowerMapInterval);
               this.mowerMapInterval = null;
               this.getMowerMap(device);
-              setTimeout(() => this.loadMowerHistory(device), 5000);
+              this.setTimeout(() => this.loadMowerHistory(device), 5000);
             }
           }
           // Plugin: prop.2.51 triggers loadSettingData() → getCFG() (L181455-181457)
@@ -6082,11 +6082,18 @@ class Dreame extends utils.Adapter {
    */
   onUnload(callback) {
     try {
-      this.updateInterval && clearInterval(this.updateInterval);
-      this.mowerMapInterval && clearInterval(this.mowerMapInterval);
-      this.refreshTokenInterval && clearInterval(this.refreshTokenInterval);
+      // this.setInterval()/this.setTimeout() (repochecker S5004/S5005) raeumen beim
+      // Adapter-Stopp ohnehin automatisch alle offenen Timer auf -- die manuellen Clears
+      // hier bleiben trotzdem stehen (schadet nicht, doppelt haelt besser) und decken jetzt
+      // zusaetzlich refreshTokenTimeout/refreshTimeout ab, die vorher gar nicht aufgeraeumt
+      // wurden.
+      this.updateInterval && this.clearInterval(this.updateInterval);
+      this.mowerMapInterval && this.clearInterval(this.mowerMapInterval);
+      this.refreshTokenInterval && this.clearInterval(this.refreshTokenInterval);
+      this.refreshTokenTimeout && this.clearTimeout(this.refreshTokenTimeout);
+      this.refreshTimeout && this.clearTimeout(this.refreshTimeout);
       for (const _timer of Object.values(this._waterboxRemovalTimers || {})) {
-        if (_timer && _timer !== 'confirmed') clearTimeout(_timer);
+        if (_timer && _timer !== 'confirmed') this.clearTimeout(_timer);
       }
       this.mqttClient && this.mqttClient.end();
 
@@ -6151,7 +6158,7 @@ class Dreame extends utils.Adapter {
 
         if (_tankRemoved) {
           if (!_existingTimer) {
-            this._waterboxRemovalTimers[_deviceId] = setTimeout(() => {
+            this._waterboxRemovalTimers[_deviceId] = this.setTimeout(() => {
               this._waterboxRemovalTimers[_deviceId] = 'confirmed';
             }, WATERBOX_REMOVAL_THRESHOLD_MS);
           }
@@ -6164,7 +6171,7 @@ class Dreame extends utils.Adapter {
             );
             await this._recalcTank(_deviceId);
           } else {
-            clearTimeout(_existingTimer);
+            this.clearTimeout(_existingTimer);
           }
           delete this._waterboxRemovalTimers[_deviceId];
         }
@@ -6236,7 +6243,7 @@ class Dreame extends utils.Adapter {
             method: 'action',
             params: { did: device.did, siid: 6, aiid: 4, in: [] },
           });
-          setTimeout(() => this.fetchWifiMap(device), 30000);
+          this.setTimeout(() => this.fetchWifiMap(device), 30000);
           return;
         }
         // Shortcut start button (native.shortcutId)
@@ -6612,7 +6619,7 @@ class Dreame extends utils.Adapter {
             await this.sendMowerCommand(device, { m: 's', t: cfgKey, d: payload });
           }
           // Reload settings after change
-          setTimeout(() => this.loadMowerSettings(device), 2000);
+          this.setTimeout(() => this.loadMowerSettings(device), 2000);
           return;
         }
         //{"id":0,"method":"app_start","params":[{"clean_mop":0}]}
@@ -7027,7 +7034,7 @@ class Dreame extends utils.Adapter {
             error.response && this.log.error(JSON.stringify(error.response.data));
           });
 
-        this.refreshTimeout = setTimeout(async () => {
+        this.refreshTimeout = this.setTimeout(async () => {
           this.log.info('Update devices');
           await this.updateDevicesViaSpec();
         }, 10 * 1000);
