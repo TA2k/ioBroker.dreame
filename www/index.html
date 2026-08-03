@@ -148,24 +148,24 @@
            reinigung.js-Kommentarkopf) -- direkte <select>-Elemente statt Dialog. -->
       <section class="gruppe g-reinigung" id="panel-reinigung">
         <div class="abschnitt">
-          <h2>Reinigung</h2>
+          <h2 id="reinigungTitel">Reinigung</h2>
         </div>
         <div class="rraum" id="reinigungRaum">Raum antippen zum Wählen</div>
         <div class="rgrid">
           <label class="rkarte" id="reinigungModusKarte">
-            <span class="rk">Modus</span>
+            <span class="rk" id="reinigungModusLabel">Modus</span>
             <select id="reinigungModus"></select>
           </label>
-          <label class="rkarte">
-            <span class="rk">Route</span>
+          <label class="rkarte" id="reinigungRouteKarte">
+            <span class="rk" id="reinigungRouteLabel">Route</span>
             <select id="reinigungRoute"></select>
           </label>
-          <label class="rkarte">
-            <span class="rk">Saugstärke</span>
+          <label class="rkarte" id="reinigungSaugKarte">
+            <span class="rk" id="reinigungSaugLabel">Saugstärke</span>
             <select id="reinigungSaug"></select>
           </label>
           <label class="rkarte" id="reinigungWasserKarte">
-            <span class="rk">Feuchtigkeit <span class="rkwert" id="reinigungWasserWert"></span></span>
+            <span class="rk"><span id="reinigungWasserLabel">Feuchtigkeit</span> <span class="rkwert" id="reinigungWasserWert"></span></span>
             <input type="range" id="reinigungWasser" min="1" max="32" step="1">
           </label>
         </div>

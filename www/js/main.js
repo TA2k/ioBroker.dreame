@@ -343,37 +343,78 @@ document.getElementById('zovlBreitePlus').onclick =
   () => wendeUndSchreibeBreite(Number(zovlBreiteEl.value) + MENUE_BREITE_SCHRITT_PX);
 
 // ===== Panels-Sektion im Einstellungs-Overlay (Etappe E2d): Sichtbarkeit-Toggle pro Panel
-// (Ebene 1 aus WIDGET_UMBAU_PLAN.md Abschnitt 8.2 -- Feld-Sichtbarkeit "versteckt" ist
-// bewusst NICHT Teil dieser Etappe, siehe WIDGET_SESSION_STATUS.md E2d-Struktur-Analyse:
-// braucht Aenderungen in mehreren Panel-Dateien, eigene Etappe E2e).
+// (Ebene 1 aus WIDGET_UMBAU_PLAN.md Abschnitt 8.2). Ebene 2 (Feld-Sichtbarkeit "versteckt",
+// Sub-Toggles je Panel) seit F3 (WIDGET_FEATURE_PLAN.md) ergaenzt -- panelsweise optional,
+// ein Panel deklariert seine versteckbaren Felder ueber die statische
+// Klasseneigenschaft versteckbareFelder (panel.js), Default leer (keine Sub-Toggles).
 // kopf/fehler sind Kern-Chrome ohne eigene Ueberschrift (Start/Stop/Home bzw. Warnungen) --
 // bewusst NICHT toggle-bar, damit sich niemand versehentlich die Bedienelemente wegklickt.
 // Liste kommt aus PanelRegistry.alle (nicht hartcodierte Reihenfolge) -- sortiert sich die
 // Registry um, folgen die Toggles automatisch. Nur die Anzeige-Namen sind hier gepflegt,
-// weil es keine zentrale "Titel"-Eigenschaft je Panel-Klasse gibt. =====
+// weil es keine zentrale "Titel"-Eigenschaft je Panel-Klasse gibt. Bleiben bewusst als
+// hartcodierte deutsche Strings stehen (nicht t()) -- PANEL_LABEL deckt alle fuenf Panels
+// ab, aber nur reinigung hat mit F3 schon i18n-Keys; volle Umstellung folgt mit F6-F9,
+// wenn jedes Panel seine eigenen Keys bekommt. =====
 const PANEL_LABEL = { reinigung: 'Reinigung', wartung: 'Wartung', frischwasser: 'Wasser & Mopp', statistik: 'Statistik', station: 'Station' };
 const zovlPanelsListe = document.getElementById('zovlPanelsListe');
-zovlPanelsListe.innerHTML = PanelRegistry.alle
-  .filter(eintrag => PANEL_LABEL[eintrag.id])
-  .map(eintrag => `<label class="zovl-feld"><span>${PANEL_LABEL[eintrag.id]}</span>`
-    + `<input type="checkbox" class="zovl-switch" data-panel="${eintrag.id}"></label>`)
-  .join('');
 
-/** Panel-Sichtbarkeit-Checkboxen auf den Stand des aktuell aktiven Geraets bringen
- * (config.widget ist pro Geraet -- unterschiedliche Roboter koennen unterschiedliche
- * Panels ausgeblendet haben, Toggles muessen bei jedem Geraete-Wechsel neu gesetzt werden). */
+/** Baut die Panels-Toggle-Liste im Zahnrad-Overlay, inkl. Sub-Toggle-Zeilen fuer
+ * Panel.versteckbareFelder (F3). Muss NACH I18n.laden() laufen (siehe Start-IIFE weiter
+ * unten) -- die Sub-Toggle-Labels kommen ueber t(), das vor Ladeabschluss nur
+ * Fallback-Werte liefert (siehe i18n.js-Kommentarkopf). */
+function baueZovlPanelsListe() {
+  zovlPanelsListe.innerHTML = PanelRegistry.alle
+    .filter(eintrag => PANEL_LABEL[eintrag.id])
+    .map(eintrag => {
+      const subZeilen = (eintrag.klasse.versteckbareFelder || []).map(feld =>
+        `<label class="zovl-feld zovl-feld-sub"><span>${t(feld.labelKey)}</span>`
+        + `<input type="checkbox" class="zovl-switch" data-panel-feld="${eintrag.id}.${feld.id}"></label>`,
+      ).join('');
+      return `<label class="zovl-feld"><span>${PANEL_LABEL[eintrag.id]}</span>`
+        + `<input type="checkbox" class="zovl-switch" data-panel="${eintrag.id}"></label>${subZeilen}`;
+    })
+    .join('');
+}
+
+/** Panel- und Feld-Sichtbarkeit-Checkboxen auf den Stand des aktuell aktiven Geraets
+ * bringen (config.widget ist pro Geraet -- unterschiedliche Roboter koennen
+ * unterschiedliche Panels/Felder ausgeblendet haben, Toggles muessen bei jedem
+ * Geraete-Wechsel neu gesetzt werden). */
 function initPanelsSektion(config) {
   for (const el of zovlPanelsListe.querySelectorAll('input[data-panel]')) {
     const eintrag = config.panels && config.panels[el.dataset.panel];
     el.checked = eintrag ? eintrag.sichtbar !== false : true;
+  }
+  for (const el of zovlPanelsListe.querySelectorAll('input[data-panel-feld]')) {
+    const [panelId, feldId] = el.dataset.panelFeld.split('.');
+    const eintrag = config.panels && config.panels[panelId];
+    const versteckt = !!(eintrag && Array.isArray(eintrag.versteckt) && eintrag.versteckt.includes(feldId));
+    el.checked = !versteckt; // Haken = sichtbar, gleiche Semantik wie die Panel-Ebene
   }
 }
 
 // Delegated Listener statt einzelner Handler pro Checkbox: die Checkboxen werden oben zur
 // Laufzeit generiert, ihre Zahl/Reihenfolge kann sich mit der PanelRegistry aendern. Kein
 // Minimum erzwungen -- alle fuenf Panels gleichzeitig aus ist erlaubt (David-Vorgabe),
-// Sidebar bleibt dann einfach leer/leer bis auf kopf/fehler.
+// Sidebar bleibt dann einfach leer/leer bis auf kopf/fehler. Ein Handler fuer beide Ebenen
+// (Panel UND Feld) -- data-panel-feld wird zuerst geprueft, sonst waere jeder Feld-Klick
+// zusaetzlich (faelschlich) als Panel-Sichtbarkeit-Aenderung interpretierbar, weil
+// dataset.panel bei verschachtelten data-*-Attributen sonst leicht verwechselt wird.
 zovlPanelsListe.addEventListener('change', async e => {
+  const panelFeld = e.target.dataset.panelFeld;
+  if (panelFeld) {
+    const [panelId, feldId] = panelFeld.split('.');
+    const eintrag = aktiveWidgetConfig.panels[panelId] || (aktiveWidgetConfig.panels[panelId] = { sichtbar: true, versteckt: [] });
+    if (!Array.isArray(eintrag.versteckt)) eintrag.versteckt = [];
+    const idx = eintrag.versteckt.indexOf(feldId);
+    if (e.target.checked) { if (idx !== -1) eintrag.versteckt.splice(idx, 1); }
+    else if (idx === -1) eintrag.versteckt.push(feldId);
+    panelsAbbauen();
+    const geraetFeld = Geraete.aktuelles();
+    await baueAktivePanels(aktiveWidgetConfig, Geraete.aktiveDid, geraetFeld && geraetFeld.typ);
+    await Config.speichern(Geraete.aktiveDid, aktiveWidgetConfig);
+    return;
+  }
   const id = e.target.dataset.panel;
   if (!id) return;
   aktiveWidgetConfig.panels[id].sichtbar = e.target.checked;
@@ -727,7 +768,7 @@ async function baueAktivePanels(config, did, typ) {
   for (const { id, klasse } of PanelRegistry.aktive(config, typ)) {
     const el = document.getElementById('panel-' + id);
     if (el) el.hidden = false;
-    const panel = new klasse(id, el);
+    const panel = new klasse(id, el, config);
     aktivePanels.push(panel);
     panel.zeige();
     await panel.init(did);
@@ -840,6 +881,10 @@ async function ladeGeraet(did) {
     // F2: vor dem ersten ladeGeraet()-Aufruf abschliessen, siehe i18n.js-Kommentarkopf --
     // Panels ab F3 rufen t() aus render()/init() heraus auf, das laeuft immer erst danach.
     await I18n.laden();
+    // F3: baut die Zahnrad-Panels-Liste inkl. Sub-Toggles -- nutzt t(), muss deshalb
+    // ebenfalls erst nach I18n.laden() laufen, spaetestens vor initPanelsSektion()
+    // (in ladeGeraet(), noch weiter unten in dieser Sequenz).
+    baueZovlPanelsListe();
 
     const geraet = await Geraete.starten();
     if (!geraet) {

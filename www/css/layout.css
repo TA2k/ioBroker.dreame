@@ -203,6 +203,11 @@ body.trail-off .trail, body.trail-off .mopspur{display:none}
   margin-bottom:10px; font-size:12.5px}
 .zovl-feld:last-child{margin-bottom:0}
 .zovl-feld > span:first-child{color:var(--txt)}
+/* Sub-Toggle-Zeilen fuer Panel.versteckbareFelder (F3, WIDGET_FEATURE_PLAN.md) -- pro
+   Panel-Zeile in #zovlPanelsListe direkt darunter eingehaengt, per Einzug + kleinerer/
+   gedaempfter Schrift als "gehoert zur Zeile darueber" erkennbar. */
+.zovl-feld-sub{margin-left:16px; margin-bottom:6px}
+.zovl-feld-sub > span:first-child{color:var(--muted); font-size:11.5px}
 .zovl-feld select{font:inherit; font-size:12.5px; padding:6px 8px; border-radius:8px;
   border:1px solid var(--line); background:var(--knoepfe); color:var(--txt); cursor:pointer}
 /* Zusaetzliche Farb-Picker fuer die Modi "Hauptfarbe"/"Benutzerdefiniert" -- per hidden-

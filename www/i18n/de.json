@@ -1,3 +1,29 @@
 {
-  "i18n.selftest": "Widget-i18n geladen"
+  "i18n.selftest": "Widget-i18n geladen",
+
+  "panel.reinigung.titel": "Reinigung",
+  "panel.reinigung.modus.label": "Modus",
+  "panel.reinigung.route.label": "Route",
+  "panel.reinigung.saug.label": "Saugstärke",
+  "panel.reinigung.wasser.label": "Feuchtigkeit",
+
+  "panel.reinigung.modus.vacuum": "Saugen",
+  "panel.reinigung.modus.mop": "Wischen",
+  "panel.reinigung.modus.vacuum-mop": "Saugen und Wischen",
+  "panel.reinigung.modus.mop-after-vacuum": "Wischen nach Saugen",
+  "panel.reinigung.modus.raum-hinweis": "Bei Raum-Reinigung wählt das Gerät den Modus selbst",
+
+  "panel.reinigung.route.schnell": "Schnell",
+  "panel.reinigung.route.standard": "Standard",
+  "panel.reinigung.route.intensiv": "Intensiv",
+  "panel.reinigung.route.tief": "Tief",
+
+  "panel.reinigung.saug.leise": "Leise",
+  "panel.reinigung.saug.standard": "Standard",
+  "panel.reinigung.saug.stark": "Stark",
+  "panel.reinigung.saug.turbo": "Turbo",
+
+  "panel.reinigung.raum.alle": "Alle Räume aktiv",
+  "panel.reinigung.raum.gewaehlt-eins": "1 Raum gewählt",
+  "panel.reinigung.raum.gewaehlt-mehrere": "Räume gewählt"
 }
