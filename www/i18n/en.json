@@ -38,5 +38,30 @@
   "termine.verwaist": "Shortcut no longer exists",
   "termine.schliessen": "Close",
   "termine.route-praefix": "Route:",
-  "termine.feuchtigkeit-praefix": "Moisture:"
+  "termine.feuchtigkeit-praefix": "Moisture:",
+
+  "panel.station.titel": "Station",
+  "panel.station.entleeren.label": "Empty",
+  "panel.station.waschen.label": "Wash",
+  "panel.station.trocknen.label": "Dry",
+
+  "panel.station.knopf.entleeren": "Empty",
+  "panel.station.knopf.fortsetzen": "Resume",
+  "panel.station.knopf.anhalten": "Pause",
+  "panel.station.knopf.waschen": "Wash",
+  "panel.station.knopf.trocknen-beenden": "Stop drying",
+  "panel.station.knopf.trocknen": "Dry",
+
+  "panel.station.hinweis.laeuft": "Running",
+  "panel.station.hinweis.entleeren-geht": "Empty the dustbin into the station",
+  "panel.station.hinweis.erst-nach-mopp-waschen": "Only after mop washing",
+  "panel.station.hinweis.nur-an-station": "Only possible at the station",
+  "panel.station.hinweis.gerade-nicht-moeglich": "Not possible right now",
+  "panel.station.hinweis.waschgang-fortsetzen": "Resume the paused washing cycle",
+  "panel.station.hinweis.waschen-laeuft": "Running — pause without ending the job",
+  "panel.station.hinweis.wischpad-reinigen": "Clean the mop pad in the station",
+  "panel.station.hinweis.kein-wischpad": "No mop pad inserted",
+  "panel.station.hinweis.trocknung-abbrechen": "Cancel the running drying cycle",
+  "panel.station.hinweis.wischpad-trocknen": "Dry the mop pad",
+  "panel.station.hinweis.erst-nach-reinigung": "Only after cleaning"
 }

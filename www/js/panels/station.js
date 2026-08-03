@@ -28,7 +28,7 @@
  * unveraendert aus openStationMenu() uebernommen, nur die Darstellung ist neu.
  */
 
-/* global Trigger, Panel, uiIcon, WASH, EMPTY_ACTIVE, ST, geraetGestartet */
+/* global Trigger, Panel, uiIcon, WASH, EMPTY_ACTIVE, ST, geraetGestartet, t */
 
 // ===== Faehigkeits-/Zustandsfunktionen, 1:1 aus legacy.html "Station" uebernommen, nur auf
 // ein vst-Objekt statt das globale VST umgestellt (gleiches Muster wie kopf.js). =====
@@ -69,6 +69,15 @@ const entleerenGeht = vst => kannEntleeren(vst) && vst.dustcol === 1
   && !vst.drain;
 
 class StationPanel extends Panel {
+  // F6 (WIDGET_FEATURE_PLAN.md): die drei Aktionsknoepfe (Entleeren/Waschen/Trocknen)
+  // einzeln ausblendbar, analog zum F3-Blueprint (reinigung.js). Ein versteckter Knopf wird
+  // wie bei Reinigung komplett aus der Liste entfernt (nicht nur ausgegraut), siehe render().
+  static versteckbareFelder = [
+    { id: 'empty', labelKey: 'panel.station.entleeren.label' },
+    { id: 'wash', labelKey: 'panel.station.waschen.label' },
+    { id: 'dry', labelKey: 'panel.station.trocknen.label' },
+  ];
+
   constructor(id, container, config) {
     super(id, container, config);
     this.vst = {
@@ -76,6 +85,7 @@ class StationPanel extends Panel {
       status: null, cpaused: null, drain: null, empty: null, state: null,
     };
     this._idZuVst = {};
+    this._statischeTexteGesetzt = false;
   }
 
   benoetigteStates(did) {
@@ -98,8 +108,16 @@ class StationPanel extends Panel {
     this.render();
   }
 
+  _renderStatischeTexte() {
+    if (this._statischeTexteGesetzt) return;
+    this._statischeTexteGesetzt = true;
+    const titel = document.getElementById('stationTitel');
+    if (titel) titel.textContent = t('panel.station.titel');
+  }
+
   render() {
     if (!this.container) return;
+    this._renderStatischeTexte();
     const liste = document.getElementById('stationAktionen');
     const titel = document.getElementById('stationTitel');
     if (!liste || !titel) return;
@@ -111,11 +129,11 @@ class StationPanel extends Panel {
       const laeuft = vst.empty === EMPTY_ACTIVE;
       const geht = entleerenGeht(vst);
       knoepfe.push({
-        id: 'empty', text: 'Entleeren', icon: 'staubbeutel', disabled: laeuft || !geht,
-        titel: laeuft ? 'Läuft gerade'
-          : geht ? 'Behälter in die Station absaugen'
-            : (vst.wash === WASH.WASHING ? 'Erst nach dem Mopp-Waschen'
-              : !angedockt(vst) ? 'Nur an der Station möglich' : 'Gerade nicht möglich'),
+        id: 'empty', text: t('panel.station.knopf.entleeren'), icon: 'staubbeutel', disabled: laeuft || !geht,
+        titel: laeuft ? t('panel.station.hinweis.laeuft')
+          : geht ? t('panel.station.hinweis.entleeren-geht')
+            : (vst.wash === WASH.WASHING ? t('panel.station.hinweis.erst-nach-mopp-waschen')
+              : !angedockt(vst) ? t('panel.station.hinweis.nur-an-station') : t('panel.station.hinweis.gerade-nicht-moeglich')),
         onclick: () => Trigger.startAutoEmpty(this.did),
       });
     }
@@ -124,12 +142,14 @@ class StationPanel extends Panel {
       const waschtGerade = vst.wash === WASH.WASHING, pausiert = vst.wash === WASH.PAUSED;
       const geht = waschenGeht(vst);
       knoepfe.push({
-        id: 'wash', text: pausiert ? 'Fortsetzen' : waschtGerade ? 'Anhalten' : 'Waschen', icon: 'wasser',
+        id: 'wash',
+        text: pausiert ? t('panel.station.knopf.fortsetzen') : waschtGerade ? t('panel.station.knopf.anhalten') : t('panel.station.knopf.waschen'),
+        icon: 'wasser',
         disabled: (pausiert || waschtGerade) ? false : !geht,
-        titel: pausiert ? 'Angehaltenen Waschgang weiterlaufen lassen'
-          : waschtGerade ? 'Läuft gerade — anhalten, ohne den Auftrag zu beenden'
-            : geht ? 'Wischpad in der Station reinigen'
-              : (!moppDrin(vst) ? 'Kein Wischpad eingesetzt' : 'Gerade nicht möglich'),
+        titel: pausiert ? t('panel.station.hinweis.waschgang-fortsetzen')
+          : waschtGerade ? t('panel.station.hinweis.waschen-laeuft')
+            : geht ? t('panel.station.hinweis.wischpad-reinigen')
+              : (!moppDrin(vst) ? t('panel.station.hinweis.kein-wischpad') : t('panel.station.hinweis.gerade-nicht-moeglich')),
         onclick: () => {
           if (pausiert) Trigger.resumeWashing(this.did);
           else if (waschtGerade) Trigger.pauseWashing(this.did);
@@ -140,23 +160,26 @@ class StationPanel extends Panel {
       const trocknet = trocknetGerade(vst);
       const trockenGeht = trocknenGeht(vst);
       knoepfe.push({
-        id: 'dry', text: trocknet ? 'Trocknen beenden' : 'Trocknen', icon: 'wischtuch',
+        id: 'dry',
+        text: trocknet ? t('panel.station.knopf.trocknen-beenden') : t('panel.station.knopf.trocknen'),
+        icon: 'wischtuch',
         disabled: !trocknet && !trockenGeht,
-        titel: trocknet ? 'Laufende Trocknung abbrechen'
-          : trockenGeht ? 'Wischpad trocknen'
-            : waschtGerade ? 'Erst nach dem Mopp-Waschen'
-              : (!angedockt(vst) ? 'Nur an der Station möglich'
-                : geraetGestartet() ? 'Erst nach der Reinigung' : 'Gerade nicht möglich'),
+        titel: trocknet ? t('panel.station.hinweis.trocknung-abbrechen')
+          : trockenGeht ? t('panel.station.hinweis.wischpad-trocknen')
+            : waschtGerade ? t('panel.station.hinweis.erst-nach-mopp-waschen')
+              : (!angedockt(vst) ? t('panel.station.hinweis.nur-an-station')
+                : geraetGestartet() ? t('panel.station.hinweis.erst-nach-reinigung') : t('panel.station.hinweis.gerade-nicht-moeglich')),
         onclick: () => { if (trocknet) Trigger.stopDrying(this.did); else Trigger.startDrying(this.did); },
       });
     }
 
-    liste.innerHTML = knoepfe.map(k => `<button class="saktion" type="button" data-id="${k.id}"`
+    const sichtbareKnoepfe = knoepfe.filter(k => !this.feldVersteckt(k.id));
+    liste.innerHTML = sichtbareKnoepfe.map(k => `<button class="saktion" type="button" data-id="${k.id}"`
       + ` title="${k.titel}" aria-label="${k.text}: ${k.titel}"${k.disabled ? ' disabled' : ''}>`
       + `${uiIcon(k.icon, 18)}<span>${k.text}</span></button>`).join('');
-    titel.hidden = !knoepfe.length;
+    titel.hidden = !sichtbareKnoepfe.length;
     for (const btn of liste.querySelectorAll('button[data-id]')) {
-      const eintrag = knoepfe.find(k => k.id === btn.dataset.id);
+      const eintrag = sichtbareKnoepfe.find(k => k.id === btn.dataset.id);
       if (eintrag) btn.onclick = eintrag.onclick;
     }
   }

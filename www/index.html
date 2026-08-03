@@ -211,6 +211,17 @@
           <button type="button" id="termineBtn" class="saktion"></button>
         </div>
       </section>
+      <!-- Station-Panel (Etappe C, Commit C4): Waschstations-Zustand + Aktionen. Bewusst
+           ohne Bestaetigungsdialog (siehe station.js-Kommentarkopf) -- direkte Knoepfe.
+           F6 (WIDGET_FEATURE_PLAN.md): von seiner alten Position (nach Statistik) hierher
+           vorgezogen, direkt nach Termine/vor Wartung -- muss mit main.js'
+           PanelRegistry.registriere()-Reihenfolge uebereinstimmen (siehe Kommentar dort). -->
+      <section class="gruppe g-station" id="panel-station">
+        <div class="abschnitt">
+          <h2 id="stationTitel" hidden>Station</h2>
+        </div>
+        <div class="saktionen" id="stationAktionen"></div>
+      </section>
       <!-- Wartungs-Panel (Etappe C, Commit C2): Verschleiss + Reset, optional Saugbeutel. -->
       <section class="gruppe g-wartung" id="panel-wartung">
         <div class="abschnitt">
@@ -235,14 +246,6 @@
           <h2 id="statistikTitel" hidden>Statistik</h2>
         </div>
         <div class="statlist" id="statistikListe"></div>
-      </section>
-      <!-- Station-Panel (Etappe C, Commit C4): Waschstations-Zustand + Aktionen. Bewusst
-           ohne Bestaetigungsdialog (siehe station.js-Kommentarkopf) -- direkte Knoepfe. -->
-      <section class="gruppe g-station" id="panel-station">
-        <div class="abschnitt">
-          <h2 id="stationTitel" hidden>Station</h2>
-        </div>
-        <div class="saktionen" id="stationAktionen"></div>
       </section>
     </div></div>
   </div>

@@ -66,10 +66,13 @@ PanelRegistry.registriere('shortcuts', ShortcutsPanel);
 // F5 (WIDGET_FEATURE_PLAN.md, nach Live-Test-Feedback): direkt nach shortcuts registriert +
 // in index.html direkt danach im DOM -- David-Vorgabe "Termine-Knopf unter den Kurzbefehlen".
 PanelRegistry.registriere('termine', TerminePanel);
+// F6 (WIDGET_FEATURE_PLAN.md): von seiner alten Position (nach statistik) hierher vorgezogen
+// -- Plan-Ziel "station direkt nach shortcuts/vor wartung", station steht damit direkt
+// nach termine (F5 kam nach der Plan-Erstellung dazwischen).
+PanelRegistry.registriere('station', StationPanel);
 PanelRegistry.registriere('wartung', WartungPanel);
 PanelRegistry.registriere('frischwasser', WasserMoppPanel);
 PanelRegistry.registriere('statistik', StatistikPanel);
-PanelRegistry.registriere('station', StationPanel);
 
 // ===== Verbindungsstatus (Karten-Overlay oben rechts) + Geraetename in der Kopfzeile =====
 const errEl = document.getElementById('err');
@@ -374,9 +377,9 @@ document.getElementById('zovlBreitePlus').onclick =
 // Registry um, folgen die Toggles automatisch. Nur die Anzeige-Namen sind hier gepflegt,
 // weil es keine zentrale "Titel"-Eigenschaft je Panel-Klasse gibt. Bleiben bewusst als
 // hartcodierte deutsche Strings stehen (nicht t()) -- PANEL_LABEL deckt alle sieben Panels
-// ab, aber nur reinigung/shortcuts/termine haben bisher eigene i18n-Keys (F3/F4/F5); volle
-// Umstellung dieser Zahnrad-Liste folgt mit F6-F9, wenn jedes Panel seine eigenen Keys
-// bekommt. =====
+// ab, aber nur reinigung/shortcuts/termine/station haben bisher eigene i18n-Keys
+// (F3/F4/F5/F6); volle Umstellung dieser Zahnrad-Liste folgt mit F7-F9, wenn jedes Panel
+// seine eigenen Keys bekommt. =====
 const PANEL_LABEL = { reinigung: 'Reinigung', shortcuts: 'Kurzbefehle', termine: 'Termine', wartung: 'Wartung', frischwasser: 'Wasser & Mopp', statistik: 'Statistik', station: 'Station' };
 const zovlPanelsListe = document.getElementById('zovlPanelsListe');
 

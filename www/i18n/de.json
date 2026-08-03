@@ -38,5 +38,30 @@
   "termine.verwaist": "Kurzbefehl existiert nicht mehr",
   "termine.schliessen": "Schließen",
   "termine.route-praefix": "Route:",
-  "termine.feuchtigkeit-praefix": "Feuchtigkeit:"
+  "termine.feuchtigkeit-praefix": "Feuchtigkeit:",
+
+  "panel.station.titel": "Station",
+  "panel.station.entleeren.label": "Entleeren",
+  "panel.station.waschen.label": "Waschen",
+  "panel.station.trocknen.label": "Trocknen",
+
+  "panel.station.knopf.entleeren": "Entleeren",
+  "panel.station.knopf.fortsetzen": "Fortsetzen",
+  "panel.station.knopf.anhalten": "Anhalten",
+  "panel.station.knopf.waschen": "Waschen",
+  "panel.station.knopf.trocknen-beenden": "Trocknen beenden",
+  "panel.station.knopf.trocknen": "Trocknen",
+
+  "panel.station.hinweis.laeuft": "Läuft gerade",
+  "panel.station.hinweis.entleeren-geht": "Behälter in die Station absaugen",
+  "panel.station.hinweis.erst-nach-mopp-waschen": "Erst nach dem Mopp-Waschen",
+  "panel.station.hinweis.nur-an-station": "Nur an der Station möglich",
+  "panel.station.hinweis.gerade-nicht-moeglich": "Gerade nicht möglich",
+  "panel.station.hinweis.waschgang-fortsetzen": "Angehaltenen Waschgang weiterlaufen lassen",
+  "panel.station.hinweis.waschen-laeuft": "Läuft gerade — anhalten, ohne den Auftrag zu beenden",
+  "panel.station.hinweis.wischpad-reinigen": "Wischpad in der Station reinigen",
+  "panel.station.hinweis.kein-wischpad": "Kein Wischpad eingesetzt",
+  "panel.station.hinweis.trocknung-abbrechen": "Laufende Trocknung abbrechen",
+  "panel.station.hinweis.wischpad-trocknen": "Wischpad trocknen",
+  "panel.station.hinweis.erst-nach-reinigung": "Erst nach der Reinigung"
 }
