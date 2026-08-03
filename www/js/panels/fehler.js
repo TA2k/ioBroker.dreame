@@ -146,8 +146,8 @@ function fehlerUnterdruecken(code, vst) {
 }
 
 class FehlerPanel extends Panel {
-  constructor(id, container) {
-    super(id, container);
+  constructor(id, container, config) {
+    super(id, container, config);
     this.meldungen = {};
     this._charging = null;
     this._wash = null;

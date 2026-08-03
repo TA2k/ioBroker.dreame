@@ -39,8 +39,8 @@ const SAUGBEUTEL_TEXT = { 0: 'Installiert', 1: 'Nicht installiert', 2: 'ÃœberprÃ
 const SAUGBEUTEL_OBJ = 'dust-bag-status';
 
 class WartungPanel extends Panel {
-  constructor(id, container) {
-    super(id, container);
+  constructor(id, container, config) {
+    super(id, container, config);
     this.werte = {}; // obj -> letzter Wert (fehlender Eintrag = noch nichts empfangen -> Zeile bleibt aus)
     this._idZuObj = {};
   }

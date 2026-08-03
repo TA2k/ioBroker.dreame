@@ -153,8 +153,8 @@ function setBadge(group, key, href, size, pos) {
 }
 
 class KopfPanel extends Panel {
-  constructor(id, container) {
-    super(id, container);
+  constructor(id, container, config) {
+    super(id, container, config);
     this.vst = {
       state: null, status: null, battery: null, charging: null, cprog: null, dprog: null,
       carea: null, ctime: null, tstat: null, cpaused: null, wash: null, empty: null,

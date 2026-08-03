@@ -69,8 +69,8 @@ const entleerenGeht = vst => kannEntleeren(vst) && vst.dustcol === 1
   && !vst.drain;
 
 class StationPanel extends Panel {
-  constructor(id, container) {
-    super(id, container);
+  constructor(id, container, config) {
+    super(id, container, config);
     this.vst = {
       wash: null, dustcol: null, charging: null, tank: null, mopstat: null,
       status: null, cpaused: null, drain: null, empty: null, state: null,

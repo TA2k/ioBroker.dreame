@@ -29,8 +29,8 @@ const STATISTIK = [
 ];
 
 class StatistikPanel extends Panel {
-  constructor(id, container) {
-    super(id, container);
+  constructor(id, container, config) {
+    super(id, container, config);
     this.werte = {}; // obj -> letzter Wert (fehlender Eintrag = noch nichts empfangen -> Zeile bleibt aus)
     this._idZuObj = {};
   }

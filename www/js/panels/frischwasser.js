@@ -39,8 +39,8 @@ const IST_EINS = wert => Number(wert) === 1;
 class WasserMoppPanel extends Panel {
   static passtZuTyp = ['vacuum'];
 
-  constructor(id, container) {
-    super(id, container);
+  constructor(id, container, config) {
+    super(id, container, config);
     this.werte = {}; // key -> letzter Wert, key aus _idZuKey
     this._idZuKey = {};
     this._temperaturStates = {}; // wert -> lokalisierter Text, aus common.states des Adapter-Objekts
