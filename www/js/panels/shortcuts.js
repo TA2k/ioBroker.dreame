@@ -107,6 +107,8 @@ class ShortcutsPanel extends Panel {
         + `</div>`;
     }).join('');
 
+    this._vereinheitlicheKachelBreite(liste);
+
     for (const btn of liste.querySelectorAll('button[data-start]')) {
       const scId = btn.dataset.start;
       btn.onclick = () => Trigger.startShortcut(this.did, scId);
@@ -115,6 +117,26 @@ class ShortcutsPanel extends Panel {
       const scId = btn.dataset.toggle;
       btn.onclick = () => this._toggleVersteckt(scId);
     }
+  }
+
+  /** Alle Kacheln auf dieselbe Breite bringen -- David-Vorgabe nach Live-Test: einheitliche
+   * Groesse fuer alle Shortcuts, bemessen am laengsten Namen (nicht individuell pro Kachel,
+   * wie ein reiner CSS min-content/white-space:nowrap-Ansatz es liefern wuerde). CSS allein
+   * kann "alle Elemente in einem Wrap-Flex-Layout gleich breit wie das breiteste" nicht
+   * zuverlaessig ohne Grid-Spalten-Vorwissen abbilden -- deshalb hier gemessen: erst jede
+   * Kachel ihre natuerliche (Text-bestimmte) Breite einnehmen lassen (inline width
+   * zuruecksetzen, sonst wuerde ein inzwischen kuerzerer laengster Name die alte, zu grosse
+   * Breite fuer immer einfrieren), dann die groesste gemessene Breite auf alle anwenden.
+   * Bekannte Grenze: misst nur bei render() (State-Aenderung), nicht bei reiner
+   * Fenstergroessen-/Zoom-Aenderung (kein ResizeObserver) -- z.B. die Menue-Breite live im
+   * offenen Zahnrad zu verstellen (F1) macht die gemessene Breite erst beim naechsten
+   * render() wieder passend. Nicht Teil dieser Korrektur, nur dokumentiert. */
+  _vereinheitlicheKachelBreite(liste) {
+    const kacheln = Array.from(liste.querySelectorAll('.kbkachel'));
+    if (!kacheln.length) return;
+    for (const el of kacheln) el.style.width = '';
+    const maxBreite = Math.max(...kacheln.map(el => el.getBoundingClientRect().width));
+    for (const el of kacheln) el.style.width = `${maxBreite}px`;
   }
 
   /** Persistiert ueber die main.js-Bruecke (siehe Datei-Kommentarkopf), rendert danach
