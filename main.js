@@ -34,6 +34,33 @@ const mapController = require('./lib/mapController');
 const { getRoomDisplayName, buildSegmentTypeMap } = require('./lib/cleanset');
 const { parseScheduleBlob } = require('./lib/schedule');
 
+// Termine (SIID 8-2): Slug->i18n-Key Mapping fuer die Enum-Anzeigewerte in .rooms/
+// .parameters. Die Slugs selbst kommen bereits aus lib/schedule.js (decodeRoomsWord/
+// decodeAllRoomsWord) - hier wird nur noch der sprachabhaengige Anzeigetext ergaenzt.
+const SCHEDULE_MODE_KEYS = Object.freeze({
+  vacuum: 'vacuum.cleaning-mode.vacuuming',
+  mop: 'vacuum.cleaning-mode.mopping',
+  'vacuum-mop': 'vacuum.cleaning-mode.sweep-mop',
+  // Vierter all_rooms-Modus hat kein Aequivalent im live remote.cleaning-mode-Enum
+  // (das kennt nur 0-3/2-Bit) - eigener Key statt Wiederverwendung von
+  // vacuum.cleaning-mode.mop-after-sweep, siehe WIDGET_TERMINE_PLAN.md S6.
+  'mop-after-vacuum': 'vacuum.schedule.mode.mop-after-vacuum',
+});
+const SCHEDULE_SUCTION_KEYS = Object.freeze({
+  quiet: 'vacuum.suction-level.quiet',
+  standard: 'vacuum.suction-level.standard',
+  strong: 'vacuum.suction-level.strong',
+  // Schedule-Slug heisst "max", bestehender Key/Anzeigetext ist "turbo"/"Turbo" -
+  // bewusste Wiederverwendung (Sign-off David), siehe WIDGET_TERMINE_PLAN.md S6.
+  max: 'vacuum.suction-level.turbo',
+});
+const SCHEDULE_ROUTE_KEYS = Object.freeze({
+  standard: 'vacuum.cleaning-route.standard',
+  intensive: 'vacuum.cleaning-route.intensive',
+  deep: 'vacuum.cleaning-route.deep',
+  quick: 'vacuum.cleaning-route.quick',
+});
+
 const BRAND_CONFIG = {
   dreame: {
     domain: 'eu.iot.dreame.tech:13267',
@@ -5526,6 +5553,16 @@ class Dreame extends utils.Adapter {
     return roomResult.value;
   }
 
+  // Uebersetzt einen Termin-Enum-Slug (z.B. "vacuum-mop") ueber die uebergebene
+  // Slug->i18n-Key-Map in die aktuelle Adapter-Sprache. null (unbekannter Rohwert
+  // aus decodeRoomsWord/decodeAllRoomsWord) und unbekannte Slugs werden unveraendert
+  // durchgereicht statt zu crashen.
+  _translateScheduleEnum(keyMap, slug) {
+    if (slug === null || slug === undefined) return slug;
+    const key = keyMap[slug];
+    return key ? I18n.translate(key) : slug;
+  }
+
   async parseSchedule(did, value) {
     try {
       const termine = parseScheduleBlob(value);
@@ -5606,6 +5643,8 @@ class Dreame extends utils.Adapter {
           });
           const roomsWithNames = termin.rooms.map((room) => ({
             ...room,
+            mode: this._translateScheduleEnum(SCHEDULE_MODE_KEYS, room.mode),
+            suction: this._translateScheduleEnum(SCHEDULE_SUCTION_KEYS, room.suction),
             roomName: this._resolveRoomName(did, room.segmentId),
           }));
           this.setState(`${path}.rooms`, JSON.stringify(roomsWithNames), true);
@@ -5615,7 +5654,13 @@ class Dreame extends utils.Adapter {
             common: { name: 'Parameter', type: 'string', role: 'json', read: true, write: false },
             native: {},
           });
-          this.setState(`${path}.parameters`, JSON.stringify(termin.parameters), true);
+          const translatedParameters = {
+            ...termin.parameters,
+            mode: this._translateScheduleEnum(SCHEDULE_MODE_KEYS, termin.parameters.mode),
+            suction: this._translateScheduleEnum(SCHEDULE_SUCTION_KEYS, termin.parameters.suction),
+            route: this._translateScheduleEnum(SCHEDULE_ROUTE_KEYS, termin.parameters.route),
+          };
+          this.setState(`${path}.parameters`, JSON.stringify(translatedParameters), true);
         }
       }
     } catch (e) {

@@ -265,6 +265,7 @@
   "vacuum.remote.water-temperature": "Température de l'eau",
   "vacuum.remote.water-volume": "Volume d'eau",
   "vacuum.remote.wetness-level": "Niveau d'humidité",
+  "vacuum.schedule.mode.mop-after-vacuum": "Vadrouille après aspirateur",
   "vacuum.self-clean-frequency.high": "Haut",
   "vacuum.self-clean-frequency.per-room": "Par chambre",
   "vacuum.self-clean-frequency.standard": "Standard",

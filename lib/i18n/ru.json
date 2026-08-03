@@ -265,6 +265,7 @@
   "vacuum.remote.water-temperature": "Температура воды",
   "vacuum.remote.water-volume": "Объем воды",
   "vacuum.remote.wetness-level": "Уровень влажности",
+  "vacuum.schedule.mode.mop-after-vacuum": "Швабра после пылесоса",
   "vacuum.self-clean-frequency.high": "Высокий",
   "vacuum.self-clean-frequency.per-room": "За номер",
   "vacuum.self-clean-frequency.standard": "Стандартный",

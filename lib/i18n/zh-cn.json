@@ -265,6 +265,7 @@
   "vacuum.remote.water-temperature": "水温",
   "vacuum.remote.water-volume": "水量",
   "vacuum.remote.wetness-level": "湿度水平",
+  "vacuum.schedule.mode.mop-after-vacuum": "吸尘后拖把",
   "vacuum.self-clean-frequency.high": "高的",
   "vacuum.self-clean-frequency.per-room": "每间客房",
   "vacuum.self-clean-frequency.standard": "标准",

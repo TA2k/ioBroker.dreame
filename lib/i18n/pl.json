@@ -265,6 +265,7 @@
   "vacuum.remote.water-temperature": "Temperatura wody",
   "vacuum.remote.water-volume": "Objętość wody",
   "vacuum.remote.wetness-level": "Poziom wilgoci",
+  "vacuum.schedule.mode.mop-after-vacuum": "Wycieraj po odkurzeniu",
   "vacuum.self-clean-frequency.high": "Wysoki",
   "vacuum.self-clean-frequency.per-room": "Za pokój",
   "vacuum.self-clean-frequency.standard": "Standard",

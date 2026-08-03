@@ -262,6 +262,8 @@
   "vacuum.cleaning-route.deep":      "Deep",
   "vacuum.cleaning-route.quick":     "Quick",
 
+  "vacuum.schedule.mode.mop-after-vacuum": "Mop after Vacuum",
+
   "vacuum.wider-corner.off":       "Off",
   "vacuum.wider-corner.high-freq": "HighFreq",
   "vacuum.wider-corner.low-freq":  "LowFreq",
