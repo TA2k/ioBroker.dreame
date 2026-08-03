@@ -837,6 +837,10 @@ async function ladeGeraet(did) {
     Daten.subscribe(CONN_ID, zeigeVerbindung);
     zeigeVerbindung(await Daten.getState(CONN_ID));
 
+    // F2: vor dem ersten ladeGeraet()-Aufruf abschliessen, siehe i18n.js-Kommentarkopf --
+    // Panels ab F3 rufen t() aus render()/init() heraus auf, das laeuft immer erst danach.
+    await I18n.laden();
+
     const geraet = await Geraete.starten();
     if (!geraet) {
       errEl.textContent = 'Kein Dreame-Gerät gefunden.\n\nLäuft der Adapter (dreame.0) und hat er ein Gerät angelegt?\nBestimmtes Gerät wählen: ?did=<Geräte-ID>';
