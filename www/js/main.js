@@ -132,6 +132,10 @@ const GEAR_SICHTBAR = new URLSearchParams(location.search).get('gear') !== '0'; 
 // data-gear aufs Root, konsistent mit data-leiste/data-farben -- CSS braucht es, um den
 // #conn-Versatz (siehe layout.css) nur zu setzen, wenn tatsaechlich ein Zahnrad da ist.
 document.documentElement.dataset.gear = GEAR_SICHTBAR ? 'an' : 'aus';
+// data-einstellungen: 'an' nur waehrend das Overlay offen ist (siehe oeffneZahnradOvl()/
+// schliesseZahnradOvl() unten) -- Default 'aus' bei jedem Start/Reload, Overlay ist nie
+// initial offen.
+document.documentElement.dataset.einstellungen = 'aus';
 const zahnradBtn = document.getElementById('zahnradBtn');
 const zahnradOvl = document.getElementById('zahnradOvl');
 
@@ -165,6 +169,7 @@ function onZahnradEscape(e) { if (e.key === 'Escape') schliesseZahnradOvl(); }
 function schliesseZahnradOvl() {
   zahnradOvl.classList.remove('offen');
   zahnradBtn.classList.remove('on');
+  document.documentElement.dataset.einstellungen = 'aus';
   document.removeEventListener('keydown', onZahnradEscape);
   zovlResetZuruecksetzen(); // E2f: kein "Reset beim naechsten Oeffnen"-Rest-Zustand
 }
@@ -172,6 +177,11 @@ function schliesseZahnradOvl() {
 function oeffneZahnradOvl() {
   zahnradOvl.classList.add('offen');
   zahnradBtn.classList.add('on');
+  // F4-Live-Test-Fix: :root[data-einstellungen] steuert Bedienelemente AUSSERHALB des
+  // Overlays selbst, die nur waehrend der Einstellungs-Bearbeitung sichtbar sein sollen
+  // (z.B. das Auge-Icon je Kurzbefehl-Kachel, siehe shortcuts.js/layout.css .kbauge) --
+  // gleiches Muster wie die bestehenden data-gear/data-farben/data-leiste-Attribute.
+  document.documentElement.dataset.einstellungen = 'an';
   document.addEventListener('keydown', onZahnradEscape);
 }
 

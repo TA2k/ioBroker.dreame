@@ -522,12 +522,25 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
 /* Kurzbefehle-Panel (F4, WIDGET_FEATURE_PLAN.md): .saktion wird hier zu zweit pro Kachel
    verwendet (Start-Knopf + kleines Auge fuer Sichtbarkeit-Toggle je Shortcut, siehe
    shortcuts.js-Kommentarkopf) -- eigener Wrapper noetig, damit das Auge frei auf der
-   Kachel positioniert werden kann, statt im gleichen Flex-Rahmen wie der Start-Knopf. */
-.kbkachel{position:relative;flex:1;min-width:84px}
+   Kachel positioniert werden kann, statt im gleichen Flex-Rahmen wie der Start-Knopf.
+   Live-Test-Fix (2026-08-03): KEIN flex-grow (anders als die generische .saktion-Regel
+   oben, die fuer Station/Frischwasser mit wenigen, kurzen, festen Texten weiterhin passt) --
+   bei vielen Shortcuts unterschiedlicher Namenslaenge hatte flex:1 alle Kacheln gleich breit
+   gemacht, unabhaengig vom tatsaechlichen Text, dadurch war der Name in schmalen Kacheln
+   nicht mehr lesbar. min-width:max(56px, min-content) + white-space:nowrap am Namen sorgt
+   dafuer, dass jede Kachel schrumpft (flex-shrink bleibt Standard 1, alle gleichmaessig),
+   aber nie unter die eigene Text-Breite (oder ein 56px-Mindestmass fuers Touch-Ziel) --
+   .saktionen{flex-wrap:wrap} bricht dann automatisch um, sobald eine Zeile voll ist. */
+.kbkachel{position:relative;flex:0 1 auto;min-width:max(56px, min-content)}
 .kbkachel .saktion{width:100%;min-width:0}
-.kbauge{position:absolute;top:2px;right:2px;width:20px;height:20px;padding:0;border:none;
-  border-radius:50%;background:transparent;color:var(--muted);font-size:12px;line-height:20px;
-  cursor:pointer;-webkit-tap-highlight-color:transparent}
+.kbkachel .saktion span{white-space:nowrap}
+/* Nur sichtbar, waehrend das Zahnrad-Overlay offen ist (:root[data-einstellungen="an"],
+   main.js oeffneZahnradOvl()/schliesseZahnradOvl()) -- ausserhalb der Einstellungen soll
+   das Panel wie jede andere Kachel-Liste aussehen, ohne Bearbeiten-Icons im Weg. */
+.kbauge{display:none;position:absolute;top:2px;right:2px;width:20px;height:20px;padding:0;
+  border:none;border-radius:50%;background:transparent;color:var(--muted);font-size:12px;
+  line-height:20px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+:root[data-einstellungen="an"] .kbauge{display:block}
 .kbauge:hover{color:var(--txt);background:color-mix(in srgb, var(--txt) 12%, transparent)}
 .kb-versteckt .saktion{opacity:.35}
 /* Reinigungs-Panel Kachel-Grid (Etappe C, Commit C5): direkte <select>-Elemente statt
