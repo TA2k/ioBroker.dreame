@@ -317,6 +317,39 @@ The `customCommand` and the room checkboxes are **bidirectionally synchronized**
 
 ---
 
+### Vacuum Shortcuts
+
+Shortcuts (quick commands created in the Dreame app) are parsed from property 4-48 (base64 encoded names). Each shortcut gets its own channel under `deviceId.shortcuts.{id}`:
+
+| State   | Description                                |
+| ------- | ------------------------------------------ |
+| name    | Decoded shortcut name                      |
+| running | Whether the shortcut is currently running  |
+| start   | Button to start the shortcut               |
+
+Channels are rebuilt automatically on adapter start (not just on the next app-side change) and removed automatically when a shortcut is deleted in the app.
+
+---
+
+### Schedules
+
+Schedules created in the Dreame app (property 8-2) are parsed into one channel per schedule entry under `deviceId.schedule.{id}`:
+
+| State      | Description                                                                          |
+| ---------- | ------------------------------------------------------------------------------------- |
+| enabled    | Whether the schedule is active — writable, toggles the schedule directly on the robot |
+| time       | Time of day the schedule triggers (`HH:MM`)                                            |
+| weekdays   | Weekdays the schedule runs on (currently always in German, e.g. `Mo,Mi,Fr` or `täglich`) |
+| type       | Kind of schedule: room cleaning, all-rooms cleaning, or a shortcut                      |
+| rooms      | *(room-cleaning schedules only)* JSON array, one entry per room with its own mode/suction/route/cycles/moisture and translated room name |
+| parameters | *(all-rooms schedules only)* JSON object with mode/suction/route/cycles/moisture applying to the whole floor |
+| shortcutId | *(shortcut schedules only)* the numeric ID of the linked shortcut                      |
+| orphan     | *(shortcut schedules only)* `true` if the linked shortcut no longer exists (deleted in the app) — `enabled` should not be relied on in this case |
+
+Schedule channels are rebuilt automatically on adapter start and removed automatically when a schedule is deleted in the app, same as shortcuts above.
+
+---
+
 ### Live Map Widget
 
 The adapter includes a browser-based live map widget: robot position, cleaning trail and cleaned rooms, updating in real time while the robot cleans. It is served directly by this adapter — no vis widget or extra adapter needed, and it's ready to embed as an iframe in vis, Grafana or a custom dashboard.
@@ -353,7 +386,10 @@ All appearance settings live in the widget itself — open the gear icon in the 
 
 - Device switcher in the header for setups with multiple robots
 - Customizable layout: sidebar left/right, UI zoom, sidebar width, map rotation
-- Panels can be shown or hidden individually (Cleaning, Maintenance, Water & Mop, Statistics, Station)
+- Panels can be shown or hidden individually (Cleaning, Shortcuts, Station, Maintenance, Water & Mop, Statistics) — some panels additionally let you hide individual rows/tiles inside them (e.g. suction level or moisture on the Cleaning panel)
+- Shortcuts panel: one tile per app shortcut, tap to start it directly from the widget
+- Schedules button opens a table of all schedules created in the Dreame app (time, weekdays, type, per-room or whole-floor settings) with an on/off switch for each — a schedule pointing at a deleted shortcut shows a locked switch instead of silently doing nothing
+- Widget UI is available in German and English, following the ioBroker system language
 - Kiosk mode (`?gear=0`) hides the settings gear — for read-only displays (wall tablets, dashboards)
 - Current appearance and panel settings can be exported as a compact link (`?cfg=<blob>`), for quickly sharing or reusing a setup across multiple embeds without touching the stored configuration
 - Tank and mop consumption counters (Water & Mop panel)
