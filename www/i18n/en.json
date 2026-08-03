@@ -30,5 +30,12 @@
   "panel.shortcuts.titel": "Shortcuts",
   "panel.shortcuts.ausblenden": "Hide",
   "panel.shortcuts.einblenden": "Show",
-  "panel.shortcuts.laeuft": "running"
+  "panel.shortcuts.laeuft": "running",
+
+  "termine.knopf": "Schedules",
+  "termine.titel": "Schedules",
+  "termine.leer": "No schedules set up.",
+  "termine.verwaist": "Shortcut no longer exists",
+  "termine.schliessen": "Close",
+  "termine.route-praefix": "Route:"
 }

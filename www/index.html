@@ -95,6 +95,16 @@
                  -- Reihenfolge folgt automatisch der Registrierungsreihenfolge. -->
             <div id="zovlPanelsListe"></div>
           </section>
+          <!-- Termine-Sektion (F5, WIDGET_FEATURE_PLAN.md): Knopf im Style der Panel-
+               Aktionsknoepfe (.saktion/.saktionen, siehe frischwasser.js "Tank gefuellt
+               zuruecksetzen"), NICHT die .zovl-link-btn-Optik der Link/Sonstiges-Sektionen
+               -- Plan-Vorgabe. Text/Icon werden von termine.js gesetzt (Termine.initTexte()). -->
+          <section class="zovl-sektion" id="zovlTermine">
+            <h3>Termine</h3>
+            <div class="saktionen">
+              <button type="button" id="zovlTermineBtn" class="saktion"></button>
+            </div>
+          </section>
           <section class="zovl-sektion" id="zovlLink">
             <h3>Link</h3>
             <button type="button" id="zovlLinkGenerieren" class="zovl-link-btn">Link generieren</button>
@@ -113,6 +123,20 @@
             <button type="button" id="zovlResetBtn" class="zovl-link-btn zovl-reset-btn">Einstellungen zurücksetzen</button>
             <div class="zovl-inhalt" id="zovlResetFehler" hidden>Reset fehlgeschlagen, versuch's erneut.</div>
           </section>
+        </div>
+      </div>
+      <!-- Termine-Modal (F5, WIDGET_FEATURE_PLAN.md): nutzt das bestehende, bisher
+           ungenutzte .ovl/.ovlbox-Overlay-Muster (Ricardos Original-Auswahl-Overlay-CSS,
+           siehe reinigung.js-Kommentarkopf -- die JS-Seite davon (openPicker/openSlider)
+           wurde nie portiert, die CSS-Klassen standen bislang ungenutzt bereit). z-index:200
+           liegt damit automatisch ueber dem Zahnrad-Overlay (z-index:7) -- Termine ueber dem
+           weiterhin offenen Zahnrad zu zeigen ist bewusst kein Problem, kein Schliessen
+           des Zahnrads noetig. -->
+      <div id="termineOvl" class="ovl">
+        <div class="ovlbox" id="termineBox">
+          <h3 id="termineTitel"></h3>
+          <div id="termineListe"></div>
+          <button type="button" id="termineSchliessen" class="ovlclose"></button>
         </div>
       </div>
     </div>
@@ -246,6 +270,10 @@
 <script src="js/panels/fehler.js"></script>
 <script src="js/panels/frischwasser.js"></script>
 <script src="js/panels/mopp.js"></script>
+
+<!-- Termine-Modal (F5, WIDGET_FEATURE_PLAN.md) -- kein Panel (kein PanelRegistry-Eintrag),
+     braucht aber Daten/t/uiIcon, deshalb nach den Panels und vor main.js. -->
+<script src="js/termine.js"></script>
 
 <!-- Startpunkt (Etappe B, Commit B5). -->
 <script src="js/main.js"></script>

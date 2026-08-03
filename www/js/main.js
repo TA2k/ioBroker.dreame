@@ -895,6 +895,7 @@ async function ladeGeraet(did) {
   renderGeraeteAuswahl(geraet);
 
   await baueAktivePanels(config, did, geraet && geraet.typ);
+  await Termine.setDid(did); // F5: Termine-Modal auf das jetzt aktive Geraet umstellen
 
   aktCloudId = `dreame.0.${did}.map.mergedCloud`;
   aktRobotId = `dreame.0.${did}.map.robot`;
@@ -930,6 +931,9 @@ async function ladeGeraet(did) {
     // ebenfalls erst nach I18n.laden() laufen, spaetestens vor initPanelsSektion()
     // (in ladeGeraet(), noch weiter unten in dieser Sequenz).
     baueZovlPanelsListe();
+    // F5: uebersetzt Knopf/Titel/Schliessen-Text des Termine-Modals -- gleiche
+    // I18n.laden()-Abhaengigkeit wie baueZovlPanelsListe() direkt darueber.
+    Termine.initTexte();
 
     const geraet = await Geraete.starten();
     if (!geraet) {

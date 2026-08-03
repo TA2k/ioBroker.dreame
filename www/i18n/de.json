@@ -30,5 +30,12 @@
   "panel.shortcuts.titel": "Kurzbefehle",
   "panel.shortcuts.ausblenden": "Ausblenden",
   "panel.shortcuts.einblenden": "Einblenden",
-  "panel.shortcuts.laeuft": "läuft"
+  "panel.shortcuts.laeuft": "läuft",
+
+  "termine.knopf": "Termine",
+  "termine.titel": "Termine",
+  "termine.leer": "Keine Termine angelegt.",
+  "termine.verwaist": "Kurzbefehl existiert nicht mehr",
+  "termine.schliessen": "Schließen",
+  "termine.route-praefix": "Route:"
 }
