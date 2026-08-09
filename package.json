@@ -21,7 +21,7 @@
     "node": ">= 22"
   },
   "dependencies": {
-    "@iobroker/adapter-core": "^3.4.1",
+    "@iobroker/adapter-core": "^3.4.3",
     "axios": "^1.18.1",
     "axios-retry": "^4.5.0",
     "crypto-js": "^4.2.0",
