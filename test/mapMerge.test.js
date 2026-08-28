@@ -418,4 +418,33 @@ describe('mapMerge (HA-Port)', function () {
     }
 
   });
+
+  // --- Issue #124 Layer 3: detected_carpets mit ungueltigem Polygon (null / ungerade Laenge /
+  //     zu kurz) darf NICHT ins Wire-Format gelangen — der Frontend-Renderer (buildCarpetData)
+  //     laeuft blind ueber c.polygon.filter(...) und crasht sonst die komplette Kartenanzeige.
+  //     Ursache: haDecode.js carpet_info-Branch setzt polygon:null. ---
+  it('filtert detected_carpets mit ungueltigem Polygon heraus (Issue #124 Layer 3)', function () {
+    const logs = [];
+    const merger = new MapMerger({ log: { debug: (m) => logs.push(m), info() {}, warn() {} } });
+    // minimaler I-Frame, damit this.current existiert
+    const iPix = Buffer.from(new Array(16).fill(R(1)));
+    merger.process(buildFrame({
+      frameId: 1, frameType: 73, gridSize: 50, width: 4, height: 4, originX: 0, originY: 0,
+      pixels: iPix, meta: { fsm: 1, ris: 2, seg_inf: { 1: {} } },
+    }));
+
+    merger.current.detected_carpets = [
+      { id: 1, polygon: [0, 0, 100, 0, 100, 100, 0, 100], hidden: false }, // gueltig (4 Punkte)
+      { id: 2, polygon: null, hidden: null },                              // carpet_info-Fall
+      { id: 3, polygon: [0, 0, 100, 0, 100], hidden: false },              // ungerade Laenge (5)
+      { id: 4, polygon: [0, 0], hidden: false },                           // zu kurz (< 6)
+    ];
+
+    const d = decodeFrame(merger._buildFrame());
+    const dc = d.meta.ha.detectedCarpets;
+    assert(Array.isArray(dc) && dc.length === 1, `nur der gueltige Teppich kommt durch (war ${JSON.stringify(dc)})`);
+    assert(dc[0].id === 1 && dc[0].polygon.length === 8, 'gueltiges Polygon unveraendert durchgereicht');
+    const verworfen = logs.filter((l) => l.includes('ungueltigem Polygon'));
+    assert(verworfen.length === 3, `3 ungueltige Teppiche per log.debug protokolliert (waren ${verworfen.length})`);
+  });
 });
