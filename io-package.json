@@ -1,21 +1,8 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.4.3",
+    "version": "0.4.4",
     "news": {
-      "0.3.24": {
-        "en": "Fixed custom room cleaning bug where switching active-map without touching a checkbox left customCommand holding room IDs from the previously selected map, causing the robot to clean the wrong room (room segment IDs are not unique across maps). customCommand is now rebuilt automatically whenever active-map changes, and is recomputed fresh from the active map's checkboxes immediately before every start as a final safeguard. Start is now aborted with a warning if no room is selected for the active map.",
-        "de": "Bugfix bei der benutzerdefinierten Zimmerreinigung: Beim Wechsel von active-map ohne Anklicken einer Checkbox behielt customCommand die Raum-IDs der zuvor gewählten Karte, wodurch der Roboter den falschen Raum reinigte (Segment-IDs sind nicht kartenübergreifend eindeutig). customCommand wird jetzt automatisch neu aufgebaut, sobald sich active-map ändert, und wird zusätzlich unmittelbar vor jedem Start als letzte Absicherung frisch aus den Checkboxen der aktiven Karte berechnet. Der Start wird jetzt mit einer Warnung abgebrochen, falls kein Raum für die aktive Karte ausgewählt ist.",
-        "ru": "Исправления и улучшения",
-        "pt": "Correções e melhorias",
-        "nl": "Fixes en verbeteringen",
-        "fr": "Corrections et améliorations",
-        "it": "Correzioni e miglioramenti",
-        "es": "Correcciones y mejoras",
-        "pl": "Poprawki i usprawnienia",
-        "uk": "Виправлення та покращення",
-        "zh-cn": "修复和改进"
-      },
       "0.3.25": {
         "en": "Fixed room-specific cleaning settings being written to the wrong room (cleanset used RoomOrder instead of the real room id) (#95). Fixed boolean switches being rejected by the device - values are now sent as 1/0 (#94). Fixed adapter reboot loop on devices without a generated map, e.g. MOVA Z70 (#83). Fixed multi-room cleaning only cleaning the first selected room on 5th gen devices. Fixed swapped cleaning modes (vacuum/vacuum+mop) on devices with liftable mop pads. Fixed stream-status type warning (#82). German translation: renamed dining hall segment from Speisesaal to Esszimmer. Thanks to RicardoHipp for reporting and analyzing several of these issues.",
         "de": "Behoben: raumspezifische Reinigungseinstellungen wurden in den falschen Raum geschrieben (cleanset nutzte RoomOrder statt der echten Raum-ID) (#95). Behoben: Boolean-Schalter wurden vom Gerät abgelehnt - Werte werden jetzt als 1/0 gesendet (#94). Behoben: Adapter-Neustartschleife bei Geräten ohne erzeugte Karte, z.B. MOVA Z70 (#83). Behoben: Mehrraum-Reinigung reinigte auf Geräten der 5. Generation nur den ersten gewählten Raum. Behoben: vertauschte Reinigungsmodi (Saugen/Saugen+Wischen) bei Geräten mit anhebbarem Wischmopp. Behoben: Typ-Warnung bei stream-status (#82). Deutsche Übersetzung: Speisesaal in Esszimmer umbenannt. Danke an RicardoHipp für Meldung und Analyse mehrerer dieser Fehler.",
@@ -84,6 +71,19 @@
       "0.4.3": {
         "en": "Fix for issue #124 (HTTP 404 on map download for r2253c, r2253w and similar newer Dreame models where the Dreame backend returns an object_name with a comma suffix that the OSS storage does not resolve): the adapter now transparently retries with the object_name truncated at the first comma. Models without a comma in the object_name (e.g. r9419h/L40s) are unchanged. Diagnostic [MAP-DIAG] logging from 0.4.2 remains but only fires when the fallback also fails; new [MAP-DIAG-2] captures the retry outcome for future analysis.",
         "de": "Fix für Issue #124 (HTTP-404 beim Karten-Download auf r2253c, r2253w und ähnlichen neueren Dreame-Modellen, bei denen das Dreame-Backend einen object_name mit Komma-Suffix liefert, den der OSS-Storage nicht auflöst): der Adapter versucht jetzt transparent einen zweiten Download mit an der ersten Komma-Stelle gekürztem object_name. Modelle ohne Komma im object_name (z.B. r9419h/L40s) bleiben unverändert. [MAP-DIAG]-Logging aus 0.4.2 bleibt, wird aber nur getriggert wenn auch der Fallback fehlschlägt; neues [MAP-DIAG-2] hält das Retry-Ergebnis für spätere Analyse fest.",
+        "ru": "Исправления и улучшения",
+        "pt": "Correções e melhorias",
+        "nl": "Fixes en verbeteringen",
+        "fr": "Corrections et améliorations",
+        "it": "Correzioni e miglioramenti",
+        "es": "Correcciones y mejoras",
+        "pl": "Poprawki i usprawnienia",
+        "uk": "Виправлення та покращення",
+        "zh-cn": "修复和改进"
+      },
+      "0.4.4": {
+        "en": "Fix for issue #124 (Layer 2): map payload for r2253c, r2253w and similar newer Dreame models is AES-256-CBC encrypted; the adapter now derives the AES key from the object_name comma suffix (SHA256, first 32 hex chars as UTF-8), uses a model-specific IV, and decrypts the payload before zlib inflation. Combined with the 0.4.3 comma-truncation fix, this closes the full end-to-end map download path for r2253 models. Also fixes a long-standing bug in lib/dreame.js where the persistent MAP_LIST path used an empty IV instead of the model-specific one. Models without a comma suffix in the object_name (e.g. r9419h/L40s) are unchanged. Thanks to luckyheiko and ralfheitz for the diagnostic logs.",
+        "de": "Fix für Issue #124 (Layer 2): Karten-Payload bei r2253c, r2253w und ähnlichen neueren Dreame-Modellen ist AES-256-CBC-verschlüsselt; der Adapter leitet den AES-Key jetzt aus dem Komma-Suffix des object_name ab (SHA256, erste 32 Hex-Zeichen als UTF-8), benutzt einen modellspezifischen IV und entschlüsselt die Payload vor der zlib-Dekomprimierung. Zusammen mit dem 0.4.3-Komma-Kürzungs-Fix schließt das den kompletten End-to-End-Karten-Download für die r2253-Familie. Behebt zusätzlich einen langjährigen Bug in lib/dreame.js, wo der persistente MAP_LIST-Pfad einen leeren IV statt des modellspezifischen verwendete. Modelle ohne Komma-Suffix im object_name (z.B. r9419h/L40s) bleiben unverändert. Dank an luckyheiko und ralfheitz für die Diagnose-Logs.",
         "ru": "Исправления и улучшения",
         "pt": "Correções e melhorias",
         "nl": "Fixes en verbeteringen",
