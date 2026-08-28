@@ -1,21 +1,8 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.4.4",
+    "version": "0.4.5",
     "news": {
-      "0.3.25": {
-        "en": "Fixed room-specific cleaning settings being written to the wrong room (cleanset used RoomOrder instead of the real room id) (#95). Fixed boolean switches being rejected by the device - values are now sent as 1/0 (#94). Fixed adapter reboot loop on devices without a generated map, e.g. MOVA Z70 (#83). Fixed multi-room cleaning only cleaning the first selected room on 5th gen devices. Fixed swapped cleaning modes (vacuum/vacuum+mop) on devices with liftable mop pads. Fixed stream-status type warning (#82). German translation: renamed dining hall segment from Speisesaal to Esszimmer. Thanks to RicardoHipp for reporting and analyzing several of these issues.",
-        "de": "Behoben: raumspezifische Reinigungseinstellungen wurden in den falschen Raum geschrieben (cleanset nutzte RoomOrder statt der echten Raum-ID) (#95). Behoben: Boolean-Schalter wurden vom Gerät abgelehnt - Werte werden jetzt als 1/0 gesendet (#94). Behoben: Adapter-Neustartschleife bei Geräten ohne erzeugte Karte, z.B. MOVA Z70 (#83). Behoben: Mehrraum-Reinigung reinigte auf Geräten der 5. Generation nur den ersten gewählten Raum. Behoben: vertauschte Reinigungsmodi (Saugen/Saugen+Wischen) bei Geräten mit anhebbarem Wischmopp. Behoben: Typ-Warnung bei stream-status (#82). Deutsche Übersetzung: Speisesaal in Esszimmer umbenannt. Danke an RicardoHipp für Meldung und Analyse mehrerer dieser Fehler.",
-        "ru": "Исправления и улучшения",
-        "pt": "Correções e melhorias",
-        "nl": "Fixes en verbeteringen",
-        "fr": "Corrections et améliorations",
-        "it": "Correzioni e miglioramenti",
-        "es": "Correcciones y mejoras",
-        "pl": "Poprawki i usprawnienia",
-        "uk": "Виправлення та покращення",
-        "zh-cn": "修复和改进"
-      },
       "0.3.26": {
         "en": "Fixed stream-status (siid 10001 piid 1) type warning: the value is a streaming-session object, not a number - state declaration corrected to type string / role json, matching the convention used for dnd-task, task-info and zone-status (#82). The boolean type mismatch reported by flapman on remote.auto-dust-collecting, mopping-with-detergent, hair-compression, silent-drying, auto-lds-coverage and clean-carpets-first is already covered by the boolean coercion added in 0.3.25 - please update. Thanks to krobipd for reporting the exact device payload and preparing the fix.",
         "de": "Behoben: Typ-Warnung bei stream-status (siid 10001 piid 1) - der Wert ist ein Streaming-Session-Objekt, keine Zahl. State-Deklaration auf type string / role json korrigiert, analog zu dnd-task, task-info und zone-status (#82). Die von flapman gemeldeten Boolean-Typ-Warnungen an remote.auto-dust-collecting, mopping-with-detergent, hair-compression, silent-drying, auto-lds-coverage und clean-carpets-first sind bereits durch die Boolean-Konvertierung aus 0.3.25 abgedeckt - bitte aktualisieren. Danke an krobipd fuer die Analyse und den vorbereiteten Fix.",
@@ -84,6 +71,19 @@
       "0.4.4": {
         "en": "Fix for issue #124 (Layer 2): map payload for r2253c, r2253w and similar newer Dreame models is AES-256-CBC encrypted; the adapter now derives the AES key from the object_name comma suffix (SHA256, first 32 hex chars as UTF-8), uses a model-specific IV, and decrypts the payload before zlib inflation. Combined with the 0.4.3 comma-truncation fix, this closes the full end-to-end map download path for r2253 models. Also fixes a long-standing bug in lib/dreame.js where the persistent MAP_LIST path used an empty IV instead of the model-specific one. Models without a comma suffix in the object_name (e.g. r9419h/L40s) are unchanged. Thanks to luckyheiko and ralfheitz for the diagnostic logs.",
         "de": "Fix für Issue #124 (Layer 2): Karten-Payload bei r2253c, r2253w und ähnlichen neueren Dreame-Modellen ist AES-256-CBC-verschlüsselt; der Adapter leitet den AES-Key jetzt aus dem Komma-Suffix des object_name ab (SHA256, erste 32 Hex-Zeichen als UTF-8), benutzt einen modellspezifischen IV und entschlüsselt die Payload vor der zlib-Dekomprimierung. Zusammen mit dem 0.4.3-Komma-Kürzungs-Fix schließt das den kompletten End-to-End-Karten-Download für die r2253-Familie. Behebt zusätzlich einen langjährigen Bug in lib/dreame.js, wo der persistente MAP_LIST-Pfad einen leeren IV statt des modellspezifischen verwendete. Modelle ohne Komma-Suffix im object_name (z.B. r9419h/L40s) bleiben unverändert. Dank an luckyheiko und ralfheitz für die Diagnose-Logs.",
+        "ru": "Исправления и улучшения",
+        "pt": "Correções e melhorias",
+        "nl": "Fixes en verbeteringen",
+        "fr": "Corrections et améliorations",
+        "it": "Correzioni e miglioramenti",
+        "es": "Correcciones y mejoras",
+        "pl": "Poprawki i usprawnienia",
+        "uk": "Виправлення та покращення",
+        "zh-cn": "修复和改进"
+      },
+      "0.4.5": {
+        "en": "Fix for issue #124 (Layer 3): map rendering could crash on the frontend when the device reported detected carpets with an invalid polygon field (null or malformed). Adds a filter in lib/mapMerge.js so invalid carpets never reach the frontend, a defensive guard in the carpet drawing routine in www/js/karte/merger.js, and a generic try/catch around overlay drawing so a single bad overlay never breaks the whole map rendering. The unreferenced legacy widget page www/legacy.html, which carried the same bug, is removed. Combined with 0.4.3 (comma-truncation) and 0.4.4 (AES decryption), this closes the full end-to-end map path for r2253c/r2253w. Thanks to luckyheiko for identifying the root cause and proposing the fix approach.",
+        "de": "Fix für Issue #124 (Layer 3): Karten-Rendering konnte im Frontend abstürzen, wenn das Gerät einen erkannten Teppich mit ungültigem Polygon-Feld (null oder fehlerhaft) meldete. Ergänzt einen Filter in lib/mapMerge.js damit ungültige Teppiche das Frontend gar nicht erst erreichen, einen defensiven Guard in der Teppich-Zeichenroutine in www/js/karte/merger.js, und ein generisches try/catch um die Overlay-Zeichenschleifen damit ein einzelnes fehlerhaftes Overlay nicht das gesamte Karten-Rendering bricht. Die nicht mehr referenzierte Alt-Widget-Seite www/legacy.html mit demselben Bug wird entfernt. Zusammen mit 0.4.3 (Komma-Kürzung) und 0.4.4 (AES-Entschlüsselung) schließt das den kompletten End-to-End-Karten-Pfad für r2253c/r2253w. Dank an luckyheiko für die Identifikation der Ursache und den Fix-Vorschlag.",
         "ru": "Исправления и улучшения",
         "pt": "Correções e melhorias",
         "nl": "Fixes en verbeteringen",
