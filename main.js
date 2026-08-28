@@ -4585,7 +4585,7 @@ class Dreame extends utils.Adapter {
         // geschrieben. Sonst würde während der Reinigung (force-I scheitert) die veraltete
         // Karte die Live-Karte überschreiben. mergedCloud kommt NUR aus force-I (idle) oder
         // den P-Frames (Reinigung). Die gespeicherte Karte dient nur Raumnamen/areaInfo.
-        const multiMap = decodeMultiMapData(firstMap.thb || firstMap.map, 0);
+        const multiMap = decodeMultiMapData(firstMap.thb || firstMap.map, 0, device.model);
         if (multiMap && multiMap.areaInfo) {
           this._areaInfoByDid[device.did] = multiMap.areaInfo;
           this._areaInfoByMapId[device.did] = this._areaInfoByMapId[device.did] || {};
