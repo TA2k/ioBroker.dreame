@@ -1,21 +1,8 @@
 {
   "common": {
     "name": "dreame",
-    "version": "0.4.5",
+    "version": "0.4.6",
     "news": {
-      "0.3.26": {
-        "en": "Fixed stream-status (siid 10001 piid 1) type warning: the value is a streaming-session object, not a number - state declaration corrected to type string / role json, matching the convention used for dnd-task, task-info and zone-status (#82). The boolean type mismatch reported by flapman on remote.auto-dust-collecting, mopping-with-detergent, hair-compression, silent-drying, auto-lds-coverage and clean-carpets-first is already covered by the boolean coercion added in 0.3.25 - please update. Thanks to krobipd for reporting the exact device payload and preparing the fix.",
-        "de": "Behoben: Typ-Warnung bei stream-status (siid 10001 piid 1) - der Wert ist ein Streaming-Session-Objekt, keine Zahl. State-Deklaration auf type string / role json korrigiert, analog zu dnd-task, task-info und zone-status (#82). Die von flapman gemeldeten Boolean-Typ-Warnungen an remote.auto-dust-collecting, mopping-with-detergent, hair-compression, silent-drying, auto-lds-coverage und clean-carpets-first sind bereits durch die Boolean-Konvertierung aus 0.3.25 abgedeckt - bitte aktualisieren. Danke an krobipd fuer die Analyse und den vorbereiteten Fix.",
-        "ru": "Исправления и улучшения",
-        "pt": "Correções e melhorias",
-        "nl": "Fixes en verbeteringen",
-        "fr": "Corrections et améliorations",
-        "it": "Correzioni e miglioramenti",
-        "es": "Correcciones y mejoras",
-        "pl": "Poprawki i usprawnienia",
-        "uk": "Виправлення та покращення",
-        "zh-cn": "修复和改进"
-      },
       "0.4.0": {
         "en": "Modular widget rebuild: customizable appearance (light/dark/main-color/custom themes), configurable panels, kiosk mode with URL-based configuration sharing, robot switcher for multi-device setups.",
         "de": "Modulares Widget-Rebuild: anpassbares Aussehen (Hell/Dunkel/Hauptfarbe/Custom-Themes), konfigurierbare Panels, Kiosk-Modus mit URL-basierter Konfigurations-Freigabe, Roboter-Umschalter für Multi-Device-Setups.",
@@ -84,6 +71,19 @@
       "0.4.5": {
         "en": "Fix for issue #124 (Layer 3): map rendering could crash on the frontend when the device reported detected carpets with an invalid polygon field (null or malformed). Adds a filter in lib/mapMerge.js so invalid carpets never reach the frontend, a defensive guard in the carpet drawing routine in www/js/karte/merger.js, and a generic try/catch around overlay drawing so a single bad overlay never breaks the whole map rendering. The unreferenced legacy widget page www/legacy.html, which carried the same bug, is removed. Combined with 0.4.3 (comma-truncation) and 0.4.4 (AES decryption), this closes the full end-to-end map path for r2253c/r2253w. Thanks to luckyheiko for identifying the root cause and proposing the fix approach.",
         "de": "Fix für Issue #124 (Layer 3): Karten-Rendering konnte im Frontend abstürzen, wenn das Gerät einen erkannten Teppich mit ungültigem Polygon-Feld (null oder fehlerhaft) meldete. Ergänzt einen Filter in lib/mapMerge.js damit ungültige Teppiche das Frontend gar nicht erst erreichen, einen defensiven Guard in der Teppich-Zeichenroutine in www/js/karte/merger.js, und ein generisches try/catch um die Overlay-Zeichenschleifen damit ein einzelnes fehlerhaftes Overlay nicht das gesamte Karten-Rendering bricht. Die nicht mehr referenzierte Alt-Widget-Seite www/legacy.html mit demselben Bug wird entfernt. Zusammen mit 0.4.3 (Komma-Kürzung) und 0.4.4 (AES-Entschlüsselung) schließt das den kompletten End-to-End-Karten-Pfad für r2253c/r2253w. Dank an luckyheiko für die Identifikation der Ursache und den Fix-Vorschlag.",
+        "ru": "Исправления и улучшения",
+        "pt": "Correções e melhorias",
+        "nl": "Fixes en verbeteringen",
+        "fr": "Corrections et améliorations",
+        "it": "Correzioni e miglioramenti",
+        "es": "Correcciones y mejoras",
+        "pl": "Poprawki i usprawnienia",
+        "uk": "Виправлення та покращення",
+        "zh-cn": "修复和改进"
+      },
+      "0.4.6": {
+        "en": "Attempted fix for issue #124 layer 4 (missing pixel raster on r2253c/r2253w): map background, walls, and room fills were not rendered even though overlays and metadata came through correctly. Adds a fallback to combined_pixel_type when the base pixel raster is empty (matching Home Assistant's renderer), and introduces permanent [MERGE-DEBUG] info-level logging (dimensions, pixel counts, wall/segment counts) so this failure mode is instantly diagnosable if it returns. Models whose base raster is already populated (e.g. r9419h) are unchanged. Thanks to luckyheiko for the pinpoint analysis.",
+        "de": "Fix-Versuch für Issue #124 Layer 4 (fehlendes Pixel-Raster auf r2253c/r2253w): Karten-Hintergrund, Wände und Raumfüllungen wurden nicht gerendert obwohl Overlays und Metadaten korrekt ankamen. Fügt einen Fallback auf combined_pixel_type ein wenn das Basis-Pixelraster leer ist (wie im Home-Assistant-Renderer), plus dauerhaftes [MERGE-DEBUG]-Info-Level-Logging (Dimensionen, Pixel-Zahlen, Wand-/Segment-Anzahl) damit dieser Fehlermodus falls er wiederkehrt sofort diagnostizierbar ist. Modelle mit bereits gefülltem Basis-Raster (z.B. r9419h) unverändert. Dank an luckyheiko für die punktgenaue Analyse.",
         "ru": "Исправления и улучшения",
         "pt": "Correções e melhorias",
         "nl": "Fixes en verbeteringen",
