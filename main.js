@@ -6147,14 +6147,16 @@ class Dreame extends utils.Adapter {
       await this.setStateAsync(_applyPath, false, true);
       return false;
     }
-    //    - every room ID must exist in the active map's areaInfo. The active map id is the
-    //      last path segment of status.map-object-name.
-    const _mapObjSt = await this.getStateAsync(`${deviceId}.status.map-object-name`);
-    const _mapObjName = _mapObjSt && _mapObjSt.val != null ? String(_mapObjSt.val) : '';
-    const _activeMapId = _mapObjName.split('/').pop().split(/[,.]/)[0];
-    if (!_activeMapId) {
+    //    - every room ID must exist in the active map's areaInfo. The active map id lives
+    //      in remote.custom-room-cleaning.active-map (values like "1" or "53" for Multi-
+    //      Floor setups). status.map-object-name is NOT the source of truth here — it
+    //      references the recovery slot, not the currently displayed/active map.
+    const _mapIdSt = await this.getStateAsync(`${deviceId}.remote.custom-room-cleaning.active-map`);
+    const _activeMapId = _mapIdSt && _mapIdSt.val != null ? String(_mapIdSt.val).trim() : '';
+    if (!_activeMapId || !/^\d+$/.test(_activeMapId)) {
       this.log.error(
-        `cleaning-sequence: cannot determine active map id from map-object-name "${_mapObjName}"`,
+        `cleaning-sequence: cannot determine active map id, ` +
+          `remote.custom-room-cleaning.active-map = "${_activeMapId}"`,
       );
       await this.setStateAsync(_applyPath, false, true);
       return false;
