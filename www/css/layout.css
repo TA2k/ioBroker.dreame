@@ -106,6 +106,15 @@ body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 .rbadge text{font-size:12px; font-weight:800; dominant-baseline:central;
   fill:var(--txt); text-anchor:start; user-select:none}
 .rbadge .zr{opacity:.55}                /* Zahnrad nur andeuten */
+/* F10d: Sequenz-Nummer (Position in remote.cleaning-sequence.order). Eigene Klasse neben
+   .rbadge, damit beide Badges nebeneinander bestehen. Kreis in Akzentfarbe, weisse Ziffer.
+   Sitzt oberhalb des Raumnamens (transform in render.js baueSeqBadge), .rbadge darunter. */
+.seq-badge{pointer-events:none}
+.seq-badge .kreis{fill:var(--accent,#4a78e0); stroke:var(--panel); stroke-width:1.5}
+.seq-badge text{font-size:11px; font-weight:800; fill:#fff;
+  text-anchor:middle; dominant-baseline:central; user-select:none}
+/* W3-Hook: Auge-Button blendet nur die Nummern aus, die Sequenz selbst bleibt unberuehrt. */
+body.cleaning-sequence-off .seq-badge{display:none}
 .stationhit{cursor:pointer}
 .trail{fill:none; stroke:#ffffff; stroke-width:1.1; stroke-linejoin:round;
   stroke-linecap:round; opacity:.85; pointer-events:none;}
