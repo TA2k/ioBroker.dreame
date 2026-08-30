@@ -6727,7 +6727,7 @@ class Dreame extends utils.Adapter {
           try {
             data.data.params = JSON.parse(state.val);
             data.data.params.did = deviceId;
-            if (state.val.includes && state.val.includes('piid')) {
+            if (state.val.includes && state.val.includes('piid') && !state.val.includes('aiid')) {
               data.data.method = 'set_properties';
             }
           } catch (error) {
