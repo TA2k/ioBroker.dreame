@@ -26,7 +26,7 @@
  * Siehe WIDGET_SESSION_STATUS.md fuer die vollstaendige Herleitung dieser Entscheidung.
  */
 
-/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel, ReinigungPanel, FehlerPanel, WasserMoppPanel, uiIcon */
+/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel, ReinigungPanel, FehlerPanel, WasserMoppPanel, ShortcutsPanel, TerminePanel, uiIcon */
 
 // ===== Zustand (verbatim aus www/legacy.html "Zustand"-Bereich uebernommen, minus SOCK —
 // die alte direkte Socket.io-Sendefunktion cmd() wird nicht mehr gebraucht, Trigger/Daten
@@ -55,10 +55,24 @@ let kartenDrehung = 0; // wird nach Config.laden() aus config.layout.drehung ges
 PanelRegistry.registriere('kopf', KopfPanel);
 PanelRegistry.registriere('fehler', FehlerPanel);
 PanelRegistry.registriere('reinigung', ReinigungPanel);
+// F4 (WIDGET_FEATURE_PLAN.md): direkt nach reinigung registriert -- Ziel-Reihenfolge laut
+// Plan "erst alle Bedienelemente, dann Statusanzeigen"; station wandert hier erst mit F6
+// nach vorne (siehe main.js-Kommentar bei den restlichen registriere()-Aufrufen unten).
+// WICHTIG: Reihenfolge hier UND die DOM-Reihenfolge der <section>-Panels in index.html
+// muessen uebereinstimmen -- main.js verschiebt beim Bauen keine DOM-Knoten, nur
+// PanelRegistry.alle bestimmt Zahnrad-Reihenfolge; die sichtbare Sidebar-Reihenfolge kommt
+// ausschliesslich aus der index.html-Reihenfolge der <section>-Elemente.
+PanelRegistry.registriere('shortcuts', ShortcutsPanel);
+// F5 (WIDGET_FEATURE_PLAN.md, nach Live-Test-Feedback): direkt nach shortcuts registriert +
+// in index.html direkt danach im DOM -- David-Vorgabe "Termine-Knopf unter den Kurzbefehlen".
+PanelRegistry.registriere('termine', TerminePanel);
+// F6 (WIDGET_FEATURE_PLAN.md): von seiner alten Position (nach statistik) hierher vorgezogen
+// -- Plan-Ziel "station direkt nach shortcuts/vor wartung", station steht damit direkt
+// nach termine (F5 kam nach der Plan-Erstellung dazwischen).
+PanelRegistry.registriere('station', StationPanel);
 PanelRegistry.registriere('wartung', WartungPanel);
 PanelRegistry.registriere('frischwasser', WasserMoppPanel);
 PanelRegistry.registriere('statistik', StatistikPanel);
-PanelRegistry.registriere('station', StationPanel);
 
 // ===== Verbindungsstatus (Karten-Overlay oben rechts) + Geraetename in der Kopfzeile =====
 const errEl = document.getElementById('err');
@@ -124,6 +138,10 @@ const GEAR_SICHTBAR = new URLSearchParams(location.search).get('gear') !== '0'; 
 // data-gear aufs Root, konsistent mit data-leiste/data-farben -- CSS braucht es, um den
 // #conn-Versatz (siehe layout.css) nur zu setzen, wenn tatsaechlich ein Zahnrad da ist.
 document.documentElement.dataset.gear = GEAR_SICHTBAR ? 'an' : 'aus';
+// data-einstellungen: 'an' nur waehrend das Overlay offen ist (siehe oeffneZahnradOvl()/
+// schliesseZahnradOvl() unten) -- Default 'aus' bei jedem Start/Reload, Overlay ist nie
+// initial offen.
+document.documentElement.dataset.einstellungen = 'aus';
 const zahnradBtn = document.getElementById('zahnradBtn');
 const zahnradOvl = document.getElementById('zahnradOvl');
 
@@ -157,6 +175,7 @@ function onZahnradEscape(e) { if (e.key === 'Escape') schliesseZahnradOvl(); }
 function schliesseZahnradOvl() {
   zahnradOvl.classList.remove('offen');
   zahnradBtn.classList.remove('on');
+  document.documentElement.dataset.einstellungen = 'aus';
   document.removeEventListener('keydown', onZahnradEscape);
   zovlResetZuruecksetzen(); // E2f: kein "Reset beim naechsten Oeffnen"-Rest-Zustand
 }
@@ -164,6 +183,11 @@ function schliesseZahnradOvl() {
 function oeffneZahnradOvl() {
   zahnradOvl.classList.add('offen');
   zahnradBtn.classList.add('on');
+  // F4-Live-Test-Fix: :root[data-einstellungen] steuert Bedienelemente AUSSERHALB des
+  // Overlays selbst, die nur waehrend der Einstellungs-Bearbeitung sichtbar sein sollen
+  // (z.B. das Auge-Icon je Kurzbefehl-Kachel, siehe shortcuts.js/layout.css .kbauge) --
+  // gleiches Muster wie die bestehenden data-gear/data-farben/data-leiste-Attribute.
+  document.documentElement.dataset.einstellungen = 'an';
   document.addEventListener('keydown', onZahnradEscape);
 }
 
@@ -268,7 +292,6 @@ function initAussehenSektion(config) {
   const breite = L.width || 275;
   document.documentElement.style.setProperty('--leiste-breite', breite + 'px');
   document.getElementById('zovlBreite').value = breite;
-  fuelleBreite();
 }
 
 document.getElementById('zovlTheme').onchange = e => {
@@ -319,57 +342,131 @@ zovlGroesseEl.onchange = () => wendeUndSchreibeGroesse(Number(zovlGroesseEl.valu
 document.getElementById('zovlGroesseMinus').onclick = () => wendeUndSchreibeGroesse(Number(zovlGroesseEl.value) - 5);
 document.getElementById('zovlGroessePlus').onclick = () => wendeUndSchreibeGroesse(Number(zovlGroesseEl.value) + 5);
 
-// Menue-Breite (Etappe E2c, Nachtrag 3): nutzt das seit E2a im Schema stehende, bisher nie
-// verdrahtete config.widget.layout.width + die zugehoerige --leiste-breite-CSS-Variable
-// (.side{width:calc(var(--leiste-breite) * var(--ui))}, siehe layout.css) -- bewusst kein
-// neues Feld, David-Entscheidung. input (Ziehen): nur live anwenden + Fuellstand/Anzeige
-// aktualisieren, kein Schreiben. change (Loslassen): persistieren -- gleiches Muster wie
-// der Wetness-Slider in reinigung.js.
+// Menue-Breite (F1, WIDGET_FEATURE_PLAN.md): Zahlenfeld + Minus/Plus statt Slider, exakt
+// dasselbe Muster wie der UI-Zoom direkt darueber (Etappe E2c, Nachtrag 2) -- kein
+// separates input-Live-Preview-Event, onchange (Enter/Tab/Blur) UND die beiden Knoepfe
+// wenden sofort an UND persistieren in einem Schritt. Ersetzt den vorherigen
+// input[type=range] (Etappe E2c, Nachtrag 3) -- config.widget.layout.width war und bleibt
+// ein px-Wert, keine Migration noetig (siehe Plan-Korrektur 2026-08-03).
+const MENUE_BREITE_SCHRITT_PX = 10;
+const MENUE_BREITE_MIN_PX = 250;
+const MENUE_BREITE_MAX_PX = 500;
 const zovlBreiteEl = document.getElementById('zovlBreite');
-const zovlBreiteWertEl = document.getElementById('zovlBreiteWert');
-function fuelleBreite() {
-  const pct = (Number(zovlBreiteEl.value) - Number(zovlBreiteEl.min)) / (Number(zovlBreiteEl.max) - Number(zovlBreiteEl.min)) * 100;
-  zovlBreiteEl.style.setProperty('--fill', pct + '%');
-  zovlBreiteWertEl.textContent = zovlBreiteEl.value + ' px';
+function wendeUndSchreibeBreite(px) {
+  const geklemmt = Math.min(MENUE_BREITE_MAX_PX,
+    Math.max(MENUE_BREITE_MIN_PX, Math.round(px) || MENUE_BREITE_MIN_PX)); // HTML5 min/max
+  // greift meist schon selbst, zusaetzliches Klemmen hier gegen "abc"/leer/Tippfehler
+  zovlBreiteEl.value = geklemmt;
+  document.documentElement.style.setProperty('--leiste-breite', geklemmt + 'px');
+  schreibeLayout('width', geklemmt);
 }
-zovlBreiteEl.oninput = () => {
-  document.documentElement.style.setProperty('--leiste-breite', zovlBreiteEl.value + 'px');
-  fuelleBreite();
-};
-zovlBreiteEl.onchange = () => schreibeLayout('width', Number(zovlBreiteEl.value));
+zovlBreiteEl.onchange = () => wendeUndSchreibeBreite(Number(zovlBreiteEl.value));
+document.getElementById('zovlBreiteMinus').onclick =
+  () => wendeUndSchreibeBreite(Number(zovlBreiteEl.value) - MENUE_BREITE_SCHRITT_PX);
+document.getElementById('zovlBreitePlus').onclick =
+  () => wendeUndSchreibeBreite(Number(zovlBreiteEl.value) + MENUE_BREITE_SCHRITT_PX);
 
 // ===== Panels-Sektion im Einstellungs-Overlay (Etappe E2d): Sichtbarkeit-Toggle pro Panel
-// (Ebene 1 aus WIDGET_UMBAU_PLAN.md Abschnitt 8.2 -- Feld-Sichtbarkeit "versteckt" ist
-// bewusst NICHT Teil dieser Etappe, siehe WIDGET_SESSION_STATUS.md E2d-Struktur-Analyse:
-// braucht Aenderungen in mehreren Panel-Dateien, eigene Etappe E2e).
+// (Ebene 1 aus WIDGET_UMBAU_PLAN.md Abschnitt 8.2). Ebene 2 (Feld-Sichtbarkeit "versteckt",
+// Sub-Toggles je Panel) seit F3 (WIDGET_FEATURE_PLAN.md) ergaenzt -- panelsweise optional,
+// ein Panel deklariert seine versteckbaren Felder ueber die statische
+// Klasseneigenschaft versteckbareFelder (panel.js), Default leer (keine Sub-Toggles).
 // kopf/fehler sind Kern-Chrome ohne eigene Ueberschrift (Start/Stop/Home bzw. Warnungen) --
 // bewusst NICHT toggle-bar, damit sich niemand versehentlich die Bedienelemente wegklickt.
 // Liste kommt aus PanelRegistry.alle (nicht hartcodierte Reihenfolge) -- sortiert sich die
 // Registry um, folgen die Toggles automatisch. Nur die Anzeige-Namen sind hier gepflegt,
-// weil es keine zentrale "Titel"-Eigenschaft je Panel-Klasse gibt. =====
-const PANEL_LABEL = { reinigung: 'Reinigung', wartung: 'Wartung', frischwasser: 'Wasser & Mopp', statistik: 'Statistik', station: 'Station' };
+// weil es keine zentrale "Titel"-Eigenschaft je Panel-Klasse gibt. Bleiben bewusst als
+// hartcodierte deutsche Strings stehen (nicht t()) -- PANEL_LABEL deckt alle sieben Panels
+// ab, aber nur reinigung/shortcuts/termine/station/wartung/statistik haben bisher eigene
+// i18n-Keys (F3/F4/F5/F6/F7a/F7b); volle Umstellung dieser Zahnrad-Liste folgt mit F8/F9,
+// wenn jedes Panel seine eigenen Keys bekommt. =====
+const PANEL_LABEL = { reinigung: 'Reinigung', shortcuts: 'Kurzbefehle', termine: 'Termine', wartung: 'Wartung', frischwasser: 'Wasser & Mopp', statistik: 'Statistik', station: 'Station' };
 const zovlPanelsListe = document.getElementById('zovlPanelsListe');
-zovlPanelsListe.innerHTML = PanelRegistry.alle
-  .filter(eintrag => PANEL_LABEL[eintrag.id])
-  .map(eintrag => `<label class="zovl-feld"><span>${PANEL_LABEL[eintrag.id]}</span>`
-    + `<input type="checkbox" class="zovl-switch" data-panel="${eintrag.id}"></label>`)
-  .join('');
 
-/** Panel-Sichtbarkeit-Checkboxen auf den Stand des aktuell aktiven Geraets bringen
- * (config.widget ist pro Geraet -- unterschiedliche Roboter koennen unterschiedliche
- * Panels ausgeblendet haben, Toggles muessen bei jedem Geraete-Wechsel neu gesetzt werden). */
+/** Baut die Panels-Toggle-Liste im Zahnrad-Overlay, inkl. Sub-Toggle-Zeilen fuer
+ * Panel.versteckbareFelder (F3). Muss NACH I18n.laden() laufen (siehe Start-IIFE weiter
+ * unten) -- die Sub-Toggle-Labels kommen ueber t(), das vor Ladeabschluss nur
+ * Fallback-Werte liefert (siehe i18n.js-Kommentarkopf). */
+function baueZovlPanelsListe() {
+  zovlPanelsListe.innerHTML = PanelRegistry.alle
+    .filter(eintrag => PANEL_LABEL[eintrag.id])
+    .map(eintrag => {
+      const subZeilen = (eintrag.klasse.versteckbareFelder || []).map(feld =>
+        `<label class="zovl-feld zovl-feld-sub"><span>${t(feld.labelKey)}</span>`
+        + `<input type="checkbox" class="zovl-switch" data-panel-feld="${eintrag.id}.${feld.id}"></label>`,
+      ).join('');
+      return `<label class="zovl-feld"><span>${PANEL_LABEL[eintrag.id]}</span>`
+        + `<input type="checkbox" class="zovl-switch" data-panel="${eintrag.id}"></label>${subZeilen}`;
+    })
+    .join('');
+}
+
+/** Panel- und Feld-Sichtbarkeit-Checkboxen auf den Stand des aktuell aktiven Geraets
+ * bringen (config.widget ist pro Geraet -- unterschiedliche Roboter koennen
+ * unterschiedliche Panels/Felder ausgeblendet haben, Toggles muessen bei jedem
+ * Geraete-Wechsel neu gesetzt werden). */
 function initPanelsSektion(config) {
   for (const el of zovlPanelsListe.querySelectorAll('input[data-panel]')) {
     const eintrag = config.panels && config.panels[el.dataset.panel];
     el.checked = eintrag ? eintrag.sichtbar !== false : true;
   }
+  for (const el of zovlPanelsListe.querySelectorAll('input[data-panel-feld]')) {
+    const [panelId, feldId] = el.dataset.panelFeld.split('.');
+    const eintrag = config.panels && config.panels[panelId];
+    const versteckt = !!(eintrag && Array.isArray(eintrag.versteckt) && eintrag.versteckt.includes(feldId));
+    el.checked = !versteckt; // Haken = sichtbar, gleiche Semantik wie die Panel-Ebene
+  }
 }
 
 // Delegated Listener statt einzelner Handler pro Checkbox: die Checkboxen werden oben zur
 // Laufzeit generiert, ihre Zahl/Reihenfolge kann sich mit der PanelRegistry aendern. Kein
-// Minimum erzwungen -- alle fuenf Panels gleichzeitig aus ist erlaubt (David-Vorgabe),
-// Sidebar bleibt dann einfach leer/leer bis auf kopf/fehler.
+// Minimum erzwungen -- alle Panels gleichzeitig aus ist erlaubt (David-Vorgabe),
+// Sidebar bleibt dann einfach leer/leer bis auf kopf/fehler. Ein Handler fuer beide Ebenen
+// (Panel UND Feld) -- data-panel-feld wird zuerst geprueft, sonst waere jeder Feld-Klick
+// zusaetzlich (faelschlich) als Panel-Sichtbarkeit-Aenderung interpretierbar, weil
+// dataset.panel bei verschachtelten data-*-Attributen sonst leicht verwechselt wird.
+/** Setzt/loescht feldId in aktiveWidgetConfig.panels.<panelId>.versteckt -- rein
+ * synchrone Mutation, keine Persistenz. Gemeinsam genutzt vom Zahnrad-Sub-Toggle-Handler
+ * unten (F3) und der schreibePanelFeldVersteckt()-Bruecke (F4) fuer Panels mit dynamischer
+ * Feld-Liste, siehe dort. */
+function setzeFeldVersteckt(panelId, feldId, versteckt) {
+  const eintrag = aktiveWidgetConfig.panels[panelId] || (aktiveWidgetConfig.panels[panelId] = { sichtbar: true, versteckt: [] });
+  if (!Array.isArray(eintrag.versteckt)) eintrag.versteckt = [];
+  const idx = eintrag.versteckt.indexOf(feldId);
+  if (versteckt) { if (idx === -1) eintrag.versteckt.push(feldId); }
+  else if (idx !== -1) eintrag.versteckt.splice(idx, 1);
+}
+
+/** Bruecke fuer Panels mit dynamischer (nicht zur Ladezeit bekannter) Feld-Liste (F4,
+ * z.B. ShortcutsPanel) -- Panel.versteckbareFelder (F3) setzt eine feste, beim Bau der
+ * Zahnrad-Liste bereits bekannte Liste voraus, was fuer pro Geraet unterschiedlich viele/
+ * benannte Elemente (Shortcuts) nicht passt. Solche Panels bieten ihre
+ * Sichtbarkeit-Bedienung direkt am Element an (z.B. Auge-Icon je Kachel, siehe
+ * shortcuts.js) und rufen diese Bruecke zum Mutieren+Persistieren auf, statt selbst
+ * Config/Geraete zu kennen -- gleiches Schichten-Prinzip wie raumUmschalten()/
+ * updateCleanPanel() zwischen render.js und reinigung.js.
+ * setzeFeldVersteckt() mutiert aktiveWidgetConfig SYNCHRON (vor dem ersten await hier) --
+ * ein direkt anschliessendes this.render() im aufrufenden Panel sieht den neuen Wert also
+ * bereits, ohne auf Config.speichern() zu warten (gleiches "visuell zuerst, Persistenz
+ * async danach"-Prinzip wie main.js' schreibeLayout()). Absichtlich nicht awaitet beim
+ * Aufruf, wie bei schreibeLayout() ueblich -- kein panelsAbbauen()/baueAktivePanels()-
+ * Rundlauf noetig, weil nur das eine, bereits laufende Panel betroffen ist. */
+async function schreibePanelFeldVersteckt(panelId, feldId, versteckt) {
+  setzeFeldVersteckt(panelId, feldId, versteckt);
+  await Config.speichern(Geraete.aktiveDid, aktiveWidgetConfig);
+}
+
 zovlPanelsListe.addEventListener('change', async e => {
+  const panelFeld = e.target.dataset.panelFeld;
+  if (panelFeld) {
+    const [panelId, feldId] = panelFeld.split('.');
+    setzeFeldVersteckt(panelId, feldId, !e.target.checked);
+    panelsAbbauen();
+    const geraetFeld = Geraete.aktuelles();
+    await baueAktivePanels(aktiveWidgetConfig, Geraete.aktiveDid, geraetFeld && geraetFeld.typ);
+    await Config.speichern(Geraete.aktiveDid, aktiveWidgetConfig);
+    return;
+  }
   const id = e.target.dataset.panel;
   if (!id) return;
   aktiveWidgetConfig.panels[id].sichtbar = e.target.checked;
@@ -629,8 +726,12 @@ function initZoomPan() {
   // #devName ausgenommen seit Etappe E1 (Roboter-Umschalter): sonst faengt
   // setPointerCapture() jeden Klick darauf als Kartendrag/Raumklick ab, bevor
   // devNameEl.onclick ueberhaupt feuert -- gleiches Prinzip wie bei .zoom oben.
+  // #termineOvl (F5, WIDGET_FEATURE_PLAN.md) ergaenzt: liegt als eigenes Overlay ebenfalls
+  // innerhalb von .stage (siehe index.html), ohne diesen Eintrag faengt setPointerCapture()
+  // jeden Klick/Checkbox-Toggle im Termine-Modal als Kartendrag/Raumklick ab, bevor dessen
+  // eigene Handler ueberhaupt feuern -- gleiches Prinzip wie bei #zahnradOvl.
   const aufBedienung = t => !!(t && t.closest && (t.closest('.zoom') || t.closest('#devName')
-    || t.closest('#zahnradBtn') || t.closest('#zahnradOvl')));
+    || t.closest('#zahnradBtn') || t.closest('#zahnradOvl') || t.closest('#termineOvl')));
   stage.addEventListener('pointerdown', e => {
     if (aufBedienung(e.target)) return;
     drag = true; lx = e.clientX; ly = e.clientY; sx0 = e.clientX; sy0 = e.clientY;
@@ -723,7 +824,7 @@ async function baueAktivePanels(config, did, typ) {
   for (const { id, klasse } of PanelRegistry.aktive(config, typ)) {
     const el = document.getElementById('panel-' + id);
     if (el) el.hidden = false;
-    const panel = new klasse(id, el);
+    const panel = new klasse(id, el, config);
     aktivePanels.push(panel);
     panel.zeige();
     await panel.init(did);
@@ -832,6 +933,14 @@ async function ladeGeraet(did) {
     }
     Daten.subscribe(CONN_ID, zeigeVerbindung);
     zeigeVerbindung(await Daten.getState(CONN_ID));
+
+    // F2: vor dem ersten ladeGeraet()-Aufruf abschliessen, siehe i18n.js-Kommentarkopf --
+    // Panels ab F3 rufen t() aus render()/init() heraus auf, das laeuft immer erst danach.
+    await I18n.laden();
+    // F3: baut die Zahnrad-Panels-Liste inkl. Sub-Toggles -- nutzt t(), muss deshalb
+    // ebenfalls erst nach I18n.laden() laufen, spaetestens vor initPanelsSektion()
+    // (in ladeGeraet(), noch weiter unten in dieser Sequenz).
+    baueZovlPanelsListe();
 
     const geraet = await Geraete.starten();
     if (!geraet) {

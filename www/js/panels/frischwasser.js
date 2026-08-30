@@ -11,16 +11,23 @@
  * Station-Panel (station.js).
  */
 
-/* global Panel, Trigger, Daten, uiIcon */
+/* global Panel, Trigger, Daten, uiIcon, t, localeFuerZahlen */
+
+// F8 (WIDGET_FEATURE_PLAN.md): toLocaleString() lief bisher hart auf 'de-DE', gleicher Fund
+// wie bei statistik.js (F7b) -- localeFuerZahlen() liegt deshalb zentral in core/i18n.js
+// (Live-Test-Fund: zwei identische lokale Deklarationen kollidierten im gemeinsamen
+// globalen Scope, siehe WIDGET_SESSION_STATUS.md).
 
 // Farben ueber vorhandene CSS-Custom-Properties (theme.css) statt neuer Klassen -- der
 // Balken braucht drei Zustaende (ok/warn/critical), die bestehenden .vrow.warn/.vrow.bad-Regeln
 // greifen hier nicht, weil der Balken (anders als bei wartung.js) senkrecht statt waagerecht
 // neben Icon/Name steht (Vorgabe: Text UEBER dem Balken).
 const TANK_FARBE = { ok: 'var(--txt)', warn: 'var(--warn,#e0a33a)', critical: 'var(--bad,#ff5c7a)' };
-const TANK_WARNTEXT = {
-  warn: 'Wasser bald nachfüllen',
-  critical: 'Wasser dringend nachfüllen — Störungsgefahr!',
+// Wert -> i18n-Key statt festem String (F8), gleiches Muster wie SAUGBEUTEL_TEXT_KEY in
+// wartung.js (F7a).
+const TANK_WARNTEXT_KEY = {
+  warn: 'panel.frischwasser.warnung.warn',
+  critical: 'panel.frischwasser.warnung.critical',
 };
 
 // Stations-Frischwassertank (siid 27, piid 1, lib/specs/station.js): 0 = Installed,
@@ -39,11 +46,25 @@ const IST_EINS = wert => Number(wert) === 1;
 class WasserMoppPanel extends Panel {
   static passtZuTyp = ['vacuum'];
 
-  constructor(id, container) {
-    super(id, container);
+  // F8 (WIDGET_FEATURE_PLAN.md): jede Zeile einzeln ausblendbar, gleiches F3-Blueprint wie
+  // bei den vorigen Panels. "fuellstand" deckt Balken + Warnbox zusammen ab (beide haengen
+  // an config.tank.remaining-ml/-capacity-ml bzw. deren abgeleitetem Status).
+  static versteckbareFelder = [
+    { id: 'fuellstand', labelKey: 'panel.frischwasser.fuellstand.label' },
+    { id: 'wasch-zyklen', labelKey: 'panel.frischwasser.wasch-zyklen.label' },
+    { id: 'tank-status', labelKey: 'panel.frischwasser.tank-status.label' },
+    { id: 'mopp-montiert', labelKey: 'panel.frischwasser.mopp-montiert.label' },
+    { id: 'mopp-in-station', labelKey: 'panel.frischwasser.mopp-in-station.label' },
+    { id: 'feuchtigkeit', labelKey: 'panel.frischwasser.feuchtigkeit.label' },
+    { id: 'temperatur', labelKey: 'panel.frischwasser.temperatur.label' },
+  ];
+
+  constructor(id, container, config) {
+    super(id, container, config);
     this.werte = {}; // key -> letzter Wert, key aus _idZuKey
     this._idZuKey = {};
     this._temperaturStates = {}; // wert -> lokalisierter Text, aus common.states des Adapter-Objekts
+    this._statischeTexteGesetzt = false;
   }
 
   // Temperatur-Texte kommen aus den Objekt-Metadaten statt einer eigenen Uebersetzungstabelle:
@@ -84,8 +105,16 @@ class WasserMoppPanel extends Panel {
     this.render();
   }
 
+  _renderStatischeTexte() {
+    if (this._statischeTexteGesetzt) return;
+    this._statischeTexteGesetzt = true;
+    const titel = document.getElementById('frischwasserTitel');
+    if (titel) titel.textContent = t('panel.frischwasser.titel');
+  }
+
   render() {
     if (!this.container) return;
+    this._renderStatischeTexte();
     const balken = document.getElementById('frischwasserBalken');
     const liste = document.getElementById('frischwasserListe');
     const titel = document.getElementById('frischwasserTitel');
@@ -94,11 +123,13 @@ class WasserMoppPanel extends Panel {
     if (!balken || !liste || !titel || !warnung || !aktionen) return;
 
     const w = this.werte;
-    const habenBalkenDaten = w.remainingMl != null && w.capacityMl != null;
+    const fuellstandVersteckt = this.feldVersteckt('fuellstand');
+    const habenBalkenDaten = w.remainingMl != null && w.capacityMl != null && !fuellstandVersteckt;
 
     if (habenBalkenDaten) {
-      const remainingL = (Number(w.remainingMl) / 1000).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-      const capacityL = (Number(w.capacityMl) / 1000).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const locale = localeFuerZahlen();
+      const remainingL = (Number(w.remainingMl) / 1000).toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const capacityL = (Number(w.capacityMl) / 1000).toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       const pct = Math.max(0, Math.min(100, (Number(w.remainingMl) / Number(w.capacityMl)) * 100));
       const farbe = TANK_FARBE[w.status] || TANK_FARBE.ok;
       const knapp = Number(w.remainingMl) < 100;
@@ -119,37 +150,39 @@ class WasserMoppPanel extends Panel {
     }
 
     const zeilen = [];
-    if (w.washCounter != null) {
-      const uebrig = w.remainingWashes != null ? ` (~${w.remainingWashes} übrig)` : '';
-      zeilen.push(`<div><span>Wasch-Zyklen</span><span>${w.washCounter} verbraucht${uebrig}</span></div>`);
+    if (w.washCounter != null && !this.feldVersteckt('wasch-zyklen')) {
+      const uebrig = w.remainingWashes != null ? ` (~${w.remainingWashes} ${t('panel.frischwasser.wasch-zyklen.uebrig')})` : '';
+      zeilen.push(`<div><span>${t('panel.frischwasser.wasch-zyklen.label')}</span>`
+        + `<span>${w.washCounter} ${t('panel.frischwasser.wasch-zyklen.verbraucht')}${uebrig}</span></div>`);
     }
-    if (w.tankStatus != null) {
+    if (w.tankStatus != null && !this.feldVersteckt('tank-status')) {
       const eingesetzt = TANK_EINGESETZT(w.tankStatus);
-      zeilen.push(`<div><span>Tank</span><span>${eingesetzt ? 'eingesetzt ✓' : 'draußen ✗'}</span></div>`);
+      const wert = eingesetzt ? t('panel.frischwasser.tank-status.eingesetzt') : t('panel.frischwasser.tank-status.draussen');
+      zeilen.push(`<div><span>${t('panel.frischwasser.tank-status.label')}</span><span>${wert}</span></div>`);
     }
-    if (w.moppStatus != null) {
+    if (w.moppStatus != null && !this.feldVersteckt('mopp-montiert')) {
       const drin = IST_EINS(w.moppStatus);
-      zeilen.push(`<div><span>Mopp montiert</span><span>${drin ? '✓' : '✗'}</span></div>`);
+      zeilen.push(`<div><span>${t('panel.frischwasser.mopp-montiert.label')}</span><span>${drin ? '✓' : '✗'}</span></div>`);
     }
-    if (w.moppInStation != null) {
+    if (w.moppInStation != null && !this.feldVersteckt('mopp-in-station')) {
       const inStation = IST_EINS(w.moppInStation);
-      zeilen.push(`<div><span>Mopp in Station</span><span>${inStation ? '✓' : '✗'}</span></div>`);
+      zeilen.push(`<div><span>${t('panel.frischwasser.mopp-in-station.label')}</span><span>${inStation ? '✓' : '✗'}</span></div>`);
     }
-    if (w.wetness != null) {
-      zeilen.push(`<div><span>Feuchtigkeit</span><span>${w.wetness}</span></div>`);
+    if (w.wetness != null && !this.feldVersteckt('feuchtigkeit')) {
+      zeilen.push(`<div><span>${t('panel.frischwasser.feuchtigkeit.label')}</span><span>${w.wetness}</span></div>`);
     }
-    if (w.temperatur != null) {
-      const temperaturText = this._temperaturStates[String(w.temperatur)] || ('Stufe ' + w.temperatur);
-      zeilen.push(`<div><span>Temperatur</span><span>${temperaturText}</span></div>`);
+    if (w.temperatur != null && !this.feldVersteckt('temperatur')) {
+      const temperaturText = this._temperaturStates[String(w.temperatur)] || `${t('panel.frischwasser.temperatur.stufe-praefix')} ${w.temperatur}`;
+      zeilen.push(`<div><span>${t('panel.frischwasser.temperatur.label')}</span><span>${temperaturText}</span></div>`);
     }
     liste.innerHTML = zeilen.join('');
 
     const habenInhalt = habenBalkenDaten || zeilen.length > 0;
     titel.hidden = !habenInhalt;
 
-    const warnText = TANK_WARNTEXT[w.status];
-    if (warnText) {
-      warnung.innerHTML = `<div class="wrow${w.status === 'critical' ? ' bad' : ''}">${uiIcon('warnung', 15)}<span>${warnText}</span></div>`;
+    const warnKey = !fuellstandVersteckt ? TANK_WARNTEXT_KEY[w.status] : null;
+    if (warnKey) {
+      warnung.innerHTML = `<div class="wrow${w.status === 'critical' ? ' bad' : ''}">${uiIcon('warnung', 15)}<span>${t(warnKey)}</span></div>`;
       warnung.hidden = false;
     } else {
       warnung.innerHTML = '';
@@ -157,7 +190,7 @@ class WasserMoppPanel extends Panel {
     }
 
     aktionen.innerHTML = `<button class="saktion" type="button" data-id="reset-tank">`
-      + `${uiIcon('frischwasser', 18)}<span>Tank gefüllt zurücksetzen</span></button>`;
+      + `${uiIcon('frischwasser', 18)}<span>${t('panel.frischwasser.reset-knopf')}</span></button>`;
     const resetBtn = aktionen.querySelector('button[data-id="reset-tank"]');
     if (resetBtn) resetBtn.onclick = () => Trigger.resetTankCounter(this.did);
   }

@@ -39,18 +39,39 @@ class Panel {
    * Raum-/Wassertank-Panels. Default: passt zu allen bekannten Typen. */
   static passtZuTyp = ['vacuum', 'mower'];
 
+  /** Einzeln aus-/einblendbare Felder dieses Panels im Zahnrad-Overlay (F3,
+   * WIDGET_FEATURE_PLAN.md -- Blaupause fuer F6-F9). In Unterklassen ueberschreiben:
+   * Array aus `{ id, labelKey }` -- `id` landet in
+   * `config.widget.panels.<panelId>.versteckt`, `labelKey` ist der i18n-Key fuer die
+   * Beschriftung der Sub-Toggle-Zeile im Overlay (main.js `baueZovlPanelsListe()`).
+   * Default: keine versteckbaren Felder (Panel ist entweder ganz sichtbar oder ganz weg,
+   * ueber die bestehende Panel-Ebene-Sichtbarkeit). */
+  static versteckbareFelder = [];
+
   /**
    * @param {string} id            Panel-ID, identisch mit dem Schluessel in
    *                                widgetConfig.panels (siehe config.js)
    * @param {HTMLElement|null} container  DOM-Bereich dieses Panels, falls schon vorhanden
+   * @param {object|null} config   aktuell geladene widgetConfig (main.js aktiveWidgetConfig),
+   *                                fuer feldVersteckt() -- seit F3, vorher nicht durchgereicht
    */
-  constructor(id, container) {
+  constructor(id, container, config) {
     this.id = id;
     this.container = container || null;
+    this.config = config || null;
     this.sichtbar = false;
     this.did = null;
     this._stateAbos = new Map(); // State-ID -> Callback, fuer dispose()
     this._musterAbos = new Map(); // Muster -> Callback, fuer dispose() (Etappe C5.5)
+  }
+
+  /** Ob das Feld feldId (siehe static versteckbareFelder) laut aktueller Config versteckt
+   * ist. Default false, wenn keine Config da ist oder das Panel/Feld darin (noch) nicht
+   * vorkommt -- config.js legt versteckt:[] zwar immer per Default an, robust gegen
+   * unerwartet fehlende Eintraege trotzdem sinnvoll (aehnlich PanelRegistry.aktive()). */
+  feldVersteckt(feldId) {
+    const eintrag = this.config && this.config.panels && this.config.panels[this.id];
+    return !!(eintrag && Array.isArray(eintrag.versteckt) && eintrag.versteckt.includes(feldId));
   }
 
   /** State-IDs (vollstaendig, inkl. DID), die dieses Panel fuer das gegebene Geraet

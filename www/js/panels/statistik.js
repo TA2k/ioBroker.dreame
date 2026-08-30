@@ -16,23 +16,33 @@
  * Knopf/Overlay noetig — openPicker()/oeffneOvl() werden hier nicht gebraucht.
  */
 
-/* global Panel */
+/* global Panel, t, localeFuerZahlen */
+
+// F7b (WIDGET_FEATURE_PLAN.md): toLocaleString()/toLocaleDateString() liefen bisher hart auf
+// 'de-DE' -- ein EN-Nutzer sah trotz uebersetzter Zeilennamen weiterhin deutsch formatierte
+// Zahlen/Datumsangaben (Tausenderpunkt statt -komma usw.). Jetzt an I18n.sprache gekoppelt
+// (localeFuerZahlen(), core/i18n.js -- gemeinsam mit frischwasser.js genutzt, siehe dort).
 
 // ===== Statistik-Zeilen: Objekt/Name/Formatierung. State-Namen und Einheiten (min, m²) aus
 // lib/specs/statistics.js verifiziert. first-cleaning-date liefert einen Unix-Zeitstempel in
-// Sekunden (wie im Original: new Date(v*1000)). =====
+// Sekunden (wie im Original: new Date(v*1000)). name -> nameKey (F7b): i18n-Key statt festem
+// deutschen String, gleiches Muster wie VERSCHLEISS in wartung.js (F7a). =====
 const STATISTIK = [
-  { obj: 'cleaning-count', name: 'Reinigungen', fmt: v => String(v) },
-  { obj: 'total-cleaned-area', name: 'Fläche', fmt: v => v.toLocaleString('de-DE') + ' m²' },
-  { obj: 'total-cleaning-time', name: 'Dauer', fmt: v => Math.round(v / 60).toLocaleString('de-DE') + ' h' },
-  { obj: 'first-cleaning-date', name: 'Seit', fmt: v => new Date(v * 1000).toLocaleDateString('de-DE') },
+  { obj: 'cleaning-count', nameKey: 'panel.statistik.reinigungen.label', fmt: v => String(v) },
+  { obj: 'total-cleaned-area', nameKey: 'panel.statistik.flaeche.label', fmt: v => v.toLocaleString(localeFuerZahlen()) + ' m²' },
+  { obj: 'total-cleaning-time', nameKey: 'panel.statistik.dauer.label', fmt: v => Math.round(v / 60).toLocaleString(localeFuerZahlen()) + ' h' },
+  { obj: 'first-cleaning-date', nameKey: 'panel.statistik.seit.label', fmt: v => new Date(v * 1000).toLocaleDateString(localeFuerZahlen()) },
 ];
 
 class StatistikPanel extends Panel {
-  constructor(id, container) {
-    super(id, container);
+  // F7b: jede Zeile einzeln ausblendbar, gleiches F3-Blueprint wie bei den vorigen Panels.
+  static versteckbareFelder = STATISTIK.map(s => ({ id: s.obj, labelKey: s.nameKey }));
+
+  constructor(id, container, config) {
+    super(id, container, config);
     this.werte = {}; // obj -> letzter Wert (fehlender Eintrag = noch nichts empfangen -> Zeile bleibt aus)
     this._idZuObj = {};
+    this._statischeTexteGesetzt = false;
   }
 
   benoetigteStates(did) {
@@ -49,15 +59,23 @@ class StatistikPanel extends Panel {
     this.render();
   }
 
+  _renderStatischeTexte() {
+    if (this._statischeTexteGesetzt) return;
+    this._statischeTexteGesetzt = true;
+    const titel = document.getElementById('statistikTitel');
+    if (titel) titel.textContent = t('panel.statistik.titel');
+  }
+
   render() {
     if (!this.container) return;
+    this._renderStatischeTexte();
     const liste = document.getElementById('statistikListe');
     const titel = document.getElementById('statistikTitel');
     if (!liste || !titel) return;
 
-    const zeilen = STATISTIK.filter(s => this.werte[s.obj] != null).map(s => {
+    const zeilen = STATISTIK.filter(s => this.werte[s.obj] != null && !this.feldVersteckt(s.obj)).map(s => {
       const wert = s.fmt(Number(this.werte[s.obj]));
-      return `<div><span>${s.name}</span><span>${wert}</span></div>`;
+      return `<div><span>${t(s.nameKey)}</span><span>${wert}</span></div>`;
     });
 
     liste.innerHTML = zeilen.join('');

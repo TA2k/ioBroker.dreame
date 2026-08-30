@@ -170,57 +170,72 @@ function buildCarpetData(){
   let L=H.origin.x, T=H.origin.y;
   if (((L%GS)+GS)%GS!==0 || ((T%GS)+GS)%GS!==0){ L+=GS/2; T+=GS/2; }
   const cellVal=(x,y)=>raw[mapStart+y*W+x];
-  if (ha.detectedCarpets && ha.detectedCarpets.length){
-    let optimized=null;
-    for (const c of ha.detectedCarpets){
-      if (c.hidden) continue;
-      const xs=c.polygon.filter((_,i)=>i%2===0), ys=c.polygon.filter((_,i)=>i%2===1);
-      const x0=Math.max(0,Math.floor((Math.min(...xs)-L)/GS)), x1=Math.min(W-1,Math.ceil((Math.max(...xs)-L)/GS));
-      const y0=Math.max(0,Math.floor((Math.min(...ys)-T)/GS)), y1=Math.min(He-1,Math.ceil((Math.max(...ys)-T)/GS));
-      for (let x=x0;x<x1;x++) for (let y=y0;y<y1;y++){
-        const val=cellVal(x,y);
-        if (val<=0 || val>100) continue;               // _check_carpet Vorfilter
-        // _check_carpet 7783-7785: der Polygon-Test rechnet Zelle->Welt mit dimensions.left
-        // DIREKT (dem ggf. verschobenen Ursprung) — nicht mit dem korrigierten L von oben.
-        const wx=x*GS+H.origin.x, wy=y*GS+H.origin.y;
-        if (!pointInPolygon(wx,wy,c.polygon)) continue;
-        if (c.polygon.length>100 && carpetSet.size){   // grosses Polygon -> Pixel-Filter
-          if (optimized===null) optimized=optimizeCarpetPixels();
-          if (!optimized.has(y*W+x)) continue;
+  // Jeder Overlay-Block in eigenem try/catch: ein einzelner fehlerhafter Overlay-
+  // Datensatz darf nicht die komplette Kartendarstellung reissen (Issue #124 Layer 3).
+  try {
+    if (ha.detectedCarpets && ha.detectedCarpets.length){
+      let optimized=null;
+      for (const c of ha.detectedCarpets){
+        if (c.hidden) continue;
+        // Robustness (Issue #124 Layer 3): ungueltiges Polygon (null / kein Array /
+        // ungerade Laenge / < 3 Punkte) -> Teppich ueberspringen statt an .filter() zu
+        // crashen. Das Backend (lib/mapMerge.js) filtert dieselben Faelle schon heraus;
+        // dieser Guard deckt alte Adapter-Versionen und gespeicherte Karten ab.
+        if (!Array.isArray(c.polygon) || c.polygon.length < 6 || c.polygon.length % 2 !== 0) continue;
+        const xs=c.polygon.filter((_,i)=>i%2===0), ys=c.polygon.filter((_,i)=>i%2===1);
+        const x0=Math.max(0,Math.floor((Math.min(...xs)-L)/GS)), x1=Math.min(W-1,Math.ceil((Math.max(...xs)-L)/GS));
+        const y0=Math.max(0,Math.floor((Math.min(...ys)-T)/GS)), y1=Math.min(He-1,Math.ceil((Math.max(...ys)-T)/GS));
+        for (let x=x0;x<x1;x++) for (let y=y0;y<y1;y++){
+          const val=cellVal(x,y);
+          if (val<=0 || val>100) continue;               // _check_carpet Vorfilter
+          // _check_carpet 7783-7785: der Polygon-Test rechnet Zelle->Welt mit dimensions.left
+          // DIREKT (dem ggf. verschobenen Ursprung) — nicht mit dem korrigierten L von oben.
+          const wx=x*GS+H.origin.x, wy=y*GS+H.origin.y;
+          if (!pointInPolygon(wx,wy,c.polygon)) continue;
+          if (c.polygon.length>100 && carpetSet.size){   // grosses Polygon -> Pixel-Filter
+            if (optimized===null) optimized=optimizeCarpetPixels();
+            if (!optimized.has(y*W+x)) continue;
+          }
+          out.set(y*W+x,1);
         }
-        out.set(y*W+x,1);
       }
+    } else if (carpetSet.size){
+      for (const idx of optimizeCarpetPixels()) out.set(idx,1);
     }
-  } else if (carpetSet.size){
-    for (const idx of optimizeCarpetPixels()) out.set(idx,1);
-  }
+  } catch(e){ console.warn(`[MAP-RENDER] Overlay-Draw abgebrochen: ${e.message}`); }
   // Raum-Material Teppich (floor_material 5-7): ganzen Raum markieren
-  if (META&&META.seg_inf){
-    for (const [id,si] of Object.entries(META.seg_inf)){
-      const m=si&&si.material;
-      if (m>4&&m<8){ const rid=+id;
-        for (let y=0;y<He;y++) for (let x=0;x<W;x++) if (cellVal(x,y)===rid) out.set(y*W+x,1);
+  try {
+    if (META&&META.seg_inf){
+      for (const [id,si] of Object.entries(META.seg_inf)){
+        const m=si&&si.material;
+        if (m>4&&m<8){ const rid=+id;
+          for (let y=0;y<He;y++) for (let x=0;x<W;x++) if (cellVal(x,y)===rid) out.set(y*W+x,1);
+        }
       }
     }
-  }
+  } catch(e){ console.warn(`[MAP-RENDER] Overlay-Draw abgebrochen: ${e.message}`); }
   // Nutzer-Teppiche (vw.addcpt): Rechtecke -> pxType 2
-  if (ha.carpets){
-    for (const r of ha.carpets){
-      if (!Array.isArray(r)||r.length<4) continue;
-      const x0=Math.max(0,Math.floor((Math.min(r[0],r[2])-L)/GS)), x1=Math.min(W-1,Math.ceil((Math.max(r[0],r[2])-L)/GS));
-      const y0=Math.max(0,Math.floor((Math.min(r[1],r[3])-T)/GS)), y1=Math.min(He-1,Math.ceil((Math.max(r[1],r[3])-T)/GS));
-      for (let x=x0;x<x1;x++) for (let y=y0;y<y1;y++){ const v=cellVal(x,y); if(v>0&&v<=100) out.set(y*W+x,2); }
+  try {
+    if (ha.carpets){
+      for (const r of ha.carpets){
+        if (!Array.isArray(r)||r.length<4) continue;
+        const x0=Math.max(0,Math.floor((Math.min(r[0],r[2])-L)/GS)), x1=Math.min(W-1,Math.ceil((Math.max(r[0],r[2])-L)/GS));
+        const y0=Math.max(0,Math.floor((Math.min(r[1],r[3])-T)/GS)), y1=Math.min(He-1,Math.ceil((Math.max(r[1],r[3])-T)/GS));
+        for (let x=x0;x<x1;x++) for (let y=y0;y<y1;y++){ const v=cellVal(x,y); if(v>0&&v<=100) out.set(y*W+x,2); }
+      }
     }
-  }
+  } catch(e){ console.warn(`[MAP-RENDER] Overlay-Draw abgebrochen: ${e.message}`); }
   // geloeschte Teppiche entfernen
-  if (ha.deletedCarpets){
-    for (const r of ha.deletedCarpets){
-      if (!Array.isArray(r)||r.length<4) continue;
-      const x0=Math.max(0,Math.floor((Math.min(r[0],r[2])-L)/GS)), x1=Math.min(W-1,Math.ceil((Math.max(r[0],r[2])-L)/GS));
-      const y0=Math.max(0,Math.floor((Math.min(r[1],r[3])-T)/GS)), y1=Math.min(He-1,Math.ceil((Math.max(r[1],r[3])-T)/GS));
-      for (let x=x0;x<x1;x++) for (let y=y0;y<y1;y++) out.delete(y*W+x);
+  try {
+    if (ha.deletedCarpets){
+      for (const r of ha.deletedCarpets){
+        if (!Array.isArray(r)||r.length<4) continue;
+        const x0=Math.max(0,Math.floor((Math.min(r[0],r[2])-L)/GS)), x1=Math.min(W-1,Math.ceil((Math.max(r[0],r[2])-L)/GS));
+        const y0=Math.max(0,Math.floor((Math.min(r[1],r[3])-T)/GS)), y1=Math.min(He-1,Math.ceil((Math.max(r[1],r[3])-T)/GS));
+        for (let x=x0;x<x1;x++) for (let y=y0;y<y1;y++) out.delete(y*W+x);
+      }
     }
-  }
+  } catch(e){ console.warn(`[MAP-RENDER] Overlay-Draw abgebrochen: ${e.message}`); }
   return out;
 }
 let showChanges=false;   // "Änderungen"-Button: rot = seit Schnappschuss geändert

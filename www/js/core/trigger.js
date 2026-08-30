@@ -63,6 +63,13 @@ const Trigger = (() => {
   // zuruecksetzen will oder die 10s-Erkennung mal danebenliegt. =====
   const resetTankCounter = did => Daten.setState(tankPfad(did, 'wash-counter'), 0);
 
+  // ===== Kurzbefehle (F4, WIDGET_FEATURE_PLAN.md): .start liegt unter shortcuts.<id>, nicht
+  // remote.* -- eigener pfad()-Aufruf statt des remote.*-Helfers oben. Adapter braucht dafuer
+  // keinen neuen Trigger (State existiert bereits, role:button/write:true, main.js
+  // parseShortcuts()) -- eigene Funktion trotzdem, damit Panels weiterhin ausschliesslich
+  // ueber Trigger.* schreiben (siehe Datei-Kommentarkopf "einziger Sende-Weg"). =====
+  const startShortcut = (did, shortcutId) => Daten.setState(`dreame.0.${did}.shortcuts.${shortcutId}.start`, true);
+
   /**
    * Aktive Karte fuer custom-room-cleaning ermitteln. Bevorzugt den bereits gesetzten
    * active-map-Wert; ist er leer (Erstlauf — niemand hat je eine Karte wirksam gewaehlt),
@@ -113,6 +120,6 @@ const Trigger = (() => {
     resetMainBrush, resetSideBrush, resetFilter, resetSensor,
     startWashing, startAutoEmpty, resumeWashing, pauseWashing, startDrying, stopDrying,
     setCleaningMode, setCleaningRoute, setSuctionLevel, setWetnessLevel,
-    resetTankCounter,
+    resetTankCounter, startShortcut,
   };
 })();

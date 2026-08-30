@@ -317,6 +317,39 @@ The `customCommand` and the room checkboxes are **bidirectionally synchronized**
 
 ---
 
+### Vacuum Shortcuts
+
+Shortcuts (quick commands created in the Dreame app) are parsed from property 4-48 (base64 encoded names). Each shortcut gets its own channel under `deviceId.shortcuts.{id}`:
+
+| State   | Description                                |
+| ------- | ------------------------------------------ |
+| name    | Decoded shortcut name                      |
+| running | Whether the shortcut is currently running  |
+| start   | Button to start the shortcut               |
+
+Channels are rebuilt automatically on adapter start (not just on the next app-side change) and removed automatically when a shortcut is deleted in the app.
+
+---
+
+### Schedules
+
+Schedules created in the Dreame app (property 8-2) are parsed into one channel per schedule entry under `deviceId.schedule.{id}`:
+
+| State      | Description                                                                          |
+| ---------- | ------------------------------------------------------------------------------------- |
+| enabled    | Whether the schedule is active — writable, toggles the schedule directly on the robot |
+| time       | Time of day the schedule triggers (`HH:MM`)                                            |
+| weekdays   | Weekdays the schedule runs on (currently always in German, e.g. `Mo,Mi,Fr` or `täglich`) |
+| type       | Kind of schedule: room cleaning, all-rooms cleaning, or a shortcut                      |
+| rooms      | *(room-cleaning schedules only)* JSON array, one entry per room with its own mode/suction/route/cycles/moisture and translated room name |
+| parameters | *(all-rooms schedules only)* JSON object with mode/suction/route/cycles/moisture applying to the whole floor |
+| shortcutId | *(shortcut schedules only)* the numeric ID of the linked shortcut                      |
+| orphan     | *(shortcut schedules only)* `true` if the linked shortcut no longer exists (deleted in the app) — `enabled` should not be relied on in this case |
+
+Schedule channels are rebuilt automatically on adapter start and removed automatically when a schedule is deleted in the app, same as shortcuts above.
+
+---
+
 ### Live Map Widget
 
 The adapter includes a browser-based live map widget: robot position, cleaning trail and cleaned rooms, updating in real time while the robot cleans. It is served directly by this adapter — no vis widget or extra adapter needed, and it's ready to embed as an iframe in vis, Grafana or a custom dashboard.
@@ -353,7 +386,10 @@ All appearance settings live in the widget itself — open the gear icon in the 
 
 - Device switcher in the header for setups with multiple robots
 - Customizable layout: sidebar left/right, UI zoom, sidebar width, map rotation
-- Panels can be shown or hidden individually (Cleaning, Maintenance, Water & Mop, Statistics, Station)
+- Panels can be shown or hidden individually (Cleaning, Shortcuts, Station, Maintenance, Water & Mop, Statistics) — some panels additionally let you hide individual rows/tiles inside them (e.g. suction level or moisture on the Cleaning panel)
+- Shortcuts panel: one tile per app shortcut, tap to start it directly from the widget
+- Schedules button opens a table of all schedules created in the Dreame app (time, weekdays, type, per-room or whole-floor settings) with an on/off switch for each — a schedule pointing at a deleted shortcut shows a locked switch instead of silently doing nothing
+- Widget UI is available in German and English, following the ioBroker system language
 - Kiosk mode (`?gear=0`) hides the settings gear — for read-only displays (wall tablets, dashboards)
 - Current appearance and panel settings can be exported as a compact link (`?cfg=<blob>`), for quickly sharing or reusing a setup across multiple embeds without touching the stored configuration
 - Tank and mop consumption counters (Water & Mop panel)
@@ -661,6 +697,44 @@ translations should be submitted as PRs against the respective
 
 ## Changelog
 
+### 0.4.6 (2026-08-29)
+- Attempted fix for issue #124 layer 4 (missing pixel raster on r2253c/r2253w): map background, walls, and room fills were not rendered even though overlays and metadata came through correctly. Adds a fallback to combined_pixel_type when the base pixel raster is empty (matching Home Assistant's renderer), and introduces permanent [MERGE-DEBUG] info-level logging (dimensions, pixel counts, wall/segment counts) so this failure mode is instantly diagnosable if it returns. Models whose base raster is already populated (e.g. r9419h) are unchanged. Thanks to luckyheiko for the pinpoint analysis.
+
+### 0.4.5 (2026-08-28)
+- Fix for issue #124 (Layer 3): map rendering could crash on the frontend when the device reported detected carpets with an invalid polygon field (null or malformed). Adds a filter in lib/mapMerge.js so invalid carpets never reach the frontend, a defensive guard in the carpet drawing routine in www/js/karte/merger.js, and a generic try/catch around overlay drawing so a single bad overlay never breaks the whole map rendering. The unreferenced legacy widget page www/legacy.html, which carried the same bug, is removed. Combined with 0.4.3 (comma-truncation) and 0.4.4 (AES decryption), this closes the full end-to-end map path for r2253c/r2253w. Thanks to luckyheiko for identifying the root cause and proposing the fix approach.
+
+### 0.4.4 (2026-08-28)
+- Fix for issue #124 (Layer 2): map payload for r2253c, r2253w and similar newer Dreame models is AES-256-CBC encrypted; the adapter now derives the AES key from the object_name comma suffix (SHA256, first 32 hex chars as UTF-8), uses a model-specific IV, and decrypts the payload before zlib inflation. Combined with the 0.4.3 comma-truncation fix, this closes the full end-to-end map download path for r2253 models. Also fixes a long-standing bug in lib/dreame.js where the persistent MAP_LIST path used an empty IV instead of the model-specific one. Models without a comma suffix in the object_name (e.g. r9419h/L40s) are unchanged. Thanks to luckyheiko and ralfheitz for the diagnostic logs.
+
+### 0.4.3 (2026-08-28)
+- Fix for issue #124 (HTTP 404 on map download for r2253c, r2253w and similar newer Dreame models where the Dreame backend returns an object_name with a comma suffix that the OSS storage does not resolve): the adapter now transparently retries with the object_name truncated at the first comma. Models without a comma in the object_name (e.g. r9419h/L40s) are unchanged. Diagnostic [MAP-DIAG] logging from 0.4.2 remains but only fires when the fallback also fails; new [MAP-DIAG-2] captures the retry outcome for future analysis.
+
+### 0.4.2 (2026-08-27)
+- Diagnostic release for issue #124 (HTTP 404 on r2253c/L20 Ultra map download): adds temporary [MAP-DIAG] logging on HTTP errors during fresh map downloads (model, did, object_name, download_url, HTTP status, timing, content-type, response body head) to distinguish race, region and object-name-format hypotheses. No functional changes; fallback to persistent MAP_LIST map unchanged. Diagnostic will be reverted in 0.4.3 together with the actual fix.
+
+### 0.4.1 (2026-08-03)
+- Added Schedules: schedules created in the Dreame app are now parsed into `schedule.<id>.*` states (time, weekdays, type, enabled toggle, per-room or whole-floor settings with translated room names and enum values, linked shortcut for shortcut-type schedules). See [Schedules](#schedules).
+- Widget: added a Schedules panel/button showing all schedules in a table with an on/off switch each; schedules pointing at a deleted shortcut show a locked switch instead of silently failing.
+- Widget: added a Shortcuts panel — one tile per app shortcut, tap to start it directly.
+- Fixed app shortcuts being unavailable on vacuums (previously mower-only); shortcut channels are now rebuilt on adapter restart and cleaned up when deleted in the app.
+- Widget: full German/English translation of every panel (Cleaning, Shortcuts, Schedules, Station, Maintenance, Water & Mop, Statistics, Kopf/Fehler status and error text), following the ioBroker system language.
+- Widget: individual rows/tiles within a panel can now be hidden, not just whole panels (e.g. hide suction level or moisture on the Cleaning panel).
+- Widget: menu width control changed from a slider (which visibly drifted under the pointer while dragging) to a number field with −/+ buttons, matching the existing UI zoom control.
+- Widget: fixed a label/input association bug where clicking the "UI zoom"/"Menu width" caption activated the adjacent minus button instead of focusing the field (#104, thanks RicardoHipp).
+- Widget: the cleaning-mode tile is no longer locked as soon as any room is selected — testing showed the robot does honour the globally set mode for room cleaning except for the combined vacuum+mop mode (#103, thanks RicardoHipp).
+- Widget: removed the unused, never-wired-up Mopp panel placeholder; `configVersion` bumped 5→6 to clean up any leftover `panels.mopp` config entry.
+- Retyped six MIoT settings from `boolean` to `number` (auto-dust-collecting, auto-lds-coverage, clean-carpets-first, silent-drying, hair-compression, mopping-with-detergent) — devices reporting a value outside 0/1 had those silently rejected before. Thanks to krobipd for the analysis.
+- Fixed several `map.*` states logging "has no existing object" on first creation (missing `await` before the object was created).
+- Named 13 previously raw/unnamed status datapoints (mop pad and dirty water tank consumables, firmware/MCU version, cleaning-related flags, camera light, current city, cleaning mode) after cross-checking them against another adapter on the same hardware. Thanks to krobipd.
+- Decoded `status.error` (previously a raw numeric code) into readable, translated text for 98 error codes, cross-checked against two independent sources. Thanks to krobipd.
+- Added a fallback so `status.state`/`status.battery-level` still populate on models whose regular status poll omits them (e.g. Aqua10 Ultra / r95475). Thanks to krobipd.
+- Added `remote.go-to-point` (x/y/use-current-position/start): send the robot to a stored map coordinate to look around, without cleaning on the way. Thanks to krobipd.
+- Added per-device `info.online` reachability state with one log line per online/offline transition, replacing silent timeout logging.
+- Bumped `pako` (map data compression) from 2.x to 3.x.
+
+### 0.4.0 (2026-07-31)
+- Modular widget rebuild: customizable appearance (light/dark/main-color/custom themes), configurable panels, kiosk mode with URL-based configuration sharing, robot switcher for multi-device setups.
+
 ### 0.3.26 (2026-07-20)
 - Fixed stream-status (siid 10001 piid 1) type warning: the value is a streaming-session object, not a number - state declaration corrected to type string / role json, matching the convention used for dnd-task, task-info and zone-status (#82). The boolean type mismatch reported by flapman on remote.auto-dust-collecting, mopping-with-detergent, hair-compression, silent-drying, auto-lds-coverage and clean-carpets-first is already covered by the boolean coercion added in 0.3.25 - please update. Thanks to krobipd for reporting the exact device payload and preparing the fix.
 
@@ -669,70 +743,6 @@ translations should be submitted as PRs against the respective
 
 ### 0.3.24 (2026-07-01)
 - Fixed custom room cleaning bug where switching active-map without touching a checkbox left customCommand holding room IDs from the previously selected map, causing the robot to clean the wrong room (room segment IDs are not unique across maps). customCommand is now rebuilt automatically whenever active-map changes, and is recomputed fresh from the active map's checkboxes immediately before every start as a final safeguard. Start is now aborted with a warning if no room is selected for the active map.
-
-### 0.3.23 (2026-07-01)
-- Added map name synchronization: renaming a map via map.maps.<id>.mapName now automatically updates the corresponding remote.custom-room-cleaning channel name. Changed active-map state to a dropdown (common.states) showing map names with their id instead of requiring the raw numeric id to be typed manually.
-
-### 0.3.22 (2026-06-28)
-- Added custom room cleaning feature under remote.custom-room-cleaning: select rooms per map via checkboxes, bidirectionally synchronized with customCommand, using global suction level and water volume; start triggers a real multi-zone cleaning command. Added editable map name state (map.maps.<id>.mapName) to rename maps directly in ioBroker admin without adapter restart. Fixed I18n initialization order on startup so mapName state is now correctly created on first start. Fixed cleanset channel names to show translated room names instead of raw path strings. Added JSON validation before sending customCommand to device. Fixed multi-language index suffix for rooms with identical types (e.g. Bedroom 2). Fixed German translation for corridor room type (Flur).
-
-### 0.3.21 (2026-06-25)
-- Added lazy-created, translated states for mower position, battery, position/DND, schedule and statistics data (mower SIID 2/3/4/5/8/12). Fixed state ordering bug where settings (rain protection, child lock, etc.) appeared empty on first adapter start. Added translations for all mower config/AutoSwitch/preference states in 11 languages. Fixed boolean states incorrectly storing numeric 0/1 instead of true/false (affects auto-dust-collecting, dnd-enable, resume-cleaning and 15 other states). Improved fallback handling for unknown properties: registered 3 previously-unmapped properties (camera stream status, map object name, robot-cleaner property 2-6) and stopped creating misleading writable states for properties we cannot confirm are writable. Added a one-time cleanup for leftover phantom states from the old fallback mechanism. Updated installation instructions in README (the adapter is now available directly via ioBroker Admin from the Latest repository). Fixed adapter crash (unhandled promise rejection) when a device reports an unmapped property with an undefined value.
-
-### 0.3.20 (2026-06-24)
-- Added lazy-created, translated states for mower position, battery, position/DND, schedule and statistics data (mower SIID 2/3/4/5/8/12). Fixed state ordering bug where settings (rain protection, child lock, etc.) appeared empty on first adapter start. Added translations for all mower config/AutoSwitch/preference states in 11 languages. Fixed boolean states incorrectly storing numeric 0/1 instead of true/false (affects auto-dust-collecting, dnd-enable, resume-cleaning and 15 other states). Improved fallback handling for unknown properties: registered 3 previously-unmapped properties (camera stream status, map object name, robot-cleaner property 2-6) and stopped creating misleading writable states for properties we cannot confirm are writable. Added a one-time cleanup for leftover phantom states from the old fallback mechanism. Updated installation instructions in README (the adapter is now available directly via ioBroker Admin from the Latest repository).
-
-### 0.3.19 (2026-06-23)
-- Documentation fix: 0.3.18 changelog entry was missing from README.md due to a release script bug. No functional changes.
-
-### 0.3.18 (2026-06-23)
-- Vacuum states are now created lazily — only properties actually reported by the device appear in the object tree, filling in gradually after adapter start. All vacuum states now have full translations in 11 languages. Fixed cleaning-mode encoding for L40s Pro Ultra and similar models (mode, area and humidity were previously combined into a single raw value). Action buttons (start, stop, reset, etc.) now display correctly as buttons instead of raw text. Added translated, lazily-created states for mower position/task data (binary protocol). Fixed data loss on first write to rawCompound states (previous compound value was discarded before decoding, causing partial state updates). Added min/max range (1-32) for wetness-level state. BREAKING CHANGE: Action states (start-clean, stop-clean, return-to-base, etc.) changed from type string/text to boolean/button. Scripts or Vis widgets that write string values to these states must be updated to write true instead.
-
-### 0.3.17 (2026-06-21)
-
-- Fix command sent for some states
-- (ioBroker-Bot) Adapter requires admin >= 7.8.23 now.
-
-### 0.3.7 (2026-04-28)
-
-- Fix mower SETTINGS/SCHEDULE parsing: reassemble chunked data before JSON.parse (fixes warning every 30s)
-- Fix mower actions: remove dangerous start-zone-mow (was sending DOCK), add pause-mow and clear-warning
-- Remove mower stop-mow-ext (no HA equivalent)
-
-### 0.3.6 (2026-04-21)
-
-- Add dedicated vacuum state tree (createVacuumRemotes) with ~85 status, ~32 remote, ~22 AutoSwitch, ~13 action states
-- Add vacuum consumable reset buttons (main brush, side brush, filter, sensor)
-- Add vacuum AutoSwitch parsing (25 features: auto-drying, collision-avoidance, fill-light, clean-genius, cleaning-route, etc.)
-- Add vacuum action buttons (start, pause, stop, return-to-dock, locate, start-washing, start-auto-empty, clear-warning)
-- Add vacuum station status (clean/dirty water tank, dust bag, detergent, hot water)
-- Add vacuum extended settings (wetness, CleanGenius mode, water temperature, silent drying, hair compression)
-- Add 20 new vacuum status enums (draining, dust bag drying, floor maintaining, finding pet, etc.)
-- Fix mower return-to-dock command (was siid:3 aiid:1, now correct siid:5 aiid:3)
-- Fix mower start-zone-mow was sending DOCK command (siid:2 aiid:3 remapped to siid:5 aiid:3) — removed, use start-mow-ext with params instead
-- Fix mower missing pause-mow action — added (siid:5 aiid:4)
-- Fix mower missing clear-warning action — added (siid:4 aiid:3)
-- Remove mower stop-mow-ext (siid:4 aiid:2, no HA equivalent)
-- Fix set_properties method for writable states (was incorrectly sending as action)
-- Fix boolean action commands now send in:[] parameter
-
-### 0.3.5 (2026-04-19)
-
-- Add AutoSwitch properties (4-50): collision avoidance, fill light, CleanGenius, cleaning route, auto charging, etc.
-- Add PRE mowing preferences: cutting height, obstacle distance, mow mode, edge mowing, edge detection, direction change
-- Add shortcuts support (4-48): parsed names, running state, start buttons
-- Add cleaning history via cloud API (last 20 mow sessions with date, duration, area, completion)
-- Fix battery byte parsing (buf[11] & 0x7F + charging bit 7)
-
-### 0.3.4 (2026-04-19)
-
-- Add mower settings states from getCFG (rain protection, frost protection, low speed, DND, battery config, volume, headlight, AI obstacle, camera, anti-theft, etc.)
-- Load all settings on startup and auto-reload on prop.2.51 MQTT trigger
-- Add dedicated remote states for setting CFG values (set-rain-protection, set-frost-protection, set-volume, find-robot, lock-robot, etc.)
-- Split consumables into individual states (blade-hours, brush-hours, robot-maintenance-hours + health %)
-- Add individual consumable reset buttons (reset-blade, reset-brush, reset-robot-maintenance)
-- Correct prop.2.51 as generic settings-update trigger (WRP/FDP/LOW)
-- Remove invalid cleaning-progress (4-63) from mower states
 
 [Older changelogs can be found there](CHANGELOG_OLD.md)
 

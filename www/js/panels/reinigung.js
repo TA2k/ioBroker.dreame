@@ -59,15 +59,18 @@
  * Betriebsart.
  */
 
-/* global Panel, Trigger, Daten, geraetGestartet, updateRoomBadges, drawFills, updateLabels */
+/* global Panel, Trigger, Daten, geraetGestartet, updateRoomBadges, drawFills, updateLabels, t */
 
 // ===== Reinigungsmodus: EINE Auswahl aus vier, wie das Geraet es kennt (remote.cleaning-mode,
-// vom Adapter bereits auf 0-3 dekodiert — siehe lib/specs/cleaning.js CLEANING_MODE_DECODE). =====
+// vom Adapter bereits auf 0-3 dekodiert — siehe lib/specs/cleaning.js CLEANING_MODE_DECODE).
+// name-Felder wurden mit F3 (WIDGET_FEATURE_PLAN.md) durch i18n-Keys ersetzt -- Anzeigetext
+// erst zur Laufzeit via t() in _renderModus() aufgeloest, NICHT hier als Modul-Top-Level-
+// Konstante (t() liefert vor I18n.laden() nur Fallback-Werte, siehe i18n.js-Kommentarkopf). =====
 const CLEAN_MODES = [
-  { id: 0, name: 'Saugen' },
-  { id: 1, name: 'Wischen' },
-  { id: 2, name: 'Saugen und Wischen' },
-  { id: 3, name: 'Wischen nach Saugen' },
+  { id: 0, key: 'panel.reinigung.modus.vacuum' },
+  { id: 1, key: 'panel.reinigung.modus.mop' },
+  { id: 2, key: 'panel.reinigung.modus.vacuum-mop' },
+  { id: 3, key: 'panel.reinigung.modus.mop-after-vacuum' },
 ];
 const modeWischt = id => id === 1 || id === 2 || id === 3;
 const modeSaugt = id => id === 0 || id === 2 || id === 3;
@@ -75,17 +78,22 @@ const modeSaugt = id => id === 0 || id === 2 || id === 3;
 // ===== Reinigungsroute (status.cleaning-route lesen, remote.set-cleaning-route schreiben).
 // Reihenfolge wie HAs CLEANING_ROUTE_TO_NAME. =====
 const CLEAN_ROUTES = [
-  { id: 4, name: 'Schnell' },
-  { id: 1, name: 'Standard' },
-  { id: 2, name: 'Intensiv' },
-  { id: 3, name: 'Tief' },
+  { id: 4, key: 'panel.reinigung.route.schnell' },
+  { id: 1, key: 'panel.reinigung.route.standard' },
+  { id: 2, key: 'panel.reinigung.route.intensiv' },
+  { id: 3, key: 'panel.reinigung.route.tief' },
 ];
 // Welche Routen der eingestellte Modus zulaesst — 1:1 HA device.py 749-758/1036-1044: beim
 // Saugen und beim gleichzeitigen Saugen+Wischen faellt "Intensiv"/"Tief" weg (reine
 // Wisch-Stufen).
 const routenFuer = m => ((m === 0 || m === 2) ? CLEAN_ROUTES.filter(r => r.id !== 2 && r.id !== 3) : CLEAN_ROUTES);
 
-const SUCT_NAMES = ['Leise', 'Standard', 'Stark', 'Turbo'];
+const SUCT_KEYS = [
+  'panel.reinigung.saug.leise',
+  'panel.reinigung.saug.standard',
+  'panel.reinigung.saug.stark',
+  'panel.reinigung.saug.turbo',
+];
 
 // ===== Globale Bruecken-Werte fuer den Karten-Layer (render.js' baueBadge()/updateRoomBadges(),
 // seit B2/B5 unveraendert) — ERSETZEN main.js' B5-Platzhalter, siehe Kommentarkopf oben. =====
@@ -108,8 +116,17 @@ const raumSaug = () => globalSaug;
 const raumWasser = () => globalWasser;
 
 class ReinigungPanel extends Panel {
-  constructor(id, container) {
-    super(id, container);
+  // F3 (WIDGET_FEATURE_PLAN.md), Blaupause fuer F6-F9: die vier Kacheln koennen einzeln im
+  // Zahnrad-Overlay ausgeblendet werden (config.widget.panels.reinigung.versteckt).
+  static versteckbareFelder = [
+    { id: 'modus', labelKey: 'panel.reinigung.modus.label' },
+    { id: 'route', labelKey: 'panel.reinigung.route.label' },
+    { id: 'saug', labelKey: 'panel.reinigung.saug.label' },
+    { id: 'wasser', labelKey: 'panel.reinigung.wasser.label' },
+  ];
+
+  constructor(id, container, config) {
+    super(id, container, config);
     this.modus = null;
     this.route = null;
     this.saug = null;
@@ -122,6 +139,7 @@ class ReinigungPanel extends Panel {
     this._mapId = null;
     this._raumMuster = null;
     this._raumVonState = {}; // State-ID -> numerische Raum-ID (native.roomId)
+    this._statischeTexteGesetzt = false; // F3: einmalig, siehe _renderStatischeTexte()
   }
 
   benoetigteStates(did) {
@@ -237,12 +255,27 @@ class ReinigungPanel extends Panel {
 
   render() {
     if (!this.container) return;
+    this._renderStatischeTexte();
     this._renderRaum();
     this._renderModus();
     this._renderRoute();
     this._renderSaug();
     this._renderWasser();
     updateRoomBadges();
+  }
+
+  /** Panel-Ueberschrift + die vier Kachel-Labels einmalig uebersetzen (F3). Guard analog
+   * zu den dataset.gefuellt-Guards bei den Kachel-Inhalten weiter unten -- statischer Text
+   * aendert sich nie zur Laufzeit, muss also nicht bei jedem render() neu gesetzt werden. */
+  _renderStatischeTexte() {
+    if (this._statischeTexteGesetzt) return;
+    this._statischeTexteGesetzt = true;
+    const setzen = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = t(key); };
+    setzen('reinigungTitel', 'panel.reinigung.titel');
+    setzen('reinigungModusLabel', 'panel.reinigung.modus.label');
+    setzen('reinigungRouteLabel', 'panel.reinigung.route.label');
+    setzen('reinigungSaugLabel', 'panel.reinigung.saug.label');
+    setzen('reinigungWasserLabel', 'panel.reinigung.wasser.label');
   }
 
   // Etappe C6-4 (WIDGET_UMBAU_PLAN.md Abschnitt 6.4): "aktiv" vs. "gewählt" ist bewusst
@@ -253,38 +286,48 @@ class ReinigungPanel extends Panel {
     const el = document.getElementById('reinigungRaum');
     if (!el) return;
     const n = selectedRooms.size;
-    el.textContent = n === 0 ? 'Alle Räume aktiv' : (n === 1 ? '1 Raum gewählt' : n + ' Räume gewählt');
+    el.textContent = n === 0 ? t('panel.reinigung.raum.alle')
+      : (n === 1 ? t('panel.reinigung.raum.gewaehlt-eins') : `${n} ${t('panel.reinigung.raum.gewaehlt-mehrere')}`);
   }
 
-  /** Bei Raum-Auswahl waehlt das X40 den Modus pro Raum selbst und ignoriert den globalen
-   * remote.cleaning-mode (live verifiziert, siehe WIDGET_SESSION_STATUS.md Etappe C5.5-Test
-   * "X40-Eigenheit, kein Bug"). Die Kachel bliebe sonst bedienbar, obwohl die Einstellung beim
-   * Start wirkungslos ist -- deshalb hier ausgegraut + Tooltip statt stillschweigend falscher
-   * Anzeige (Plan Abschnitt 6, Commit C6-3). Tooltip sitzt auf der umschliessenden .rkarte,
-   * nicht auf dem <select> selbst: disabled-Formelemente feuern in den meisten Browsern keine
-   * hover-Events, ein title auf dem <select> wuerde also nie sichtbar werden. */
+  /** C6-3 (WIDGET_UMBAU_PLAN.md Abschnitt 6) hatte die Kachel zusaetzlich gesperrt, sobald
+   * Raeume ausgewaehlt sind: live verifiziert mit Modus "Saugen+Wischen", dass das X40 dann
+   * pro Raum selbst entscheidet und den globalen remote.cleaning-mode ignoriert (siehe
+   * WIDGET_SESSION_STATUS.md Etappe C5.5-Test "X40-Eigenheit, kein Bug") -- die Kachel waere
+   * sonst bedienbar, obwohl die Einstellung wirkungslos ist.
+   * Issue #103 (RicardoHipp, TA2k/ioBroker.dreame) + Live-Gegentest (2026-08-03, David, X40):
+   * mit reinem Modus "Wischen" statt des kombinierten Modus wird die Raumauswahl SEHR WOHL
+   * beachtet -- die Ignorier-Eigenheit tritt also nur beim kombinierten Modus auf, nicht
+   * generell bei jeder Raumauswahl. Die pauschale Sperre nahm damit unnoetig die Modus-Wahl
+   * weg, auch dort, wo sie wirkt.
+   * David-Entscheidung: Sperre vorerst komplett deaktivieren (auskommentiert statt entfernt,
+   * schnell reaktivierbar) statt sofort auf eine kombinierte-Modi-only-Regel zu verfeinern --
+   * bei Beschwerden/weiteren Gegenbeispielen wird das nochmal angepasst. */
   _renderModus() {
     const el = document.getElementById('reinigungModus');
     const karte = document.getElementById('reinigungModusKarte');
     if (!el) return;
+    if (karte) karte.hidden = this.feldVersteckt('modus');
     if (!el.dataset.gefuellt) {
-      el.innerHTML = CLEAN_MODES.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+      el.innerHTML = CLEAN_MODES.map(m => `<option value="${m.id}">${t(m.key)}</option>`).join('');
       el.dataset.gefuellt = '1';
       el.onchange = () => Trigger.setCleaningMode(this.did, Number(el.value));
     }
     if (this.modus != null) el.value = String(this.modus);
-    const raumAktiv = selectedRooms.size > 0;
-    el.disabled = customizedCleaning || geraetGestartet() || raumAktiv;
-    if (karte) karte.title = raumAktiv ? 'Bei Raum-Reinigung wählt das Gerät den Modus selbst' : '';
+    // const raumAktiv = selectedRooms.size > 0; // siehe Kommentar oben -- Sperre deaktiviert
+    el.disabled = customizedCleaning || geraetGestartet();
+    if (karte) karte.title = '';
   }
 
   _renderRoute() {
     const el = document.getElementById('reinigungRoute');
+    const karte = document.getElementById('reinigungRouteKarte');
     if (!el) return;
+    if (karte) karte.hidden = this.feldVersteckt('route');
     const optionen = routenFuer(cleanMode);
     const schluessel = optionen.map(r => r.id).join(',');
     if (el.dataset.schluessel !== schluessel) {
-      el.innerHTML = optionen.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+      el.innerHTML = optionen.map(r => `<option value="${r.id}">${t(r.key)}</option>`).join('');
       el.dataset.schluessel = schluessel;
       el.onchange = () => Trigger.setCleaningRoute(this.did, Number(el.value));
     }
@@ -294,9 +337,11 @@ class ReinigungPanel extends Panel {
 
   _renderSaug() {
     const el = document.getElementById('reinigungSaug');
+    const karte = document.getElementById('reinigungSaugKarte');
     if (!el) return;
+    if (karte) karte.hidden = this.feldVersteckt('saug');
     if (!el.dataset.gefuellt) {
-      el.innerHTML = SUCT_NAMES.map((n, i) => `<option value="${i}">${n}</option>`).join('');
+      el.innerHTML = SUCT_KEYS.map((key, i) => `<option value="${i}">${t(key)}</option>`).join('');
       el.dataset.gefuellt = '1';
       el.onchange = () => Trigger.setSuctionLevel(this.did, Number(el.value));
     }
@@ -314,7 +359,7 @@ class ReinigungPanel extends Panel {
     const el = document.getElementById('reinigungWasser');
     const wertEl = document.getElementById('reinigungWasserWert');
     if (!el || !karte) return;
-    karte.hidden = !this.wasserDa;
+    karte.hidden = !this.wasserDa || this.feldVersteckt('wasser');
     if (!this.wasserDa) return;
     const fuellen = () => {
       const pct = (Number(el.value) - Number(el.min)) / (Number(el.max) - Number(el.min)) * 100;

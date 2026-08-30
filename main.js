@@ -14,6 +14,8 @@ const Json2iob = require('json2iob');
 const crypto = require('node:crypto');
 const mqtt = require('mqtt');
 const zlib = require('node:zlib');
+const { buildGoToPointIn, parsePositionPair } = require('./lib/go-to-point');
+const { ReachabilityTracker } = require('./lib/reachability');
 //check if canvas is available because is optional dependency
 let createCanvas;
 let ImageData;
@@ -32,6 +34,42 @@ const { decodeMultiMapData } = require('./lib/dreame');
 const mapController = require('./lib/mapController');
 
 const { getRoomDisplayName, buildSegmentTypeMap } = require('./lib/cleanset');
+const { parseScheduleBlob } = require('./lib/schedule');
+
+// Termine (SIID 8-2): Slug->i18n-Key Mapping fuer die Enum-Anzeigewerte in .rooms/
+// .parameters. Die Slugs selbst kommen bereits aus lib/schedule.js (decodeRoomsWord/
+// decodeAllRoomsWord) - hier wird nur noch der sprachabhaengige Anzeigetext ergaenzt.
+const SCHEDULE_MODE_KEYS = Object.freeze({
+  vacuum: 'vacuum.cleaning-mode.vacuuming',
+  mop: 'vacuum.cleaning-mode.mopping',
+  'vacuum-mop': 'vacuum.cleaning-mode.sweep-mop',
+  // Vierter all_rooms-Modus hat kein Aequivalent im live remote.cleaning-mode-Enum
+  // (das kennt nur 0-3/2-Bit) - eigener Key statt Wiederverwendung von
+  // vacuum.cleaning-mode.mop-after-sweep, siehe WIDGET_TERMINE_PLAN.md S6.
+  'mop-after-vacuum': 'vacuum.schedule.mode.mop-after-vacuum',
+});
+const SCHEDULE_SUCTION_KEYS = Object.freeze({
+  quiet: 'vacuum.suction-level.quiet',
+  standard: 'vacuum.suction-level.standard',
+  strong: 'vacuum.suction-level.strong',
+  // Schedule-Slug heisst "max", bestehender Key/Anzeigetext ist "turbo"/"Turbo" -
+  // bewusste Wiederverwendung (Sign-off David), siehe WIDGET_TERMINE_PLAN.md S6.
+  max: 'vacuum.suction-level.turbo',
+});
+const SCHEDULE_ROUTE_KEYS = Object.freeze({
+  standard: 'vacuum.cleaning-route.standard',
+  intensive: 'vacuum.cleaning-route.intensive',
+  deep: 'vacuum.cleaning-route.deep',
+  quick: 'vacuum.cleaning-route.quick',
+});
+// termin.type ('rooms'/'shortcut'/'all_rooms', siehe lib/schedule.js detectScheduleType)
+// war urspruenglich als technisches Feld gedacht, wird aber live im Objektbaum angezeigt -
+// auf Wunsch (Live-Test-Feedback) ebenfalls uebersetzt statt roher Slug.
+const SCHEDULE_TYPE_KEYS = Object.freeze({
+  rooms: 'vacuum.schedule.type.rooms',
+  all_rooms: 'vacuum.schedule.type.all-rooms',
+  shortcut: 'vacuum.schedule.type.shortcut',
+});
 
 const BRAND_CONFIG = {
   dreame: {
@@ -411,6 +449,7 @@ class Dreame extends utils.Adapter {
         this.log.error(`Request failed after 3 retries: ${error.message}`);
       },
     });
+    this.reachability = new ReachabilityTracker();
     this.remoteCommands = {};
     this.specStatusDict = {};
     this.specPropsToIdDict = {};
@@ -539,6 +578,9 @@ class Dreame extends utils.Adapter {
     this._waterboxRemovalTimers = {};
     this.subscribeStates('*.remote.*');
     this.subscribeStates('*.shortcuts.*.start');
+    this.subscribeStates('*.status.shortcuts');
+    this.subscribeStates('*.status.schedule');
+    this.subscribeStates('*.schedule.*.enabled');
     this.subscribeStates('*.cleanset.*');
     this.subscribeStates('*.map.maps.*.mapName');
     this.subscribeStates('*.config.tank.*');
@@ -557,15 +599,47 @@ class Dreame extends utils.Adapter {
           await this.loadMowerSettings(device);
         }
       }
+      // Seed status.state / status.battery-level from the device-list summary
+      // BEFORE the property poll runs, so that on models whose get_properties
+      // poll returns the core services (siid 2 = state, siid 3 = battery) the
+      // poll value wins (it runs afterwards and overwrites). On models that do
+      // not return them (e.g. dreame.vacuum.r95475) the summary value stays as
+      // the baseline. specPropsToIdDict is already populated by createRemotes.
+      for (const device of this.deviceArray) {
+        await this._bridgeStatusSummary(device);
+      }
       await this.updateDevicesViaSpec();
+      // Startup-Rebuild fuer Shortcuts: get_properties liefert den aktuellen
+      // Wert von status.shortcuts, aber ioBroker feuert bei setState mit
+      // identischem Wert kein Change-Event, daher greift der State-Subscribe
+      // beim Adapter-Restart nicht. Explizit rebuilden fuer alle Vacuums/Mower.
+      for (const device of this.deviceArray) {
+        if (this.isMower(device) || this.isVacuum(device)) {
+          const st = await this.getStateAsync(device.did + '.status.shortcuts');
+          if (st && st.val) {
+            this.parseShortcuts(device.did, st.val);
+          }
+        }
+      }
+      // Startup-Rebuild fuer Termine: gleicher Grund wie bei Shortcuts (kein
+      // Change-Event bei identischem Wert nach Adapter-Neustart).
+      for (const device of this.deviceArray) {
+        if (this.isMower(device) || this.isVacuum(device)) {
+          const st = await this.getStateAsync(device.did + '.status.schedule');
+          if (st && st.val) {
+            this.parseSchedule(device.did, st.val);
+          }
+        }
+      }
       await this.connectMqtt();
-      this.updateInterval = setInterval(
+      this.updateInterval = this.setInterval(
         async () => {
+          await this.updateDeviceStatusSummary();
           await this.updateDevicesViaSpec();
         },
         this.config.interval * 60 * 1000,
       );
-      this.refreshTokenInterval = setInterval(
+      this.refreshTokenInterval = this.setInterval(
         async () => {
           await this.refreshToken();
         },
@@ -773,6 +847,26 @@ class Dreame extends utils.Adapter {
               type: 'device',
               common: {
                 name: device.customName || device.deviceInfo.displayName || device.model,
+                // Links the device to its reachability state so Admin and VIS
+                // render the status indicator on the device itself.
+                statusStates: { onlineId: `${this.namespace}.${device.did}.info.online` },
+              },
+              native: {},
+            });
+            await this.extendObject(device.did + '.info', {
+              type: 'channel',
+              common: { name: 'Information' },
+              native: {},
+            });
+            await this.extendObject(device.did + '.info.online', {
+              type: 'state',
+              common: {
+                name: 'Device reachable',
+                type: 'boolean',
+                role: 'indicator.reachable',
+                read: true,
+                write: false,
+                def: false,
               },
               native: {},
             });
@@ -868,6 +962,75 @@ class Dreame extends utils.Adapter {
         error.response && this.log.error('Device list error response: ' + JSON.stringify(error.response.data));
         this.log.error(error.stack);
       });
+  }
+
+  // Mirror the device-list summary (latestStatus code + battery %) into
+  // status.state / status.battery-level. Newer vacuum models (e.g.
+  // dreame.vacuum.r95475) do not return the core services (siid 2 = robot
+  // state, siid 3 = battery) via the periodic get_properties poll — those only
+  // arrive via MQTT when they change, so the states would stay null while the
+  // robot is idle. The listV2 device summary always carries the current
+  // values, so mirror them as a baseline (an actual poll/MQTT value overwrites
+  // this because the poll runs afterwards / MQTT is realtime).
+  async _bridgeStatusSummary(record) {
+    if (!record || this.isMower(record)) return;
+    const did = String(record.did);
+    if (record.latestStatus != null) {
+      await this._lazyCreateState(did, 2, 1, record.latestStatus);
+    }
+    if (record.battery != null) {
+      await this._lazyCreateState(did, 3, 1, record.battery);
+    }
+  }
+
+  async updateDeviceStatusSummary() {
+    await this.requestClient({
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: `https://${this.brand.domain}/dreame-user-iot/iotuserbind/device/listV2`,
+      headers: this.getHeaders(),
+      data: { sharedStatus: 1, current: 1, size: 100, lang: 'de', timestamp: Date.now() },
+    })
+      .then(async (response) => {
+        const records =
+          response && response.data && response.data.data && response.data.data.page
+            ? response.data.data.page.records
+            : null;
+        if (!Array.isArray(records)) return;
+        for (const record of records) {
+          await this._bridgeStatusSummary(record);
+        }
+      })
+      .catch((error) => {
+        this.log.debug('updateDeviceStatusSummary failed: ' + (error && error.message));
+      });
+  }
+
+  /**
+   * Feed a request outcome into the reachability tracker. Writes
+   * <did>.info.online and logs exactly once per transition, so a device that is
+   * unreachable for hours produces one line instead of one per failed request.
+   *
+   * @param {object} device device record from the device list
+   * @param {boolean} reachable whether the device answered the request
+   */
+  async _updateReachability(device, reachable) {
+    if (!device || device.did === undefined) return;
+    const previous = this.reachability.isOnline(device.did);
+    const changed = reachable
+      ? this.reachability.recordSuccess(device.did)
+      : this.reachability.recordFailure(device.did);
+    if (!changed) return;
+    await this.setStateAsync(`${device.did}.info.online`, reachable, true).catch(() => undefined);
+    const label = `${device.customName || (device.deviceInfo && device.deviceInfo.displayName) || device.model} (${device.did})`;
+    if (!reachable) {
+      this.log.warn(`Device ${label} is not reachable — it will be retried with the next update`);
+    } else if (previous === false) {
+      // Only a real recovery is worth a line. The first result after a start is
+      // just the initial determination and would otherwise announce "reachable
+      // again" on every restart, without the device ever having been away.
+      this.log.info(`Device ${label} is reachable again`);
+    }
   }
 
   async fetchSpecs() {
@@ -2318,8 +2481,8 @@ class Dreame extends utils.Adapter {
         name: 'Auto Dust Collecting (15-1)',
         siid: 15,
         piid: 1,
-        type: 'boolean',
-        role: 'switch',
+        type: 'number',
+        role: 'level',
       },
       {
         id: 'auto-empty-frequency',
@@ -2336,10 +2499,10 @@ class Dreame extends utils.Adapter {
         name: 'Clean Carpets First (28-2)',
         siid: 28,
         piid: 2,
-        type: 'boolean',
-        role: 'switch',
+        type: 'number',
+        role: 'level',
       },
-      { id: 'auto-lds-coverage', name: 'Auto LDS Coverage (28-3)', siid: 28, piid: 3, type: 'boolean', role: 'switch' },
+      { id: 'auto-lds-coverage', name: 'Auto LDS Coverage (28-3)', siid: 28, piid: 3, type: 'number', role: 'level' },
       {
         id: 'cleangenius-mode',
         name: 'CleanGenius Mode (28-5)',
@@ -2358,15 +2521,15 @@ class Dreame extends utils.Adapter {
         role: 'level',
         states: { 0: 'Cold', 1: 'Warm', 2: 'Hot', 3: 'Boiling' },
       },
-      { id: 'silent-drying', name: 'Silent Drying (28-27)', siid: 28, piid: 27, type: 'boolean', role: 'switch' },
-      { id: 'hair-compression', name: 'Hair Compression (28-28)', siid: 28, piid: 28, type: 'boolean', role: 'switch' },
+      { id: 'silent-drying', name: 'Silent Drying (28-27)', siid: 28, piid: 27, type: 'number', role: 'level' },
+      { id: 'hair-compression', name: 'Hair Compression (28-28)', siid: 28, piid: 28, type: 'number', role: 'level' },
       {
         id: 'mopping-with-detergent',
         name: 'Mopping With Detergent (28-52)',
         siid: 28,
         piid: 52,
-        type: 'boolean',
-        role: 'switch',
+        type: 'number',
+        role: 'level',
       },
     ];
 
@@ -2737,6 +2900,61 @@ class Dreame extends utils.Adapter {
       native: {},
     });
 
+    // cleaning-sequence (F10a): channel + control states for the cleanOrder feature
+    // (siid 6 / aiid 2 / piid 4). `order` holds the room IDs in cleaning order, `apply`
+    // triggers the stateChange handler, `active` reflects whether a sequence is in effect.
+    // See F10A_LIVE_TEST_ANALYSE.md Teil F, CLEANING_SEQUENCE_ANALYSE.md.
+    await this.extendObject(`${did}.remote.cleaning-sequence`, {
+      type: 'channel',
+      common: { name: 'Cleaning Sequence' },
+      native: {},
+    });
+    const _cseqOrderPath = `${did}.remote.cleaning-sequence.order`;
+    await this.extendObject(_cseqOrderPath, {
+      type: 'state',
+      common: {
+        name: 'Cleaning Sequence Order (Room IDs in cleaning order)',
+        type: 'string',
+        role: 'json',
+        read: true,
+        write: true,
+        def: '[]',
+      },
+      native: {},
+    });
+    const _cseqExistingOrder = await this.getStateAsync(_cseqOrderPath);
+    if (!_cseqExistingOrder || _cseqExistingOrder.val === null || _cseqExistingOrder.val === undefined) {
+      await this.setState(_cseqOrderPath, '[]', true);
+    }
+    await this.extendObject(`${did}.remote.cleaning-sequence.apply`, {
+      type: 'state',
+      common: {
+        name: 'Apply Cleaning Sequence to Device',
+        type: 'boolean',
+        role: 'button',
+        read: false,
+        write: true,
+      },
+      native: {},
+    });
+    const _cseqActivePath = `${did}.remote.cleaning-sequence.active`;
+    await this.extendObject(_cseqActivePath, {
+      type: 'state',
+      common: {
+        name: 'Cleaning Sequence Currently Active',
+        type: 'boolean',
+        role: 'indicator',
+        read: true,
+        write: false,
+        def: false,
+      },
+      native: {},
+    });
+    const _cseqExistingActive = await this.getStateAsync(_cseqActivePath);
+    if (!_cseqExistingActive || _cseqExistingActive.val === null || _cseqExistingActive.val === undefined) {
+      await this.setState(_cseqActivePath, false, true);
+    }
+
     // Tank-Verbrauchsmanagement (D1a): Konfigurierbare Tank-Kapazitaet + Verbrauch pro
     // Wasch-Session, daraus berechneter Restwasser-Stand. Siehe TANK_ANALYSE.md.
     await this.extendObject(`${did}.config.tank`, {
@@ -2856,6 +3074,40 @@ class Dreame extends utils.Adapter {
         await this.setState(_widgetConfigPath, '{}', true);
       }
     }
+
+    // go-to-point: send the robot to a map coordinate without cleaning (cruise mode).
+    // Coordinates use the same system as map.robot / map.charger.
+    await this.extendObject(`${did}.remote.go-to-point`, {
+      type: 'channel',
+      common: { name: 'Go To Point' },
+      native: {},
+    });
+    await this.extendObject(`${did}.remote.go-to-point.x`, {
+      type: 'state',
+      common: { name: 'Target X', type: 'number', role: 'value', read: true, write: true },
+      native: {},
+    });
+    await this.extendObject(`${did}.remote.go-to-point.y`, {
+      type: 'state',
+      common: { name: 'Target Y', type: 'number', role: 'value', read: true, write: true },
+      native: {},
+    });
+    await this.extendObject(`${did}.remote.go-to-point.use-current-position`, {
+      type: 'state',
+      common: {
+        name: 'Copy Current Robot Position Into X/Y',
+        type: 'boolean',
+        role: 'button',
+        read: false,
+        write: true,
+      },
+      native: {},
+    });
+    await this.extendObject(`${did}.remote.go-to-point.start`, {
+      type: 'state',
+      common: { name: 'Go To Point', type: 'boolean', role: 'button', read: false, write: true },
+      native: {},
+    });
 
     this.log.info(
       `Vacuum states created: ${statusStates.length} status, ${remoteStates.length} remote, ${autoSwitchRemotes.length} autoSwitch, ${actionStates.length} actions`,
@@ -3147,7 +3399,7 @@ class Dreame extends utils.Adapter {
   // verhindern.
   async _preSendCleaningProperties(did) {
     const PAUSE_MS = 150;
-    const pause = () => new Promise((resolve) => setTimeout(resolve, PAUSE_MS));
+    const pause = () => new Promise((resolve) => this.setTimeout(resolve, PAUSE_MS));
 
     await this._sendCleaningProperty(did, 'suction-level', 1); // 1 = Standard
     await pause();
@@ -3599,6 +3851,10 @@ class Dreame extends utils.Adapter {
             .then(async (res) => {
               if (res.data.code !== 0) {
                 if (res.data.code === -8 || res.data.code === 80001) {
+                  // Device did not answer — this is the offline signal (80001 is
+                  // "device may be offline, command timed out"). Stays on debug;
+                  // the single user-facing line comes from the state transition.
+                  await this._updateReachability(device, false);
                   this.log.debug(
                     `Error getting spec update for ${device.name || device.model} (${device.did}) with ${JSON.stringify(data)}`,
                   );
@@ -3612,6 +3868,8 @@ class Dreame extends utils.Adapter {
                 this.log.debug(JSON.stringify(res.data));
                 return;
               }
+              // Device answered — reachability confirmed.
+              await this._updateReachability(device, true);
               this.log.debug(JSON.stringify(res.data));
               for (const element of res.data.data.result) {
                 const path = await this._lazyCreateState(
@@ -3642,8 +3900,8 @@ class Dreame extends utils.Adapter {
               if (error.response && error.response.status === 401) {
                 this.log.debug(JSON.stringify(error.response.data));
                 this.log.info('Receive 401 error. Refresh Token in 60 seconds');
-                this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
-                this.refreshTokenTimeout = setTimeout(() => {
+                this.refreshTokenTimeout && this.clearTimeout(this.refreshTokenTimeout);
+                this.refreshTokenTimeout = this.setTimeout(() => {
                   this.refreshToken();
                 }, 1000 * 60);
               }
@@ -4004,15 +4262,15 @@ class Dreame extends utils.Adapter {
             if (isMowing && !this.mowerMapInterval) {
               this.log.info(`Mower ${did} started mowing (status=${element.value}), starting map polling`);
               this.getMowerMap(device);
-              this.mowerMapInterval = setInterval(() => {
+              this.mowerMapInterval = this.setInterval(() => {
                 this.getMowerMap(device);
               }, 30 * 1000);
             } else if (!isMowing && this.mowerMapInterval) {
               this.log.info(`Mower ${did} stopped mowing (status=${element.value}), stopping map polling`);
-              clearInterval(this.mowerMapInterval);
+              this.clearInterval(this.mowerMapInterval);
               this.mowerMapInterval = null;
               this.getMowerMap(device);
-              setTimeout(() => this.loadMowerHistory(device), 5000);
+              this.setTimeout(() => this.loadMowerHistory(device), 5000);
             }
           }
           // Plugin: prop.2.51 triggers loadSettingData() → getCFG() (L181455-181457)
@@ -4027,7 +4285,7 @@ class Dreame extends utils.Adapter {
             this.parseVacuumAutoSwitch(did, element.value);
           }
           // Shortcuts (4-48): parse base64 names and running state
-          if (this.isMower(device) && element.siid === 4 && element.piid === 48) {
+          if ((this.isMower(device) || this.isVacuum(device)) && element.siid === 4 && element.piid === 48) {
             this.parseShortcuts(did, element.value);
           }
           // Lazy create + setState für Properties mit bekannter Metadaten-Definition
@@ -4189,7 +4447,7 @@ class Dreame extends utils.Adapter {
       if (Object.prototype.toString.call(value) !== '[object Object]') {
         if (value != null) {
           const pathMap = In_path + key;
-          this.getType(value, pathMap);
+          await this.getType(value, pathMap);
           if (typeof value === 'object' && value !== null) {
             this.setState(pathMap, JSON.stringify(value), true);
           } else {
@@ -4249,27 +4507,27 @@ class Dreame extends utils.Adapter {
                       //1: DreameLevel, 2: DreameWaterVolume, 3: DreameRepeat, 4: DreameRoomNumber, 5: DreameCleaningMode, 6: Route
                       //map-req[{"piid": 2,"value": "{\"req_type\":1,\"frame_type\":I,\"force_type\":1}"}]
                       let pathMap = In_path + key + '.' + Subkey + '.RoomSettings';
-                      this.getType(JSON.stringify(Subvalue), pathMap);
+                      await this.getType(JSON.stringify(Subvalue), pathMap);
                       this.setState(pathMap, JSON.stringify(Subvalue), true);
                       pathMap = In_path + key + '.' + Subkey + '.RoomOrder';
-                      this.getType(parseFloat(Subvalue[3]), pathMap);
+                      await this.getType(parseFloat(Subvalue[3]), pathMap);
                       this.setState(pathMap, parseFloat(Subvalue[3]), true);
                       if (!isMowerDevice) {
                         pathMap = In_path + key + '.' + Subkey + '.Level';
-                        this.setcleansetPath(pathMap, DreameLevel);
+                        await this.setcleansetPath(pathMap, DreameLevel);
                         this.setState(pathMap, Subvalue[0], true);
                         pathMap = In_path + key + '.' + Subkey + '.CleaningMode';
-                        this.setcleansetPath(pathMap, DreameCleaningMode);
+                        await this.setcleansetPath(pathMap, DreameCleaningMode);
                         this.setState(pathMap, Subvalue[4], true);
                         pathMap = In_path + key + '.' + Subkey + '.WaterVolume';
-                        this.setcleansetPath(pathMap, DreameWaterVolume);
+                        await this.setcleansetPath(pathMap, DreameWaterVolume);
                         this.setState(pathMap, Subvalue[1], true);
                       }
                       pathMap = In_path + key + '.' + Subkey + '.Repeat';
-                      this.setcleansetPath(pathMap, DreameRepeat);
+                      await this.setcleansetPath(pathMap, DreameRepeat);
                       this.setState(pathMap, Subvalue[2], true);
                       pathMap = In_path + key + '.' + Subkey + '.Route';
-                      this.setcleansetPath(pathMap, DreameRoute);
+                      await this.setcleansetPath(pathMap, DreameRoute);
                       this.setState(pathMap, Subvalue[5], true);
                       pathMap = In_path + key + '.' + Subkey + '.Cleaning';
                       await this.setcleansetPath(pathMap, DreameRoomClean);
@@ -4281,7 +4539,7 @@ class Dreame extends utils.Adapter {
                   }
                 }
               } else {
-                this.getType(Subvalue, pathMap);
+                await this.getType(Subvalue, pathMap);
                 this.setState(pathMap, JSON.stringify(Subvalue), true);
               }
             }
@@ -4382,7 +4640,7 @@ class Dreame extends utils.Adapter {
         // geschrieben. Sonst würde während der Reinigung (force-I scheitert) die veraltete
         // Karte die Live-Karte überschreiben. mergedCloud kommt NUR aus force-I (idle) oder
         // den P-Frames (Reinigung). Die gespeicherte Karte dient nur Raumnamen/areaInfo.
-        const multiMap = decodeMultiMapData(firstMap.thb || firstMap.map, 0);
+        const multiMap = decodeMultiMapData(firstMap.thb || firstMap.map, 0, device.model);
         if (multiMap && multiMap.areaInfo) {
           this._areaInfoByDid[device.did] = multiMap.areaInfo;
           this._areaInfoByMapId[device.did] = this._areaInfoByMapId[device.did] || {};
@@ -5260,6 +5518,11 @@ class Dreame extends utils.Adapter {
 
         if (res.data.code !== 0) {
           if (res.data.code === 80001) {
+            // Same offline signal as in the property poll. Feeding it in here as
+            // well means a device that goes quiet between two poll cycles is
+            // noticed as soon as the user tries to control it.
+            const timedOutDevice = this.deviceArray.find((d) => String(d.did) === String(data.did));
+            timedOutDevice && this._updateReachability(timedOutDevice, false).catch(() => undefined);
             this.log.debug('Command timeout: ' + JSON.stringify(res.data));
           } else {
             this.log.warn('Command failed: ' + JSON.stringify(res.data));
@@ -5437,10 +5700,25 @@ class Dreame extends utils.Adapter {
     }
   }
 
-  parseShortcuts(did, value) {
+  async parseShortcuts(did, value) {
     try {
       const shortcuts = typeof value === 'string' ? JSON.parse(value) : value;
       if (!Array.isArray(shortcuts)) return;
+      // Cleanup verwaister Kanaele: Shortcuts, die im neuen Payload nicht mehr
+      // vorkommen (z.B. in der App geloescht), aus dem Objektbaum entfernen.
+      // Laeuft nur bei einem gueltigen Array (siehe Check oben), damit ein
+      // kaputter/leerer Push nicht versehentlich alle Kanaele loescht.
+      const currentIds = new Set(shortcuts.map((sc) => String(sc.id)));
+      const existingNameStates = await this.getStatesAsync(`${did}.shortcuts.*.name`);
+      for (const fullId of Object.keys(existingNameStates || {})) {
+        const idParts = fullId.split('.');
+        const scId = idParts[idParts.length - 2];
+        if (!currentIds.has(scId)) {
+          const orphanPath = `${did}.shortcuts.${scId}`;
+          await this.delObjectAsync(orphanPath, { recursive: true });
+          this.log.info(`Shortcut ${scId} nicht mehr vorhanden, Kanal ${orphanPath} entfernt`);
+        }
+      }
       for (const sc of shortcuts) {
         const name = Buffer.from(sc.name, 'base64').toString('utf-8');
         const running = sc.state === '0' || sc.state === '1';
@@ -5466,6 +5744,137 @@ class Dreame extends utils.Adapter {
       }
     } catch (e) {
       this.log.debug(`parseShortcuts error: ${e.message}`);
+    }
+  }
+
+  // Loest einen Termin-Raum (segmentId aus decodeRoomsWord) zu einem Anzeigenamen auf.
+  // Gleiche Drei-Fall-Logik wie _setCustomRoomCleaningMap (main.js:2957-2972), aber
+  // mit I18n.translate() statt getTranslatedObject() - hier wird ein einzelner String
+  // fuer die aktuelle Adapter-Sprache gebraucht (JSON-Datenfeld), kein common.name.
+  _resolveRoomName(did, segmentId) {
+    const areaEntry = this._areaInfoByDid[did]?.[String(segmentId)];
+    const roomResult = getRoomDisplayName(String(segmentId), areaEntry);
+    if (roomResult.type === 'custom') {
+      return roomResult.value;
+    } else if (roomResult.type === 'predefined') {
+      const translated = I18n.translate(roomResult.nameKey);
+      return roomResult.indexSuffix > 0 ? `${translated} ${roomResult.indexSuffix}` : translated;
+    }
+    return roomResult.value;
+  }
+
+  // Uebersetzt einen Termin-Enum-Slug (z.B. "vacuum-mop") ueber die uebergebene
+  // Slug->i18n-Key-Map in die aktuelle Adapter-Sprache. null (unbekannter Rohwert
+  // aus decodeRoomsWord/decodeAllRoomsWord) und unbekannte Slugs werden unveraendert
+  // durchgereicht statt zu crashen.
+  _translateScheduleEnum(keyMap, slug) {
+    if (slug === null || slug === undefined) return slug;
+    const key = keyMap[slug];
+    return key ? I18n.translate(key) : slug;
+  }
+
+  async parseSchedule(did, value) {
+    try {
+      const termine = parseScheduleBlob(value);
+      // Cleanup verwaister Kanaele: Termine, die im neuen Payload nicht mehr
+      // vorkommen (z.B. in der App geloescht), aus dem Objektbaum entfernen.
+      // Bei leerem Payload ist currentIds leer -> alle bestehenden Termin-Kanaele
+      // werden entfernt, der _backup-State bleibt davon unberuehrt (eigener Pfad).
+      const currentIds = new Set(termine.map((t) => String(t.id)));
+      const existingRawStates = await this.getStatesAsync(`${did}.schedule.*.raw`);
+      for (const fullId of Object.keys(existingRawStates || {})) {
+        const idParts = fullId.split('.');
+        const scheduleId = idParts[idParts.length - 2];
+        if (!currentIds.has(scheduleId)) {
+          const orphanPath = `${did}.schedule.${scheduleId}`;
+          await this.delObjectAsync(orphanPath, { recursive: true });
+          this.log.info(`Termin ${scheduleId} nicht mehr vorhanden, Kanal ${orphanPath} entfernt`);
+        }
+      }
+      this.extendObject(`${did}.schedule._backup`, {
+        type: 'state',
+        common: { name: 'Letzter Termine-Blob (Rollback)', type: 'string', role: 'json', read: true, write: false },
+        native: {},
+      });
+      for (const termin of termine) {
+        const path = `${did}.schedule.${termin.id}`;
+        const displayName = `${termin.time} - ${termin.weekdays || 'nie'}`;
+        this.extendObject(path, { type: 'channel', common: { name: displayName }, native: {} });
+        this.extendObject(`${path}.enabled`, {
+          type: 'state',
+          common: { name: 'Aktiv', type: 'boolean', role: 'switch', read: true, write: true },
+          native: {},
+        });
+        this.setState(`${path}.enabled`, termin.enabled, true);
+        this.extendObject(`${path}.time`, {
+          type: 'state',
+          common: { name: 'Uhrzeit', type: 'string', role: 'text', read: true, write: false },
+          native: {},
+        });
+        this.setState(`${path}.time`, termin.time, true);
+        this.extendObject(`${path}.weekdays`, {
+          type: 'state',
+          common: { name: 'Wochentage', type: 'string', role: 'text', read: true, write: false },
+          native: {},
+        });
+        this.setState(`${path}.weekdays`, termin.weekdays, true);
+        this.extendObject(`${path}.type`, {
+          type: 'state',
+          common: { name: 'Termin-Typ', type: 'string', role: 'text', read: true, write: false },
+          native: {},
+        });
+        this.setState(`${path}.type`, this._translateScheduleEnum(SCHEDULE_TYPE_KEYS, termin.type), true);
+        this.extendObject(`${path}.raw`, {
+          type: 'state',
+          common: { name: 'Raw-Segment (Debug)', type: 'string', role: 'text', read: true, write: false },
+          native: {},
+        });
+        this.setState(`${path}.raw`, termin.raw, true);
+
+        if (termin.type === 'shortcut') {
+          this.extendObject(`${path}.shortcutId`, {
+            type: 'state',
+            common: { name: 'Shortcut-ID', type: 'number', role: 'value', read: true, write: false },
+            native: {},
+          });
+          this.setState(`${path}.shortcutId`, termin.shortcutId, true);
+          const shortcutObj = await this.getObjectAsync(`${did}.shortcuts.${termin.shortcutId}`);
+          this.extendObject(`${path}.orphan`, {
+            type: 'state',
+            common: { name: 'Shortcut fehlt (verwaist)', type: 'boolean', role: 'indicator', read: true, write: false },
+            native: {},
+          });
+          this.setState(`${path}.orphan`, !shortcutObj, true);
+        } else if (termin.type === 'rooms') {
+          this.extendObject(`${path}.rooms`, {
+            type: 'state',
+            common: { name: 'Raeume', type: 'string', role: 'json', read: true, write: false },
+            native: {},
+          });
+          const roomsWithNames = termin.rooms.map((room) => ({
+            ...room,
+            mode: this._translateScheduleEnum(SCHEDULE_MODE_KEYS, room.mode),
+            suction: this._translateScheduleEnum(SCHEDULE_SUCTION_KEYS, room.suction),
+            roomName: this._resolveRoomName(did, room.segmentId),
+          }));
+          this.setState(`${path}.rooms`, JSON.stringify(roomsWithNames), true);
+        } else if (termin.type === 'all_rooms') {
+          this.extendObject(`${path}.parameters`, {
+            type: 'state',
+            common: { name: 'Parameter', type: 'string', role: 'json', read: true, write: false },
+            native: {},
+          });
+          const translatedParameters = {
+            ...termin.parameters,
+            mode: this._translateScheduleEnum(SCHEDULE_MODE_KEYS, termin.parameters.mode),
+            suction: this._translateScheduleEnum(SCHEDULE_SUCTION_KEYS, termin.parameters.suction),
+            route: this._translateScheduleEnum(SCHEDULE_ROUTE_KEYS, termin.parameters.route),
+          };
+          this.setState(`${path}.parameters`, JSON.stringify(translatedParameters), true);
+        }
+      }
+    } catch (e) {
+      this.log.debug(`parseSchedule error: ${e.message}`);
     }
   }
 
@@ -5696,6 +6105,120 @@ class Dreame extends utils.Adapter {
 
     return TosRetString;
   }
+  /**
+   * cleaning-sequence (F10a): validates a room-order array and — once live-test 2 has
+   * confirmed the interaction — sends cleanOrder (siid 6 / aiid 2 / piid 4) to the device.
+   *
+   * Runs steps 3-8 of the design (see F10A_LIVE_TEST_ANALYSE.md Teil F): array/int/uniqueness
+   * checks, room-existence against the active map's areaInfo, a busy-guard, payload
+   * construction, the [F10a-BLOCKER] log lines that stand in for the real send, and the
+   * .active / .apply state updates. The stateChange handler only reads and JSON-parses the
+   * .order state and then calls this. Kept as its own method so it can be driven directly
+   * from a REPL/script during testing.
+   *
+   * @param {string} deviceId
+   * @param {number[]} order  room IDs in cleaning order (already JSON-parsed)
+   * @returns {Promise<boolean>} true if the sequence was accepted (blocker log emitted,
+   *                             .active set), false if it was rejected by validation/busy-guard
+   */
+  async UpdateCleaningSequence(deviceId, order) {
+    const _applyPath = `${deviceId}.remote.cleaning-sequence.apply`;
+
+    // 3. validation
+    //    - must be an array
+    if (!Array.isArray(order)) {
+      this.log.error('cleaning-sequence: order must be a JSON array of room IDs');
+      await this.setStateAsync(_applyPath, false, true);
+      return false;
+    }
+    //    - every element must be a positive integer
+    if (!order.every(v => typeof v === 'number' && Number.isInteger(v) && v > 0)) {
+      this.log.error(
+        `cleaning-sequence: order must contain positive integers only: ${JSON.stringify(order)}`,
+      );
+      await this.setStateAsync(_applyPath, false, true);
+      return false;
+    }
+    //    - all elements must be unique
+    if (new Set(order).size !== order.length) {
+      this.log.error(
+        `cleaning-sequence: order must not contain duplicate room IDs: ${JSON.stringify(order)}`,
+      );
+      await this.setStateAsync(_applyPath, false, true);
+      return false;
+    }
+    //    - every room ID must exist in the active map's areaInfo. The active map id is the
+    //      last path segment of status.map-object-name.
+    const _mapObjSt = await this.getStateAsync(`${deviceId}.status.map-object-name`);
+    const _mapObjName = _mapObjSt && _mapObjSt.val != null ? String(_mapObjSt.val) : '';
+    const _activeMapId = _mapObjName.split('/').pop().split(/[,.]/)[0];
+    if (!_activeMapId) {
+      this.log.error(
+        `cleaning-sequence: cannot determine active map id from map-object-name "${_mapObjName}"`,
+      );
+      await this.setStateAsync(_applyPath, false, true);
+      return false;
+    }
+    const _areaStates = await this.getStatesAsync(
+      `${deviceId}.map.maps.${_activeMapId}.info.areaInfo.*`,
+    );
+    // Room id is the token right after ".areaInfo." — the matched states are nested
+    // (areaInfo.<roomId>.<field>), so the last path segment is a field name, not the id.
+    const _knownRoomIds = new Set();
+    for (const _k of Object.keys(_areaStates)) {
+      const _m = _k.match(/\.areaInfo\.(\d+)(?:\.|$)/);
+      if (_m) {
+        _knownRoomIds.add(Number(_m[1]));
+      }
+    }
+    const _unknown = order.filter(rid => !_knownRoomIds.has(rid));
+    if (_unknown.length > 0) {
+      this.log.error(
+        `cleaning-sequence: room IDs ${JSON.stringify(_unknown)} are not in the active map ` +
+          `${_activeMapId} (known: ${JSON.stringify([..._knownRoomIds])})`,
+      );
+      await this.setStateAsync(_applyPath, false, true);
+      return false;
+    }
+
+    // 4. block while a cleaning task is running
+    const _stateSt = await this.getStateAsync(`${deviceId}.status.state`);
+    const _taskSt = await this.getStateAsync(`${deviceId}.status.task-status`);
+    const _busyStates = [1, 4, 5, 7, 25];
+    const _stateVal = _stateSt && _stateSt.val != null ? Number(_stateSt.val) : null;
+    const _taskVal = _taskSt && _taskSt.val != null ? Number(_taskSt.val) : 0;
+    if (_busyStates.includes(_stateVal) || _taskVal !== 0) {
+      this.log.warn(
+        `cleaning-sequence: device is busy (state=${_stateVal}, task-status=${_taskVal}), apply aborted`,
+      );
+      await this.setStateAsync(_applyPath, false, true);
+      return false;
+    }
+
+    // 5. construct the payload
+    const _payload = JSON.stringify({ cleanOrder: order });
+    const _message = {
+      siid: 6,
+      aiid: 2,
+      in: [{ piid: 4, value: _payload }],
+      did: deviceId,
+    };
+
+    // 6. BLOCKER: actual send is disabled until live-test 2 confirms how cleanOrder and
+    //    start-custom-clean interact (Design B: partial room selection with defined order).
+    this.log.info(`[F10a-BLOCKER] would send cleanOrder: ${JSON.stringify(_message)}`);
+    this.log.info(
+      '[F10a-BLOCKER] Live-Test 2 pending — actual send disabled until cleanOrder+start-custom-clean ' +
+        'interaction verified',
+    );
+
+    // 7. mark the sequence active (the widget can already use this, independent of the send)
+    await this.setStateAsync(`${deviceId}.remote.cleaning-sequence.active`, true, true);
+
+    // 8. reset the .apply button
+    await this.setStateAsync(_applyPath, false, true);
+    return true;
+  }
   async refreshToken() {
     await this.requestClient({
       method: 'post',
@@ -5728,11 +6251,18 @@ class Dreame extends utils.Adapter {
    */
   onUnload(callback) {
     try {
-      this.updateInterval && clearInterval(this.updateInterval);
-      this.mowerMapInterval && clearInterval(this.mowerMapInterval);
-      this.refreshTokenInterval && clearInterval(this.refreshTokenInterval);
+      // this.setInterval()/this.setTimeout() (repochecker S5004/S5005) raeumen beim
+      // Adapter-Stopp ohnehin automatisch alle offenen Timer auf -- die manuellen Clears
+      // hier bleiben trotzdem stehen (schadet nicht, doppelt haelt besser) und decken jetzt
+      // zusaetzlich refreshTokenTimeout/refreshTimeout ab, die vorher gar nicht aufgeraeumt
+      // wurden.
+      this.updateInterval && this.clearInterval(this.updateInterval);
+      this.mowerMapInterval && this.clearInterval(this.mowerMapInterval);
+      this.refreshTokenInterval && this.clearInterval(this.refreshTokenInterval);
+      this.refreshTokenTimeout && this.clearTimeout(this.refreshTokenTimeout);
+      this.refreshTimeout && this.clearTimeout(this.refreshTimeout);
       for (const _timer of Object.values(this._waterboxRemovalTimers || {})) {
-        if (_timer && _timer !== 'confirmed') clearTimeout(_timer);
+        if (_timer && _timer !== 'confirmed') this.clearTimeout(_timer);
       }
       this.mqttClient && this.mqttClient.end();
 
@@ -5797,7 +6327,7 @@ class Dreame extends utils.Adapter {
 
         if (_tankRemoved) {
           if (!_existingTimer) {
-            this._waterboxRemovalTimers[_deviceId] = setTimeout(() => {
+            this._waterboxRemovalTimers[_deviceId] = this.setTimeout(() => {
               this._waterboxRemovalTimers[_deviceId] = 'confirmed';
             }, WATERBOX_REMOVAL_THRESHOLD_MS);
           }
@@ -5810,9 +6340,31 @@ class Dreame extends utils.Adapter {
             );
             await this._recalcTank(_deviceId);
           } else {
-            clearTimeout(_existingTimer);
+            this.clearTimeout(_existingTimer);
           }
           delete this._waterboxRemovalTimers[_deviceId];
+        }
+        return;
+      }
+      // Rebuild der Shortcut-Objekte bei Aenderung von status.shortcuts
+      // (deckt initialen Poll, MQTT-Push und Adapter-Restart einheitlich ab)
+      if (id.endsWith('.status.shortcuts') && state && state.ack) {
+        const parts = id.split('.');
+        const did = parts[2];
+        const device = this.deviceArray && this.deviceArray.find((d) => d.did === did);
+        if (device && (this.isMower(device) || this.isVacuum(device))) {
+          this.parseShortcuts(did, state.val);
+        }
+        return;
+      }
+      // Rebuild der Termin-Objekte bei Aenderung von status.schedule
+      // (deckt initialen Poll, MQTT-Push und Adapter-Restart einheitlich ab)
+      if (id.endsWith('.status.schedule') && state && state.ack) {
+        const parts = id.split('.');
+        const did = parts[2];
+        const device = this.deviceArray && this.deviceArray.find((d) => d.did === did);
+        if (device && (this.isMower(device) || this.isVacuum(device))) {
+          this.parseSchedule(did, state.val);
         }
         return;
       }
@@ -5860,7 +6412,7 @@ class Dreame extends utils.Adapter {
             method: 'action',
             params: { did: device.did, siid: 6, aiid: 4, in: [] },
           });
-          setTimeout(() => this.fetchWifiMap(device), 30000);
+          this.setTimeout(() => this.fetchWifiMap(device), 30000);
           return;
         }
         // Shortcut start button (native.shortcutId)
@@ -5868,7 +6420,7 @@ class Dreame extends utils.Adapter {
           const stateObjSc = await this.getObjectAsync(id);
           if (stateObjSc && stateObjSc.native && stateObjSc.native.shortcutId !== undefined) {
             const device = this.deviceArray.find((obj) => obj.did === deviceId);
-            if (!device || !this.isMower(device)) return;
+            if (!device || (!this.isMower(device) && !this.isVacuum(device))) return;
             const scId = String(stateObjSc.native.shortcutId);
             this.log.info(`Starting shortcut ${scId} for ${device.model}`);
             await this.sendCommand({
@@ -5886,6 +6438,94 @@ class Dreame extends utils.Adapter {
             });
             return;
           }
+        }
+        // Termin-Toggle (schedule.<id>.enabled): schreibt Feld[1] im status.schedule-Blob
+        if (id.includes('.schedule.') && id.endsWith('.enabled')) {
+          const device = this.deviceArray.find((obj) => obj.did === deviceId);
+          if (!device || (!this.isMower(device) && !this.isVacuum(device))) return;
+          const idParts = id.split('.');
+          const scheduleId = idParts[idParts.length - 2];
+          // Orphan-Schutz: verweist der Termin auf einen geloeschten Shortcut, blockiert
+          // auch die App den Toggle client-seitig (siehe SHORTCUTS_SCHEDULE_ANALYSE.md
+          // Runde 2 Block 4b) - hier spiegeln statt an ein ungueltiges Ziel zu schreiben.
+          const orphanState = await this.getStateAsync(`${deviceId}.schedule.${scheduleId}.orphan`);
+          if (orphanState && orphanState.val) {
+            this.log.warn(
+              `Termin ${scheduleId} verweist auf einen geloeschten Shortcut (verwaist) - Toggle wird nicht ans Geraet gesendet`,
+            );
+            await this.setState(id, state.val, false);
+            return;
+          }
+          const scheduleSt = await this.getStateAsync(`${deviceId}.status.schedule`);
+          const oldBlob = (scheduleSt && scheduleSt.val) || '';
+          const segments = oldBlob.split(';');
+          const idx = segments.findIndex((seg) => seg.split('-')[0] === scheduleId);
+          if (idx === -1) {
+            this.log.warn(`Termin ${scheduleId} nicht in status.schedule gefunden, Toggle abgebrochen`);
+            await this.setState(id, state.val, false);
+            return;
+          }
+          // Rollback-Sicherung: alten Blob VOR dem Schreiben sichern.
+          await this.setState(`${deviceId}.schedule._backup`, oldBlob, true);
+          const fields = segments[idx].split('-');
+          fields[1] = state.val ? '1' : '0';
+          segments[idx] = fields.join('-');
+          const newBlob = segments.join(';');
+          const result = await this.sendCommand({
+            did: deviceId,
+            method: 'set_properties',
+            params: [{ did: deviceId, siid: 8, piid: 2, value: newBlob }],
+          });
+          const ok = result && Array.isArray(result.result) && result.result[0] && result.result[0].code === 0;
+          if (ok) {
+            this.log.info(`Termin ${scheduleId} enabled=${state.val}`);
+            await this.setState(id, state.val, true);
+          } else {
+            this.log.error(`Termin ${scheduleId} Toggle fehlgeschlagen: ${JSON.stringify(result)}`);
+            await this.setState(id, state.val, false);
+          }
+          return;
+        }
+        // go-to-point: drive to a map coordinate without cleaning
+        if (id.includes('.remote.go-to-point.')) {
+          const _gtpBase = `${deviceId}.remote.go-to-point`;
+          if (id.endsWith('.use-current-position')) {
+            const _robot = await this.getStateAsync(`${deviceId}.map.robot`);
+            const _pos = _robot ? parsePositionPair(_robot.val) : null;
+            if (!_pos) {
+              this.log.warn(
+                'go-to-point: no usable robot position available. Map data is needed for this — enable "getMap" or wait for the robot to report a map.',
+              );
+            } else {
+              await this.setState(`${_gtpBase}.x`, _pos.x, true);
+              await this.setState(`${_gtpBase}.y`, _pos.y, true);
+              this.log.info(`go-to-point: took current position ${_pos.x}/${_pos.y}`);
+            }
+            await this.setStateAsync(id, false, true);
+            return;
+          }
+          if (id.endsWith('.start')) {
+            const _xs = await this.getStateAsync(`${_gtpBase}.x`);
+            const _ys = await this.getStateAsync(`${_gtpBase}.y`);
+            const _x = Number(_xs && _xs.val);
+            const _y = Number(_ys && _ys.val);
+            const _in = buildGoToPointIn(_x, _y);
+            if (!_in) {
+              this.log.warn('go-to-point: x and y must both be set to a number before starting');
+              await this.setStateAsync(id, false, true);
+              return;
+            }
+            this.log.info(`go-to-point start: ${_x}/${_y}`);
+            await this.sendCommand({
+              did: deviceId,
+              method: 'action',
+              params: { did: deviceId, siid: 4, aiid: 1, in: _in },
+            });
+            await this.setStateAsync(id, false, true);
+            return;
+          }
+          // x / y themselves carry no device command
+          return;
         }
         // custom-room-cleaning: bidirectional sync between checkboxes and customCommand
         if (id.includes('.remote.custom-room-cleaning.')) {
@@ -6022,6 +6662,28 @@ class Dreame extends utils.Adapter {
           // Any other sub-state (e.g. active-map): no device command needed
           return;
         }
+        // cleaning-sequence (F10a): .apply button -> validate the persisted order and
+        // (once live-test 2 has confirmed the interaction) send cleanOrder to the device.
+        // siid 6 / aiid 2 / piid 4, empirically verified 2026-08-29 with Dreame X40 Ultra.
+        // See F10A_LIVE_TEST_ANALYSE.md Teil F, CLEANING_SEQUENCE_ANALYSE.md.
+        if (id.endsWith('.remote.cleaning-sequence.apply') && state.val === true) {
+          // 1. read the persisted order
+          const _cseqOrderSt = await this.getStateAsync(`${deviceId}.remote.cleaning-sequence.order`);
+          const _cseqOrderRaw = _cseqOrderSt && _cseqOrderSt.val != null ? String(_cseqOrderSt.val) : '';
+
+          // 2. parse as JSON array; everything after this (validation, busy-guard, payload,
+          //    blocker log, .active/.apply updates) lives in UpdateCleaningSequence().
+          let _cseqOrder;
+          try {
+            _cseqOrder = JSON.parse(_cseqOrderRaw);
+          } catch (_e) {
+            this.log.error(`cleaning-sequence: order is not valid JSON: ${_cseqOrderRaw}`);
+            await this.setStateAsync(id, false, true);
+            return;
+          }
+          await this.UpdateCleaningSequence(deviceId, _cseqOrder);
+          return;
+        }
         // config.tank: Nutzer/Widget aendert Tank-Einstellungen - Wert uebernehmen (ack:true),
         // dann Restwasser/Restwaeschen/Status neu berechnen. Siehe TANK_ANALYSE.md.
         if (id.includes('.config.tank.')) {
@@ -6148,7 +6810,7 @@ class Dreame extends utils.Adapter {
             await this.sendMowerCommand(device, { m: 's', t: cfgKey, d: payload });
           }
           // Reload settings after change
-          setTimeout(() => this.loadMowerSettings(device), 2000);
+          this.setTimeout(() => this.loadMowerSettings(device), 2000);
           return;
         }
         //{"id":0,"method":"app_start","params":[{"clean_mop":0}]}
@@ -6256,7 +6918,7 @@ class Dreame extends utils.Adapter {
           try {
             data.data.params = JSON.parse(state.val);
             data.data.params.did = deviceId;
-            if (state.val.includes && state.val.includes('piid')) {
+            if (state.val.includes && state.val.includes('piid') && !state.val.includes('aiid')) {
               data.data.method = 'set_properties';
             }
           } catch (error) {
@@ -6563,7 +7225,7 @@ class Dreame extends utils.Adapter {
             error.response && this.log.error(JSON.stringify(error.response.data));
           });
 
-        this.refreshTimeout = setTimeout(async () => {
+        this.refreshTimeout = this.setTimeout(async () => {
           this.log.info('Update devices');
           await this.updateDevicesViaSpec();
         }, 10 * 1000);

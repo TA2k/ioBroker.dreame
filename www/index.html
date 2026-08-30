@@ -74,15 +74,23 @@
                 <span class="zovl-switch-txt" id="zovlLeisteTxt">Rechts</span>
               </span>
             </label>
-            <label class="zovl-feld"><span>UI-Zoom</span>
+            <!-- for="zovlGroesse"/"zovlBreite" (Issue #104, RicardoHipp): ohne explizites for
+                 gilt als "gelabeltes Element" der erste labelfaehige Nachfahre in Tree-Order --
+                 das ist hier der Minus-Knopf, nicht das Zahlenfeld. Klick auf die Beschriftung
+                 aktivierte dadurch den Minus-Knopf (optisch) statt nur das Feld zu fokussieren. -->
+            <label class="zovl-feld" for="zovlGroesse"><span>UI-Zoom</span>
               <span class="zovl-zoom">
                 <button type="button" id="zovlGroesseMinus" aria-label="Verkleinern">−</button>
                 <input type="number" id="zovlGroesse" min="70" max="150" step="5"><span class="zovl-zoom-pct">%</span>
                 <button type="button" id="zovlGroessePlus" aria-label="Vergrößern">+</button>
               </span>
             </label>
-            <label class="zovl-feld"><span>Menü-Breite <span class="zovl-wert" id="zovlBreiteWert"></span></span>
-              <input type="range" id="zovlBreite" min="250" max="500" step="10">
+            <label class="zovl-feld" for="zovlBreite"><span>Menü-Breite</span>
+              <span class="zovl-zoom">
+                <button type="button" id="zovlBreiteMinus" aria-label="Schmaler">−</button>
+                <input type="number" id="zovlBreite" min="250" max="500" step="10"><span class="zovl-zoom-pct">px</span>
+                <button type="button" id="zovlBreitePlus" aria-label="Breiter">+</button>
+              </span>
             </label>
           </section>
           <section class="zovl-sektion" id="zovlPanels">
@@ -109,6 +117,27 @@
             <button type="button" id="zovlResetBtn" class="zovl-link-btn zovl-reset-btn">Einstellungen zurücksetzen</button>
             <div class="zovl-inhalt" id="zovlResetFehler" hidden>Reset fehlgeschlagen, versuch's erneut.</div>
           </section>
+        </div>
+      </div>
+      <!-- Termine-Modal (F5, WIDGET_FEATURE_PLAN.md): nutzt das bestehende, bisher
+           ungenutzte .ovl/.ovlbox-Overlay-Muster (Ricardos Original-Auswahl-Overlay-CSS,
+           siehe reinigung.js-Kommentarkopf -- die JS-Seite davon (openPicker/openSlider)
+           wurde nie portiert, die CSS-Klassen standen bislang ungenutzt bereit). z-index:200
+           liegt damit automatisch ueber dem Zahnrad-Overlay (z-index:7) -- Termine ueber dem
+           weiterhin offenen Zahnrad zu zeigen ist bewusst kein Problem, kein Schliessen
+           des Zahnrads noetig.
+           Kopfzeile (Titel + X) bewusst NICHT Teil des scrollenden Inhalts (anders als der
+           erste F5-Commit, Live-Test-Fund: bei vielen Terminen wanderte der Schliessen-Knopf
+           unten aus dem sichtbaren Bereich) -- .tovlbox macht die Box selbst zur Flex-Spalte,
+           .tkopf bleibt fest stehen (flex:none), nur .tliste scrollt (analog zu
+           .zovl-kopf/.zovl-body beim Zahnrad-Overlay). -->
+      <div id="termineOvl" class="ovl">
+        <div class="ovlbox tovlbox" id="termineBox">
+          <div class="tkopf">
+            <h3 id="termineTitel"></h3>
+            <button type="button" id="termineSchliessen" class="zovl-x" aria-label="Schließen">✕</button>
+          </div>
+          <div id="termineListe" class="tliste"></div>
         </div>
       </div>
     </div>
@@ -144,27 +173,58 @@
            reinigung.js-Kommentarkopf) -- direkte <select>-Elemente statt Dialog. -->
       <section class="gruppe g-reinigung" id="panel-reinigung">
         <div class="abschnitt">
-          <h2>Reinigung</h2>
+          <h2 id="reinigungTitel">Reinigung</h2>
         </div>
         <div class="rraum" id="reinigungRaum">Raum antippen zum Wählen</div>
         <div class="rgrid">
           <label class="rkarte" id="reinigungModusKarte">
-            <span class="rk">Modus</span>
+            <span class="rk" id="reinigungModusLabel">Modus</span>
             <select id="reinigungModus"></select>
           </label>
-          <label class="rkarte">
-            <span class="rk">Route</span>
+          <label class="rkarte" id="reinigungRouteKarte">
+            <span class="rk" id="reinigungRouteLabel">Route</span>
             <select id="reinigungRoute"></select>
           </label>
-          <label class="rkarte">
-            <span class="rk">Saugstärke</span>
+          <label class="rkarte" id="reinigungSaugKarte">
+            <span class="rk" id="reinigungSaugLabel">Saugstärke</span>
             <select id="reinigungSaug"></select>
           </label>
           <label class="rkarte" id="reinigungWasserKarte">
-            <span class="rk">Feuchtigkeit <span class="rkwert" id="reinigungWasserWert"></span></span>
+            <span class="rk"><span id="reinigungWasserLabel">Feuchtigkeit</span> <span class="rkwert" id="reinigungWasserWert"></span></span>
             <input type="range" id="reinigungWasser" min="1" max="32" step="1">
           </label>
         </div>
+      </section>
+      <!-- Kurzbefehle-Panel (F4, WIDGET_FEATURE_PLAN.md): Kachel-Liste der App-seitig
+           angelegten Shortcuts. shortcuts.js blendet das ganze Panel aus, solange kein
+           Shortcut fuer das aktive Geraet existiert (siehe render() dort). -->
+      <section class="gruppe g-shortcuts" id="panel-shortcuts">
+        <div class="abschnitt">
+          <h2 id="shortcutsTitel" hidden>Kurzbefehle</h2>
+        </div>
+        <div class="saktionen" id="shortcutsListe"></div>
+      </section>
+      <!-- Termine-Panel (F5, WIDGET_FEATURE_PLAN.md, nach Live-Test-Feedback auf ein
+           normales Panel umgestellt statt Zahnrad-Abschnitt): Knopf ueber die volle
+           Panel-Breite, oeffnet das Termine-Modal weiter unten (#termineOvl). Panel wird
+           ueber die normale Panels-Sichtbarkeit-Liste im Zahnrad aus-/eingeblendet (wie
+           jedes andere Panel), zusaetzlich blendet termine.js das ganze Panel aus, solange
+           kein Termin fuer das aktive Geraet existiert (wie shortcuts.js). -->
+      <section class="gruppe g-termine" id="panel-termine">
+        <div class="saktionen">
+          <button type="button" id="termineBtn" class="saktion"></button>
+        </div>
+      </section>
+      <!-- Station-Panel (Etappe C, Commit C4): Waschstations-Zustand + Aktionen. Bewusst
+           ohne Bestaetigungsdialog (siehe station.js-Kommentarkopf) -- direkte Knoepfe.
+           F6 (WIDGET_FEATURE_PLAN.md): von seiner alten Position (nach Statistik) hierher
+           vorgezogen, direkt nach Termine/vor Wartung -- muss mit main.js'
+           PanelRegistry.registriere()-Reihenfolge uebereinstimmen (siehe Kommentar dort). -->
+      <section class="gruppe g-station" id="panel-station">
+        <div class="abschnitt">
+          <h2 id="stationTitel" hidden>Station</h2>
+        </div>
+        <div class="saktionen" id="stationAktionen"></div>
       </section>
       <!-- Wartungs-Panel (Etappe C, Commit C2): Verschleiss + Reset, optional Saugbeutel. -->
       <section class="gruppe g-wartung" id="panel-wartung">
@@ -191,14 +251,6 @@
         </div>
         <div class="statlist" id="statistikListe"></div>
       </section>
-      <!-- Station-Panel (Etappe C, Commit C4): Waschstations-Zustand + Aktionen. Bewusst
-           ohne Bestaetigungsdialog (siehe station.js-Kommentarkopf) -- direkte Knoepfe. -->
-      <section class="gruppe g-station" id="panel-station">
-        <div class="abschnitt">
-          <h2 id="stationTitel" hidden>Station</h2>
-        </div>
-        <div class="saktionen" id="stationAktionen"></div>
-      </section>
     </div></div>
   </div>
 </div>
@@ -218,17 +270,21 @@
 <script src="js/core/config.js"></script>
 <script src="js/core/geraete.js"></script>
 <script src="js/core/trigger.js"></script>
+<!-- Widget-i18n (F2, WIDGET_FEATURE_PLAN.md) -- braucht Daten (system.config-Objekt),
+     muss vor allen Panels stehen, die in kommenden Etappen t() nutzen. -->
+<script src="js/core/i18n.js"></script>
 
 <!-- Panel-Basis + Panels (Etappe B Commit B4, Etappe C, Etappe D). -->
 <script src="js/panels/panel.js"></script>
 <script src="js/panels/kopf.js"></script>
 <script src="js/panels/reinigung.js"></script>
+<script src="js/panels/shortcuts.js"></script>
+<script src="js/panels/termine.js"></script>
 <script src="js/panels/wartung.js"></script>
 <script src="js/panels/statistik.js"></script>
 <script src="js/panels/station.js"></script>
 <script src="js/panels/fehler.js"></script>
 <script src="js/panels/frischwasser.js"></script>
-<script src="js/panels/mopp.js"></script>
 
 <!-- Startpunkt (Etappe B, Commit B5). -->
 <script src="js/main.js"></script>
