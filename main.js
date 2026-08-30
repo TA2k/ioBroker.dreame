@@ -2900,6 +2900,61 @@ class Dreame extends utils.Adapter {
       native: {},
     });
 
+    // cleaning-sequence (F10a): channel + control states for the cleanOrder feature
+    // (siid 6 / aiid 2 / piid 4). `order` holds the room IDs in cleaning order, `apply`
+    // triggers the stateChange handler, `active` reflects whether a sequence is in effect.
+    // See F10A_LIVE_TEST_ANALYSE.md Teil F, CLEANING_SEQUENCE_ANALYSE.md.
+    await this.extendObject(`${did}.remote.cleaning-sequence`, {
+      type: 'channel',
+      common: { name: 'Cleaning Sequence' },
+      native: {},
+    });
+    const _cseqOrderPath = `${did}.remote.cleaning-sequence.order`;
+    await this.extendObject(_cseqOrderPath, {
+      type: 'state',
+      common: {
+        name: 'Cleaning Sequence Order (Room IDs in cleaning order)',
+        type: 'string',
+        role: 'json',
+        read: true,
+        write: true,
+        def: '[]',
+      },
+      native: {},
+    });
+    const _cseqExistingOrder = await this.getStateAsync(_cseqOrderPath);
+    if (!_cseqExistingOrder || _cseqExistingOrder.val === null || _cseqExistingOrder.val === undefined) {
+      await this.setState(_cseqOrderPath, '[]', true);
+    }
+    await this.extendObject(`${did}.remote.cleaning-sequence.apply`, {
+      type: 'state',
+      common: {
+        name: 'Apply Cleaning Sequence to Device',
+        type: 'boolean',
+        role: 'button',
+        read: false,
+        write: true,
+      },
+      native: {},
+    });
+    const _cseqActivePath = `${did}.remote.cleaning-sequence.active`;
+    await this.extendObject(_cseqActivePath, {
+      type: 'state',
+      common: {
+        name: 'Cleaning Sequence Currently Active',
+        type: 'boolean',
+        role: 'indicator',
+        read: true,
+        write: false,
+        def: false,
+      },
+      native: {},
+    });
+    const _cseqExistingActive = await this.getStateAsync(_cseqActivePath);
+    if (!_cseqExistingActive || _cseqExistingActive.val === null || _cseqExistingActive.val === undefined) {
+      await this.setState(_cseqActivePath, false, true);
+    }
+
     // Tank-Verbrauchsmanagement (D1a): Konfigurierbare Tank-Kapazitaet + Verbrauch pro
     // Wasch-Session, daraus berechneter Restwasser-Stand. Siehe TANK_ANALYSE.md.
     await this.extendObject(`${did}.config.tank`, {
@@ -6050,6 +6105,120 @@ class Dreame extends utils.Adapter {
 
     return TosRetString;
   }
+  /**
+   * cleaning-sequence (F10a): validates a room-order array and — once live-test 2 has
+   * confirmed the interaction — sends cleanOrder (siid 6 / aiid 2 / piid 4) to the device.
+   *
+   * Runs steps 3-8 of the design (see F10A_LIVE_TEST_ANALYSE.md Teil F): array/int/uniqueness
+   * checks, room-existence against the active map's areaInfo, a busy-guard, payload
+   * construction, the [F10a-BLOCKER] log lines that stand in for the real send, and the
+   * .active / .apply state updates. The stateChange handler only reads and JSON-parses the
+   * .order state and then calls this. Kept as its own method so it can be driven directly
+   * from a REPL/script during testing.
+   *
+   * @param {string} deviceId
+   * @param {number[]} order  room IDs in cleaning order (already JSON-parsed)
+   * @returns {Promise<boolean>} true if the sequence was accepted (blocker log emitted,
+   *                             .active set), false if it was rejected by validation/busy-guard
+   */
+  async UpdateCleaningSequence(deviceId, order) {
+    const _applyPath = `${deviceId}.remote.cleaning-sequence.apply`;
+
+    // 3. validation
+    //    - must be an array
+    if (!Array.isArray(order)) {
+      this.log.error('cleaning-sequence: order must be a JSON array of room IDs');
+      await this.setStateAsync(_applyPath, false, true);
+      return false;
+    }
+    //    - every element must be a positive integer
+    if (!order.every(v => typeof v === 'number' && Number.isInteger(v) && v > 0)) {
+      this.log.error(
+        `cleaning-sequence: order must contain positive integers only: ${JSON.stringify(order)}`,
+      );
+      await this.setStateAsync(_applyPath, false, true);
+      return false;
+    }
+    //    - all elements must be unique
+    if (new Set(order).size !== order.length) {
+      this.log.error(
+        `cleaning-sequence: order must not contain duplicate room IDs: ${JSON.stringify(order)}`,
+      );
+      await this.setStateAsync(_applyPath, false, true);
+      return false;
+    }
+    //    - every room ID must exist in the active map's areaInfo. The active map id is the
+    //      last path segment of status.map-object-name.
+    const _mapObjSt = await this.getStateAsync(`${deviceId}.status.map-object-name`);
+    const _mapObjName = _mapObjSt && _mapObjSt.val != null ? String(_mapObjSt.val) : '';
+    const _activeMapId = _mapObjName.split('/').pop().split(/[,.]/)[0];
+    if (!_activeMapId) {
+      this.log.error(
+        `cleaning-sequence: cannot determine active map id from map-object-name "${_mapObjName}"`,
+      );
+      await this.setStateAsync(_applyPath, false, true);
+      return false;
+    }
+    const _areaStates = await this.getStatesAsync(
+      `${deviceId}.map.maps.${_activeMapId}.info.areaInfo.*`,
+    );
+    // Room id is the token right after ".areaInfo." — the matched states are nested
+    // (areaInfo.<roomId>.<field>), so the last path segment is a field name, not the id.
+    const _knownRoomIds = new Set();
+    for (const _k of Object.keys(_areaStates)) {
+      const _m = _k.match(/\.areaInfo\.(\d+)(?:\.|$)/);
+      if (_m) {
+        _knownRoomIds.add(Number(_m[1]));
+      }
+    }
+    const _unknown = order.filter(rid => !_knownRoomIds.has(rid));
+    if (_unknown.length > 0) {
+      this.log.error(
+        `cleaning-sequence: room IDs ${JSON.stringify(_unknown)} are not in the active map ` +
+          `${_activeMapId} (known: ${JSON.stringify([..._knownRoomIds])})`,
+      );
+      await this.setStateAsync(_applyPath, false, true);
+      return false;
+    }
+
+    // 4. block while a cleaning task is running
+    const _stateSt = await this.getStateAsync(`${deviceId}.status.state`);
+    const _taskSt = await this.getStateAsync(`${deviceId}.status.task-status`);
+    const _busyStates = [1, 4, 5, 7, 25];
+    const _stateVal = _stateSt && _stateSt.val != null ? Number(_stateSt.val) : null;
+    const _taskVal = _taskSt && _taskSt.val != null ? Number(_taskSt.val) : 0;
+    if (_busyStates.includes(_stateVal) || _taskVal !== 0) {
+      this.log.warn(
+        `cleaning-sequence: device is busy (state=${_stateVal}, task-status=${_taskVal}), apply aborted`,
+      );
+      await this.setStateAsync(_applyPath, false, true);
+      return false;
+    }
+
+    // 5. construct the payload
+    const _payload = JSON.stringify({ cleanOrder: order });
+    const _message = {
+      siid: 6,
+      aiid: 2,
+      in: [{ piid: 4, value: _payload }],
+      did: deviceId,
+    };
+
+    // 6. BLOCKER: actual send is disabled until live-test 2 confirms how cleanOrder and
+    //    start-custom-clean interact (Design B: partial room selection with defined order).
+    this.log.info(`[F10a-BLOCKER] would send cleanOrder: ${JSON.stringify(_message)}`);
+    this.log.info(
+      '[F10a-BLOCKER] Live-Test 2 pending — actual send disabled until cleanOrder+start-custom-clean ' +
+        'interaction verified',
+    );
+
+    // 7. mark the sequence active (the widget can already use this, independent of the send)
+    await this.setStateAsync(`${deviceId}.remote.cleaning-sequence.active`, true, true);
+
+    // 8. reset the .apply button
+    await this.setStateAsync(_applyPath, false, true);
+    return true;
+  }
   async refreshToken() {
     await this.requestClient({
       method: 'post',
@@ -6491,6 +6660,28 @@ class Dreame extends utils.Adapter {
             return;
           }
           // Any other sub-state (e.g. active-map): no device command needed
+          return;
+        }
+        // cleaning-sequence (F10a): .apply button -> validate the persisted order and
+        // (once live-test 2 has confirmed the interaction) send cleanOrder to the device.
+        // siid 6 / aiid 2 / piid 4, empirically verified 2026-08-29 with Dreame X40 Ultra.
+        // See F10A_LIVE_TEST_ANALYSE.md Teil F, CLEANING_SEQUENCE_ANALYSE.md.
+        if (id.endsWith('.remote.cleaning-sequence.apply') && state.val === true) {
+          // 1. read the persisted order
+          const _cseqOrderSt = await this.getStateAsync(`${deviceId}.remote.cleaning-sequence.order`);
+          const _cseqOrderRaw = _cseqOrderSt && _cseqOrderSt.val != null ? String(_cseqOrderSt.val) : '';
+
+          // 2. parse as JSON array; everything after this (validation, busy-guard, payload,
+          //    blocker log, .active/.apply updates) lives in UpdateCleaningSequence().
+          let _cseqOrder;
+          try {
+            _cseqOrder = JSON.parse(_cseqOrderRaw);
+          } catch (_e) {
+            this.log.error(`cleaning-sequence: order is not valid JSON: ${_cseqOrderRaw}`);
+            await this.setStateAsync(id, false, true);
+            return;
+          }
+          await this.UpdateCleaningSequence(deviceId, _cseqOrder);
           return;
         }
         // config.tank: Nutzer/Widget aendert Tank-Einstellungen - Wert uebernehmen (ack:true),
