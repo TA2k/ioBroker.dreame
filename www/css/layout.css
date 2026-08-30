@@ -91,7 +91,8 @@ body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 /* Raummarke = Name + Badge. Die Gruppe wird gegen den Zoom skaliert (skaliereMarken),
    innen wird deshalb in BILDSCHIRMPIXELN gerechnet, nicht in Karteneinheiten. */
 .rlabel{font-weight:800; letter-spacing:.2px; text-anchor:middle; dominant-baseline:middle;
-  font-size:13px; filter:drop-shadow(0 1px 1px rgba(255,255,255,.7)); pointer-events:none;}
+  font-size:13px; fill:var(--txt); stroke:var(--bg); stroke-width:2px; paint-order:stroke fill;
+  stroke-linejoin:round; pointer-events:none;}
 .rbadge{cursor:pointer; color:var(--txt)}
 /* Einheitlich-Betrieb: das Badge zeigt nur noch an. pointer-events:none laesst den Tipp
    zur Raumflaeche darunter durch — antippen waehlt den Raum ab, statt ins Leere zu
@@ -107,11 +108,13 @@ body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   fill:var(--txt); text-anchor:start; user-select:none}
 .rbadge .zr{opacity:.55}                /* Zahnrad nur andeuten */
 /* F10d: Sequenz-Nummer (Position in remote.cleaning-sequence.order). Eigene Klasse neben
-   .rbadge, damit beide Badges nebeneinander bestehen. Kreis in Akzentfarbe, weisse Ziffer.
-   Sitzt oberhalb des Raumnamens (transform in render.js baueSeqBadge), .rbadge darunter. */
+   .rbadge, damit beide Badges nebeneinander bestehen. Kreis in Theme-Hintergrundfarbe mit
+   Textfarben-Rand, Ziffer in Textfarbe — konsistent mit .rbadge (beide nutzen dieselben
+   Theme-Variablen). Sitzt oberhalb des Raumnamens (transform in render.js baueSeqBadge),
+   .rbadge darunter. */
 .seq-badge{pointer-events:none}
-.seq-badge .kreis{fill:var(--accent,#4a78e0); stroke:var(--panel); stroke-width:1.5}
-.seq-badge text{font-size:11px; font-weight:800; fill:#fff;
+.seq-badge .kreis{fill:var(--bg); stroke:var(--txt); stroke-width:1.5}
+.seq-badge text{font-size:11px; font-weight:800; fill:var(--txt);
   text-anchor:middle; dominant-baseline:central; user-select:none}
 /* W3-Hook: Auge-Button blendet nur die Nummern aus, die Sequenz selbst bleibt unberuehrt. */
 body.cleaning-sequence-off .seq-badge{display:none}
