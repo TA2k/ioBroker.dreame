@@ -165,6 +165,13 @@ function skaliereMarken(erzwingen){
 // die C5.5-2-Muster-Subscription zurueckkommt (neueDatenMuster() ruft dann selbst
 // drawFills()/updateLabels()/render() auf) -- kein optimistisches UI-Update.
 function selectRoom(seg){
+  // F10b/c: im Sequence-Modus (Menueleiste sichtbar) uebernimmt SequencePanel den Tap --
+  // Toggle in die Reinigungs-Reihenfolge statt custom-room-cleaning-Checkbox. Ausserhalb
+  // des Modus (window.sequenceModus fehlt oder .aktiv === false) unveraendertes Verhalten.
+  if (window.sequenceModus && window.sequenceModus.aktiv) {
+    window.sequenceModus.tap(seg);
+    return;
+  }
   raumUmschalten(seg);
 }
 

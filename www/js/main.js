@@ -26,7 +26,7 @@
  * Siehe WIDGET_SESSION_STATUS.md fuer die vollstaendige Herleitung dieser Entscheidung.
  */
 
-/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel, ReinigungPanel, FehlerPanel, WasserMoppPanel, ShortcutsPanel, TerminePanel, uiIcon */
+/* global Daten, Geraete, Config, PanelRegistry, KopfPanel, WartungPanel, StatistikPanel, StationPanel, ReinigungPanel, SequencePanel, FehlerPanel, WasserMoppPanel, ShortcutsPanel, TerminePanel, uiIcon */
 
 // ===== Zustand (verbatim aus www/legacy.html "Zustand"-Bereich uebernommen, minus SOCK —
 // die alte direkte Socket.io-Sendefunktion cmd() wird nicht mehr gebraucht, Trigger/Daten
@@ -55,6 +55,11 @@ let kartenDrehung = 0; // wird nach Config.laden() aus config.layout.drehung ges
 PanelRegistry.registriere('kopf', KopfPanel);
 PanelRegistry.registriere('fehler', FehlerPanel);
 PanelRegistry.registriere('reinigung', ReinigungPanel);
+// F10 (CLEANING_SEQUENCE_ANALYSE.md): reines Logik-Panel ohne DOM-Section und ohne
+// PANEL_LABEL-Eintrag -- taucht daher NICHT in der Zahnrad-Panels-Sichtbarkeitsliste auf
+// (baueZovlPanelsListe() filtert auf PANEL_LABEL). Registrierung genuegt, damit
+// baueAktivePanels() es pro Geraet baut/disposed. Thematisch direkt bei reinigung.
+PanelRegistry.registriere('sequence', SequencePanel);
 // F4 (WIDGET_FEATURE_PLAN.md): direkt nach reinigung registriert -- Ziel-Reihenfolge laut
 // Plan "erst alle Bedienelemente, dann Statusanzeigen"; station wandert hier erst mit F6
 // nach vorne (siehe main.js-Kommentar bei den restlichen registriere()-Aufrufen unten).
