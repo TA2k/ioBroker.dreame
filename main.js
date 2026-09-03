@@ -3293,6 +3293,37 @@ class Dreame extends utils.Adapter {
         }
       }
     }
+
+    // Sort selects by remote.cleaning-sequence.order if that
+    // matches the current selection. This makes the room order
+    // deterministic (the device honors the array order in selects),
+    // independent of any cleanOrder MIoT call. The widget writes
+    // the tap order into cleaning-sequence.order; scripts can set
+    // it directly. If order is empty or its IDs don't match the
+    // current selection, fall back to the natural iteration order.
+    try {
+      const _orderSt = await this.getStateAsync(`${did}.remote.cleaning-sequence.order`);
+      const _orderRaw = _orderSt && _orderSt.val != null ? String(_orderSt.val) : '[]';
+      const _order = JSON.parse(_orderRaw);
+      if (Array.isArray(_order) && _order.length > 0) {
+        const _selectedIds = new Set(selects.map(s => s[0]));
+        const _orderSet = new Set(_order);
+        const _allInOrder = selects.every(s => _orderSet.has(s[0]));
+        const _allInSelected = _order.every(id => _selectedIds.has(id));
+        if (_allInOrder && _allInSelected) {
+          // exact match: reorder selects by _order
+          const _byId = new Map(selects.map(s => [s[0], s]));
+          selects.length = 0;
+          for (const _id of _order) selects.push(_byId.get(_id));
+          this.log.debug(
+            `custom-room-cleaning: selects reordered per cleaning-sequence.order: ${JSON.stringify(_order)}`,
+          );
+        }
+      }
+    } catch (_e) {
+      this.log.debug(`custom-room-cleaning: order read/parse failed, using natural selects order: ${_e.message}`);
+    }
+
     return selects;
   }
 
@@ -6106,20 +6137,24 @@ class Dreame extends utils.Adapter {
     return TosRetString;
   }
   /**
-   * cleaning-sequence (F10a): validates a room-order array and — once live-test 2 has
-   * confirmed the interaction — sends cleanOrder (siid 6 / aiid 2 / piid 4) to the device.
+   * cleaning-sequence (F10a, Option 3): validates a room-order array and persists it.
    *
-   * Runs steps 3-8 of the design (see F10A_LIVE_TEST_ANALYSE.md Teil F): array/int/uniqueness
-   * checks, room-existence against the active map's areaInfo, a busy-guard, payload
-   * construction, the [F10a-BLOCKER] log lines that stand in for the real send, and the
-   * .active / .apply state updates. The stateChange handler only reads and JSON-parses the
-   * .order state and then calls this. Kept as its own method so it can be driven directly
-   * from a REPL/script during testing.
+   * No longer sends cleanOrder to the device — that MIoT call (siid 6 / aiid 2) raced
+   * against Part C's start-custom-clean send with no ordering guarantee between the two
+   * independent HTTPS calls. Instead, _buildCustomRoomCleaningSelects() sorts the selects
+   * array by this order right before the next .start=true, so the order arrives atomically
+   * with the start command itself — deterministic regardless of timing between state writes.
+   *
+   * Runs steps 3-4+7-8 of the original design (see F10A_LIVE_TEST_ANALYSE.md Teil F):
+   * array/int/uniqueness checks, room-existence against the active map's areaInfo, a
+   * busy-guard, and the .active / .apply state updates. The stateChange handler only reads
+   * and JSON-parses the .order state and then calls this. Kept as its own method so it can
+   * be driven directly from a REPL/script during testing.
    *
    * @param {string} deviceId
    * @param {number[]} order  room IDs in cleaning order (already JSON-parsed)
-   * @returns {Promise<boolean>} true if the sequence was accepted (blocker log emitted,
-   *                             .active set), false if it was rejected by validation/busy-guard
+   * @returns {Promise<boolean>} true if the sequence was accepted (.active set), false if
+   *                             it was rejected by validation/busy-guard
    */
   async UpdateCleaningSequence(deviceId, order) {
     const _applyPath = `${deviceId}.remote.cleaning-sequence.apply`;
@@ -6197,21 +6232,10 @@ class Dreame extends utils.Adapter {
       return false;
     }
 
-    // 5. construct the payload
-    const _payload = JSON.stringify({ cleanOrder: order });
-    const _message = {
-      siid: 6,
-      aiid: 2,
-      in: [{ piid: 4, value: _payload }],
-      did: deviceId,
-    };
-
-    // 6. BLOCKER: actual send is disabled until live-test 2 confirms how cleanOrder and
-    //    start-custom-clean interact (Design B: partial room selection with defined order).
-    this.log.info(`[F10a-BLOCKER] would send cleanOrder: ${JSON.stringify(_message)}`);
-    this.log.info(
-      '[F10a-BLOCKER] Live-Test 2 pending — actual send disabled until cleanOrder+start-custom-clean ' +
-        'interaction verified',
+    // 5. no MIoT send here (Option 3) — order is applied via the selects array on the
+    //    next .start=true, see _buildCustomRoomCleaningSelects(). Debug-only trace.
+    this.log.debug(
+      `cleaning-sequence: order stored, will be applied via selects on next start: ${JSON.stringify(order)}`,
     );
 
     // 7. mark the sequence active (the widget can already use this, independent of the send)
@@ -7180,6 +7204,21 @@ class Dreame extends utils.Adapter {
               return;
             }
           }
+        }
+
+        // Guard gegen sinnlose Round-Trips: erreicht ein beschreibbarer State diesen
+        // generischen Sende-Pfad, ohne dass einer der Branches oben eine echte Payload
+        // gebaut hat (kein native.piid/aiid, kein customCommand, keine Raum-Einstellung),
+        // bleibt method='action' mit leerem params:{}. Das Geraet weist so einen Befehl
+        // nach ~8s mit code:80001 ab -> log.error("Error setting device state"). Trifft
+        // z.B. remote.cleaning-sequence.order/.active (role:json bzw. indicator, native:{},
+        // vom .apply-Handler bzw. Adapter selbst genutzt, nie als Aktion gedacht).
+        if (
+          data.data.method === 'action' &&
+          (!data.data.params || Object.keys(data.data.params).length === 0)
+        ) {
+          this.log.debug(`No actionable payload for ${id}, skipping device command`);
+          return;
         }
 
         this.log.info(`Send: ${JSON.stringify(data)} to ${deviceId}`);
