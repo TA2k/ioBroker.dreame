@@ -91,6 +91,7 @@
   "panel.frischwasser.wasch-zyklen.uebrig": "left",
   "panel.frischwasser.tank-status.label": "Tank",
   "panel.frischwasser.tank-status.eingesetzt": "inserted ✓",
+  "panel.frischwasser.tank-status.eingesetzt-niedrig": "inserted, water low ⚠",
   "panel.frischwasser.tank-status.draussen": "removed ✗",
   "panel.frischwasser.mopp-montiert.label": "Mop attached",
   "panel.frischwasser.mopp-in-station.label": "Mop in station",
