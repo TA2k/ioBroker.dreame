@@ -96,6 +96,8 @@
   "panel.frischwasser.mopp-montiert.label": "Mopp montiert",
   "panel.frischwasser.mopp-in-station.label": "Mopp in Station",
   "panel.frischwasser.feuchtigkeit.label": "Feuchtigkeit",
+  "panel.frischwasser.reinigungsmittel.label": "Reinigungsmittel",
+  "panel.frischwasser.reinigungsmittel.uebrig": "übrig",
   "panel.frischwasser.temperatur.label": "Temperatur",
   "panel.frischwasser.temperatur.stufe-praefix": "Stufe",
   "panel.frischwasser.warnung.warn": "Wasser bald nachfüllen",

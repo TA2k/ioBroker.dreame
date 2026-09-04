@@ -49,6 +49,7 @@ class WasserMoppPanel extends Panel {
     { id: 'mopp-montiert', labelKey: 'panel.frischwasser.mopp-montiert.label' },
     { id: 'mopp-in-station', labelKey: 'panel.frischwasser.mopp-in-station.label' },
     { id: 'feuchtigkeit', labelKey: 'panel.frischwasser.feuchtigkeit.label' },
+    { id: 'reinigungsmittel', labelKey: 'panel.frischwasser.reinigungsmittel.label' },
     { id: 'temperatur', labelKey: 'panel.frischwasser.temperatur.label' },
   ];
 
@@ -84,6 +85,8 @@ class WasserMoppPanel extends Panel {
       'status.mop-in-station': 'moppInStation',
       'remote.wetness-level': 'wetness',
       'remote.water-temperature': 'temperatur',
+      'status.detergent-left': 'detergentLeft',
+      'status.detergent-time-left': 'detergentTimeLeft',
     };
     this._idZuKey = {};
     for (const [suffix, key] of Object.entries(suffixZuKey)) {
@@ -167,6 +170,10 @@ class WasserMoppPanel extends Panel {
     }
     if (w.wetness != null && !this.feldVersteckt('feuchtigkeit')) {
       zeilen.push(`<div><span>${t('panel.frischwasser.feuchtigkeit.label')}</span><span>${w.wetness}</span></div>`);
+    }
+    if (w.detergentLeft != null && !this.feldVersteckt('reinigungsmittel')) {
+      const uebrig = w.detergentTimeLeft != null ? ` (~${w.detergentTimeLeft} h ${t('panel.frischwasser.reinigungsmittel.uebrig')})` : '';
+      zeilen.push(`<div><span>${t('panel.frischwasser.reinigungsmittel.label')}</span><span>${w.detergentLeft} %${uebrig}</span></div>`);
     }
     if (w.temperatur != null && !this.feldVersteckt('temperatur')) {
       const temperaturText = this._temperaturStates[String(w.temperatur)] || `${t('panel.frischwasser.temperatur.stufe-praefix')} ${w.temperatur}`;
