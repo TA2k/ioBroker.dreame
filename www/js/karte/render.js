@@ -135,6 +135,58 @@ function updateRoomBadges(){
   }
 }
 
+// ===== F10d: Sequenz-Nummern (CLEANING_SEQUENCE_ANALYSE.md) =====
+// Eigenes Badge PARALLEL zum .rbadge -- kleine runde Zahl = Position in
+// remote.cleaning-sequence.order (1-basiert). Sitzt OBERHALB des Raumnamens, waehrend das
+// .rbadge darunter sitzt, damit beide gleichzeitig lesbar bleiben. Aufbau in
+// Bildschirmpixeln um (0,0) wie beim .rbadge (erbt die rmark-Skalierung).
+const SEQ = { r: 9, dy: -20 }; // Kreisradius; Kreismitte dy px ueber dem Raumnamen
+
+/** Ein Sequenz-Nummern-Badge fuer einen Raum. position ist 1-basiert (Anzeige 1, 2, 3...). */
+function baueSeqBadge(id, position){
+  const g = document.createElementNS(NS,'g');
+  g.setAttribute('class','seq-badge'); g.dataset.raum = id;
+  g.setAttribute('transform', `translate(0 ${SEQ.dy})`);
+  const c = document.createElementNS(NS,'circle');
+  c.setAttribute('class','kreis');
+  c.setAttribute('cx',0); c.setAttribute('cy',0); c.setAttribute('r',SEQ.r);
+  g.appendChild(c);
+  const t = document.createElementNS(NS,'text');
+  t.setAttribute('x',0); t.setAttribute('y',0);
+  t.textContent = String(position);
+  g.appendChild(t);
+  return g;
+}
+
+/**
+ * Sequenz-Nummern an allen Raeumen neu setzen. Quelle ist window.sequenceModus.order (in
+ * Tap-Reihenfolge). Ausserhalb des Sequence-Modus (kein sequenceModus oder .aktiv === false)
+ * wird wie bei leerer order verfahren -> alle .seq-badge verschwinden. Positionen kommen aus
+ * markEls -- dieselbe Quelle wie updateRoomBadges(). Guard gegen leere markEls (noch keine
+ * Karte / mitten im buildOverlay-Rebuild).
+ */
+function updateSequenceBadges(){
+  if (!markEls || !Object.keys(markEls).length) return;
+  const aktiv = !!(window.sequenceModus && window.sequenceModus.aktiv);
+  const order = aktiv ? (window.sequenceModus.order || []) : [];
+  const pos = new Map();
+  order.forEach((rid, i) => pos.set(Number(rid), i + 1));
+  for (const id of Object.keys(markEls)){
+    const g = markEls[id];
+    const alt = g.querySelector('.seq-badge');
+    if (alt) alt.remove();
+    const p = pos.get(+id);
+    if (p == null || hidden.has(+id)) continue;
+    g.appendChild(baueSeqBadge(+id, p));
+  }
+}
+
+// SequencePanel feuert seq-order-changed bei jeder Adapter-Rueckmeldung von .order,
+// seq-mode-changed beim Aktivieren/Deaktivieren. Beide Male die Nummern neu aufbauen --
+// updateSequenceBadges() ist modus-bewusst und raeumt bei inaktivem Modus selbst auf.
+document.addEventListener('seq-order-changed', updateSequenceBadges);
+document.addEventListener('seq-mode-changed', updateSequenceBadges);
+
 /**
  * Haelt Name und Badge in konstanter Bildschirmgroesse. Eine SVG-Einheit ist cell*scale
  * Bildschirmpixel — mit dem Kehrwert skaliert, entspricht innen 1 Einheit 1 Pixel.
@@ -165,6 +217,13 @@ function skaliereMarken(erzwingen){
 // die C5.5-2-Muster-Subscription zurueckkommt (neueDatenMuster() ruft dann selbst
 // drawFills()/updateLabels()/render() auf) -- kein optimistisches UI-Update.
 function selectRoom(seg){
+  // F10b/c: im Sequence-Modus (Menueleiste sichtbar) uebernimmt SequencePanel den Tap --
+  // Toggle in die Reinigungs-Reihenfolge statt custom-room-cleaning-Checkbox. Ausserhalb
+  // des Modus (window.sequenceModus fehlt oder .aktiv === false) unveraendertes Verhalten.
+  if (window.sequenceModus && window.sequenceModus.aktiv) {
+    window.sequenceModus.tap(seg);
+    return;
+  }
   raumUmschalten(seg);
 }
 

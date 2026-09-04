@@ -165,6 +165,7 @@ function buildOverlay(){
   }
   skaliereMarken(true);
   updateRoomBadges();
+  updateSequenceBadges(); // F10d: Sequenz-Nummern nach jedem Frame-Rebuild wiederherstellen
   chargerMk = chargerPos ? iconMarker(chargerPos[0],chargerPos[1],ICON.CHARGER,ICON_SIZE.charger) : null;
   robotMk   = robotPos   ? iconMarker(robotPos[0],robotPos[1],ICON.ROBOT,ICON_SIZE.robot,'robot-mk','ROBOT') : null;
   // Die Marker werden bei jedem Kartenpaket neu erzeugt — den Roboter deshalb dorthin

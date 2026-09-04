@@ -30,13 +30,6 @@ const TANK_WARNTEXT_KEY = {
   critical: 'panel.frischwasser.warnung.critical',
 };
 
-// Stations-Frischwassertank (siid 27, piid 1, lib/specs/station.js): 0 = Installed,
-// 1 = Not installed, 2 = Low water (Zwischenzustand, zaehlt auch als installiert). Per
-// TANK-DIAG-Log live bestaetigt (David, 2026-07-27) -- siehe main.js D1c-Kommentar fuer die
-// Zwischenzeitlich-falsch-korrigiert-Geschichte (kurzzeitig auf status.water-tank umgestellt,
-// das sich beim Tank-Rausziehen live nachweisbar nicht mitbewegt).
-const TANK_EINGESETZT = wert => Number(wert) === 0 || Number(wert) === 2;
-
 // mop-pad-installed (main.js Zeile ~1756) und mop-in-station (main.js Zeile ~1755) haben beide
 // keine states-Wertetabelle in der Spec-Definition -- welcher State wann was genau aussagt, ist
 // noch nicht am echten Geraet verifiziert (David-Entscheidung: beide Zeilen parallel anzeigen,
@@ -56,6 +49,7 @@ class WasserMoppPanel extends Panel {
     { id: 'mopp-montiert', labelKey: 'panel.frischwasser.mopp-montiert.label' },
     { id: 'mopp-in-station', labelKey: 'panel.frischwasser.mopp-in-station.label' },
     { id: 'feuchtigkeit', labelKey: 'panel.frischwasser.feuchtigkeit.label' },
+    { id: 'reinigungsmittel', labelKey: 'panel.frischwasser.reinigungsmittel.label' },
     { id: 'temperatur', labelKey: 'panel.frischwasser.temperatur.label' },
   ];
 
@@ -85,11 +79,14 @@ class WasserMoppPanel extends Panel {
       'config.tank.remaining-ml': 'remainingMl',
       'config.tank.remaining-washes': 'remainingWashes',
       'config.tank.status': 'status',
-      'status.clean-water-tank-status': 'tankStatus',
+      'status.clean-water-tank-installed': 'tankInstalled',
+      'status.clean-water-tank-low': 'tankLow',
       'status.mop-pad-installed': 'moppStatus',
       'status.mop-in-station': 'moppInStation',
       'remote.wetness-level': 'wetness',
       'remote.water-temperature': 'temperatur',
+      'status.detergent-left': 'detergentLeft',
+      'status.detergent-time-left': 'detergentTimeLeft',
     };
     this._idZuKey = {};
     for (const [suffix, key] of Object.entries(suffixZuKey)) {
@@ -155,9 +152,12 @@ class WasserMoppPanel extends Panel {
       zeilen.push(`<div><span>${t('panel.frischwasser.wasch-zyklen.label')}</span>`
         + `<span>${w.washCounter} ${t('panel.frischwasser.wasch-zyklen.verbraucht')}${uebrig}</span></div>`);
     }
-    if (w.tankStatus != null && !this.feldVersteckt('tank-status')) {
-      const eingesetzt = TANK_EINGESETZT(w.tankStatus);
-      const wert = eingesetzt ? t('panel.frischwasser.tank-status.eingesetzt') : t('panel.frischwasser.tank-status.draussen');
+    if (w.tankInstalled != null && !this.feldVersteckt('tank-status')) {
+      const wert = !w.tankInstalled
+        ? t('panel.frischwasser.tank-status.draussen')
+        : w.tankLow
+          ? t('panel.frischwasser.tank-status.eingesetzt-niedrig')
+          : t('panel.frischwasser.tank-status.eingesetzt');
       zeilen.push(`<div><span>${t('panel.frischwasser.tank-status.label')}</span><span>${wert}</span></div>`);
     }
     if (w.moppStatus != null && !this.feldVersteckt('mopp-montiert')) {
@@ -170,6 +170,10 @@ class WasserMoppPanel extends Panel {
     }
     if (w.wetness != null && !this.feldVersteckt('feuchtigkeit')) {
       zeilen.push(`<div><span>${t('panel.frischwasser.feuchtigkeit.label')}</span><span>${w.wetness}</span></div>`);
+    }
+    if (w.detergentLeft != null && !this.feldVersteckt('reinigungsmittel')) {
+      const uebrig = w.detergentTimeLeft != null ? ` (~${w.detergentTimeLeft} h ${t('panel.frischwasser.reinigungsmittel.uebrig')})` : '';
+      zeilen.push(`<div><span>${t('panel.frischwasser.reinigungsmittel.label')}</span><span>${w.detergentLeft} %${uebrig}</span></div>`);
     }
     if (w.temperatur != null && !this.feldVersteckt('temperatur')) {
       const temperaturText = this._temperaturStates[String(w.temperatur)] || `${t('panel.frischwasser.temperatur.stufe-praefix')} ${w.temperatur}`;
