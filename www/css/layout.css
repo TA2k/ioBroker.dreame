@@ -482,6 +482,7 @@ input[type="color"]{width:36px; height:28px; padding:2px; border-radius:6px;
    nichts anliegt — keine Liste gruener Haken, die man erst lesen muss. */
 .warnbox{background:var(--panel);border:1px solid var(--warn,#e0a33a);border-radius:10px;
   padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.warnbox[hidden]{display:none}
 .warnbox .wrow{display:flex;align-items:center;gap:8px;font-size:12.5px;line-height:1.35}
 .warnbox .wrow .ico{flex:none;color:var(--warn,#e0a33a)}
 .warnbox .wrow.bad .ico{color:var(--bad,#ff5c7a)}
