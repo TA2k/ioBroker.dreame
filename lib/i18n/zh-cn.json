@@ -422,6 +422,8 @@
   "vacuum.status.camera-light-brightness": "相机光线亮度",
   "vacuum.status.charging-status": "充电状态",
   "vacuum.status.clean-water-tank-status": "洁净水箱",
+  "vacuum.status.clean-water-tank-installed": "清水箱已安装",
+  "vacuum.status.clean-water-tank-low": "清水箱水位低",
   "vacuum.status.cleaned-area": "已清洁区域",
   "vacuum.status.cleaning-count": "清洗次数",
   "vacuum.status.cleaning-paused": "清洁暂停",

@@ -102,6 +102,8 @@
   "vacuum.status.total-cruise-time":         "Total Cruise Time",
 
   "vacuum.status.clean-water-tank-status":   "Clean Water Tank",
+  "vacuum.status.clean-water-tank-installed":"Clean Water Tank Installed",
+  "vacuum.status.clean-water-tank-low":      "Clean Water Tank Low",
   "vacuum.status.dirty-water-tank-status":   "Dirty Water Tank",
   "vacuum.status.dust-bag-status":           "Dust Bag",
   "vacuum.status.detergent-status":          "Detergent Status",

@@ -422,6 +422,8 @@
   "vacuum.status.camera-light-brightness": "Helderheid cameralicht",
   "vacuum.status.charging-status": "Oplaadstatus",
   "vacuum.status.clean-water-tank-status": "Schoon watertank",
+  "vacuum.status.clean-water-tank-installed": "Schoonwatertank geplaatst",
+  "vacuum.status.clean-water-tank-low": "Schoonwatertank bijna leeg",
   "vacuum.status.cleaned-area": "Schoongemaakt gebied",
   "vacuum.status.cleaning-count": "Reinigingstelling",
   "vacuum.status.cleaning-paused": "Reinigen onderbroken",

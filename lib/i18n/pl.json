@@ -422,6 +422,8 @@
   "vacuum.status.camera-light-brightness": "Jasność światła aparatu",
   "vacuum.status.charging-status": "Stan ładowania",
   "vacuum.status.clean-water-tank-status": "Zbiornik czystej wody",
+  "vacuum.status.clean-water-tank-installed": "Zbiornik czystej wody zainstalowany",
+  "vacuum.status.clean-water-tank-low": "Niski poziom czystej wody",
   "vacuum.status.cleaned-area": "Oczyszczony teren",
   "vacuum.status.cleaning-count": "Liczba sprzątań",
   "vacuum.status.cleaning-paused": "Czyszczenie wstrzymane",

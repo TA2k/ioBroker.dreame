@@ -422,6 +422,8 @@
   "vacuum.status.camera-light-brightness": "Яскравість світла камери",
   "vacuum.status.charging-status": "Стан зарядки",
   "vacuum.status.clean-water-tank-status": "Резервуар для чистої води",
+  "vacuum.status.clean-water-tank-installed": "Бак для чистої води встановлено",
+  "vacuum.status.clean-water-tank-low": "Низький рівень чистої води",
   "vacuum.status.cleaned-area": "Прибрана територія",
   "vacuum.status.cleaning-count": "Підрахунок очищення",
   "vacuum.status.cleaning-paused": "Очищення призупинено",

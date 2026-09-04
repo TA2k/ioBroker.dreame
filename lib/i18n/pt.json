@@ -422,6 +422,8 @@
   "vacuum.status.camera-light-brightness": "Brilho da luz da câmera",
   "vacuum.status.charging-status": "Status de carregamento",
   "vacuum.status.clean-water-tank-status": "Tanque de água limpa",
+  "vacuum.status.clean-water-tank-installed": "Depósito de água limpa instalado",
+  "vacuum.status.clean-water-tank-low": "Nível baixo de água limpa",
   "vacuum.status.cleaned-area": "Área Limpada",
   "vacuum.status.cleaning-count": "Contagem de limpeza",
   "vacuum.status.cleaning-paused": "Limpeza pausada",

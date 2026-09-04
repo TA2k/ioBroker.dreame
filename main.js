@@ -3479,6 +3479,31 @@ class Dreame extends utils.Adapter {
           : (meta?.type === 'number' && typeof val === 'string' && /^-?\d+$/.test(val)) ? Number(val)
             : val;
       this.setState(path, finalVal, true);
+
+      if (meta?.deriveStates) {
+        for (const d of meta.deriveStates) {
+          const derivedPath = `${did}.status.${d.id}`;
+          try {
+            if (!this.createdStates.has(derivedPath)) {
+              await this.extendObject(derivedPath, {
+                type: 'state',
+                common: {
+                  name: d.nameKey ? I18n.getTranslatedObject(d.nameKey) : derivedPath,
+                  type: d.type,
+                  role: d.role,
+                  read: true,
+                  write: false,
+                },
+                native: { did },
+              });
+              this.createdStates.add(derivedPath);
+            }
+            this.setState(derivedPath, d.compute(finalVal), true);
+          } catch (e) {
+            this.log.warn(`Fehler bei abgeleitetem State ${derivedPath}: ${e.message}`);
+          }
+        }
+      }
     }
     return path;
   }
