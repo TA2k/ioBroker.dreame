@@ -3460,7 +3460,7 @@ class Dreame extends utils.Adapter {
         this.compoundRaw[did] = this.compoundRaw[did] || {};
         this.compoundRaw[did][key] = value;
         const decodeDevice = this.deviceArray.find((d) => String(d.did) === String(did));
-        val = meta.decode(value, decodeDevice && this.deviceHasMopPadLifting(decodeDevice));
+        val = meta.decode(value, decodeDevice && this.deviceHasMopPadLifting(decodeDevice), decodeDevice);
       }
       // Manche Properties (z.B. stream-status 10001-1) liefern einen rein numerischen
       // String statt einer Zahl, obwohl der Datenpunkt als type:number definiert ist.
