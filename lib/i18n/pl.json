@@ -521,6 +521,8 @@
   "vacuum.wider-corner.off": "Wyłączony",
   "vacuum.status.mop-pad-left": "Pozostała żywotność nakładki mopującej",
   "vacuum.status.mop-pad-time-left": "Pozostały czas nakładki mopującej",
+  "vacuum.status.detergent-left": "Pozostały detergent",
+  "vacuum.status.detergent-time-left": "Pozostały czas detergentu",
   "vacuum.status.dirty-water-tank-left": "Pozostała żywotność zbiornika brudnej wody",
   "vacuum.status.dirty-water-tank-time-left": "Pozostały czas zbiornika brudnej wody",
   "vacuum.status.firmware-version": "Wersja oprogramowania układowego",

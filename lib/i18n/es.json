@@ -521,6 +521,8 @@
   "vacuum.wider-corner.off": "Apagado",
   "vacuum.status.mop-pad-left": "Vida útil restante de la mopa",
   "vacuum.status.mop-pad-time-left": "Tiempo restante de la mopa",
+  "vacuum.status.detergent-left": "Detergente restante",
+  "vacuum.status.detergent-time-left": "Tiempo restante del detergente",
   "vacuum.status.dirty-water-tank-left": "Vida útil restante del depósito de agua sucia",
   "vacuum.status.dirty-water-tank-time-left": "Tiempo restante del depósito de agua sucia",
   "vacuum.status.firmware-version": "Versión de firmware",

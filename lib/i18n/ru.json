@@ -521,6 +521,8 @@
   "vacuum.wider-corner.off": "Выключенный",
   "vacuum.status.mop-pad-left": "Остаток ресурса насадки для мытья",
   "vacuum.status.mop-pad-time-left": "Оставшееся время насадки для мытья",
+  "vacuum.status.detergent-left": "Остаток моющего средства",
+  "vacuum.status.detergent-time-left": "Оставшееся время моющего средства",
   "vacuum.status.dirty-water-tank-left": "Остаток ресурса бака грязной воды",
   "vacuum.status.dirty-water-tank-time-left": "Оставшееся время бака грязной воды",
   "vacuum.status.firmware-version": "Версия прошивки",

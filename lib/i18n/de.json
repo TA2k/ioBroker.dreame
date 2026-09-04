@@ -521,6 +521,8 @@
   "vacuum.wider-corner.off": "Aus",
   "vacuum.status.mop-pad-left": "Verbleibende Lebensdauer des Wischpads",
   "vacuum.status.mop-pad-time-left": "Verbleibende Wischpad-Zeit",
+  "vacuum.status.detergent-left": "Reinigungsmittel Rest",
+  "vacuum.status.detergent-time-left": "Reinigungsmittel Restzeit",
   "vacuum.status.dirty-water-tank-left": "Verbleibende Lebensdauer des Schmutzwassertanks",
   "vacuum.status.dirty-water-tank-time-left": "Verbleibende Schmutzwassertank-Zeit",
   "vacuum.status.firmware-version": "Firmware-Version",

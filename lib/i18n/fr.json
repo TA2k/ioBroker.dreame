@@ -521,6 +521,8 @@
   "vacuum.wider-corner.off": "Désactivé",
   "vacuum.status.mop-pad-left": "Durée de vie restante du tampon de lavage",
   "vacuum.status.mop-pad-time-left": "Temps restant du tampon de lavage",
+  "vacuum.status.detergent-left": "Détergent restant",
+  "vacuum.status.detergent-time-left": "Temps restant du détergent",
   "vacuum.status.dirty-water-tank-left": "Durée de vie restante du réservoir d'eau sale",
   "vacuum.status.dirty-water-tank-time-left": "Temps restant du réservoir d'eau sale",
   "vacuum.status.firmware-version": "Version du micrologiciel",

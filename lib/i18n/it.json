@@ -521,6 +521,8 @@
   "vacuum.wider-corner.off": "Spento",
   "vacuum.status.mop-pad-left": "Durata residua del panno mop",
   "vacuum.status.mop-pad-time-left": "Tempo rimanente del panno mop",
+  "vacuum.status.detergent-left": "Detergente rimanente",
+  "vacuum.status.detergent-time-left": "Tempo rimanente del detergente",
   "vacuum.status.dirty-water-tank-left": "Durata residua del serbatoio dell'acqua sporca",
   "vacuum.status.dirty-water-tank-time-left": "Tempo rimanente del serbatoio dell'acqua sporca",
   "vacuum.status.firmware-version": "Versione firmware",

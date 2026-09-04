@@ -521,6 +521,8 @@
   "vacuum.wider-corner.off": "离开",
   "vacuum.status.mop-pad-left": "拖布剩余寿命",
   "vacuum.status.mop-pad-time-left": "拖布剩余时间",
+  "vacuum.status.detergent-left": "清洁剂剩余",
+  "vacuum.status.detergent-time-left": "清洁剂剩余时间",
   "vacuum.status.dirty-water-tank-left": "脏水箱剩余寿命",
   "vacuum.status.dirty-water-tank-time-left": "脏水箱剩余时间",
   "vacuum.status.firmware-version": "固件版本",
