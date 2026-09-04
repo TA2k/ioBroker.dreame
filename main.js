@@ -16,6 +16,7 @@ const mqtt = require('mqtt');
 const zlib = require('node:zlib');
 const { buildGoToPointIn, parsePositionPair } = require('./lib/go-to-point');
 const { ReachabilityTracker } = require('./lib/reachability');
+const { isR2253Model } = require('./lib/specs/station');
 //check if canvas is available because is optional dependency
 let createCanvas;
 let ImageData;
@@ -3461,6 +3462,12 @@ class Dreame extends utils.Adapter {
         this.compoundRaw[did][key] = value;
         const decodeDevice = this.deviceArray.find((d) => String(d.did) === String(did));
         val = meta.decode(value, decodeDevice && this.deviceHasMopPadLifting(decodeDevice), decodeDevice);
+        if (key === '27-1' && value === 1 && isR2253Model(decodeDevice)) {
+          this.log.debug(
+            `[TANK] clean-water-tank-status Rohwert 1 (r2253, ${decodeDevice.model}, did=${did}) - ` +
+              'theoretisch "voll aber draussen" (Uebergangs-/Fehlerzustand), wird wie Rohwert 0 behandelt (Issue #126)',
+          );
+        }
       }
       // Manche Properties (z.B. stream-status 10001-1) liefern einen rein numerischen
       // String statt einer Zahl, obwohl der Datenpunkt als type:number definiert ist.
