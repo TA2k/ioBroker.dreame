@@ -1774,6 +1774,7 @@ class Dreame extends utils.Adapter {
 
     // Pilot: SIID 2, 3, 4 — aufgebaut via lib/specs, States werden lazy erstellt
     const { buildVacuumLookup } = require('./lib/specs/index');
+    const { getModelFamily, applyModelOverrides } = require('./lib/specs/model-overrides');
     const lookup = buildVacuumLookup(did);
     Object.assign(this.specPropsToIdDict[did], lookup.propsToId);
     this.specMetaDict[did] = lookup.metaMap;
@@ -3113,6 +3114,18 @@ class Dreame extends utils.Adapter {
       common: { name: 'Go To Point', type: 'boolean', role: 'button', read: false, write: true },
       native: {},
     });
+
+    const family = getModelFamily(device);
+    if (family) {
+      applyModelOverrides(family, did, {
+        props:  this.specPropsToIdDict[did],
+        meta:   this.specMetaDict[did],
+        status: this.specStatusDict,
+      }, {
+        translate: (k) => I18n.translate(k),
+        log: this.log,
+      });
+    }
 
     this.log.info(
       `Vacuum states created: ${statusStates.length} status, ${remoteStates.length} remote, ${autoSwitchRemotes.length} autoSwitch, ${actionStates.length} actions`,
