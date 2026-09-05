@@ -462,6 +462,7 @@
   "vacuum.status.map-object-name": "Naam van kaartobject",
   "vacuum.status.map-recovery-status": "Kaartherstelstatus",
   "vacuum.status.mop-cleaning-remainder": "Rest van de dweilreiniging",
+  "vacuum.status.mop-handling-pulse": "Puls dweilhantering",
   "vacuum.status.mop-in-station": "Dweil in station",
   "vacuum.status.mop-pad-installed": "Dweilpad geïnstalleerd",
   "vacuum.status.multi-floor-map": "Kaart met meerdere verdiepingen",

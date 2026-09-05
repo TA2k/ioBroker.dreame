@@ -462,6 +462,7 @@
   "vacuum.status.map-object-name": "Nom de l'objet cartographique",
   "vacuum.status.map-recovery-status": "État de récupération de la carte",
   "vacuum.status.mop-cleaning-remainder": "Reste de nettoyage de vadrouille",
+  "vacuum.status.mop-handling-pulse": "Impulsion de manipulation du tampon",
   "vacuum.status.mop-in-station": "Vadrouille en station",
   "vacuum.status.mop-pad-installed": "Tampon de vadrouille installé",
   "vacuum.status.multi-floor-map": "Plan multi-étages",

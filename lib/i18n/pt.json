@@ -462,6 +462,7 @@
   "vacuum.status.map-object-name": "Nome do objeto do mapa",
   "vacuum.status.map-recovery-status": "Status de recuperação do mapa",
   "vacuum.status.mop-cleaning-remainder": "Restante de limpeza do esfregão",
+  "vacuum.status.mop-handling-pulse": "Pulso de manuseio do esfregão",
   "vacuum.status.mop-in-station": "Estação de esfregão",
   "vacuum.status.mop-pad-installed": "Esfregão instalado",
   "vacuum.status.multi-floor-map": "Mapa de vários andares",

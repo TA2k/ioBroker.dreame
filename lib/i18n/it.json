@@ -462,6 +462,7 @@
   "vacuum.status.map-object-name": "Nome dell'oggetto della mappa",
   "vacuum.status.map-recovery-status": "Stato di ripristino della mappa",
   "vacuum.status.mop-cleaning-remainder": "Resto della pulizia del panno",
+  "vacuum.status.mop-handling-pulse": "Impulso di manipolazione del panno",
   "vacuum.status.mop-in-station": "Mop in stazione",
   "vacuum.status.mop-pad-installed": "Tappetino per scopa installato",
   "vacuum.status.multi-floor-map": "Mappa multipiano",

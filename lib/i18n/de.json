@@ -462,6 +462,7 @@
   "vacuum.status.map-object-name": "Name des Kartenobjekts",
   "vacuum.status.map-recovery-status": "Kartenwiederherstellungsstatus",
   "vacuum.status.mop-cleaning-remainder": "Wischmopp-Reinigungsrest",
+  "vacuum.status.mop-handling-pulse": "Wischpad-Handling-Puls",
   "vacuum.status.mop-in-station": "Mop-In-Station",
   "vacuum.status.mop-pad-installed": "Wischpad installiert",
   "vacuum.status.multi-floor-map": "Mehrstöckige Karte",

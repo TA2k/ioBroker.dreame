@@ -462,6 +462,7 @@
   "vacuum.status.map-object-name": "Nazwa obiektu mapy",
   "vacuum.status.map-recovery-status": "Stan odzyskiwania mapy",
   "vacuum.status.mop-cleaning-remainder": "Pozostałość po czyszczeniu mopa",
+  "vacuum.status.mop-handling-pulse": "Impuls obsługi podkładki mopa",
   "vacuum.status.mop-in-station": "Mop na stacji",
   "vacuum.status.mop-pad-installed": "Zamontowana podkładka do mopa",
   "vacuum.status.multi-floor-map": "Mapa wielu pięter",

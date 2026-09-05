@@ -462,6 +462,7 @@
   "vacuum.status.map-object-name": "地图对象名称",
   "vacuum.status.map-recovery-status": "地图恢复状态",
   "vacuum.status.mop-cleaning-remainder": "拖把清洁余量",
+  "vacuum.status.mop-handling-pulse": "拖把垫操作脉冲",
   "vacuum.status.mop-in-station": "拖把站",
   "vacuum.status.mop-pad-installed": "安装拖把垫",
   "vacuum.status.multi-floor-map": "多层地图",

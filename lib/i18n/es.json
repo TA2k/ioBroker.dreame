@@ -462,6 +462,7 @@
   "vacuum.status.map-object-name": "Nombre del objeto del mapa",
   "vacuum.status.map-recovery-status": "Estado de recuperación del mapa",
   "vacuum.status.mop-cleaning-remainder": "Resto de limpieza del trapeador",
+  "vacuum.status.mop-handling-pulse": "Pulso de manejo del trapeador",
   "vacuum.status.mop-in-station": "Trapeador en la estación",
   "vacuum.status.mop-pad-installed": "Almohadilla de trapeador instalada",
   "vacuum.status.multi-floor-map": "Mapa de varios pisos",

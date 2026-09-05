@@ -27,6 +27,7 @@
   "vacuum.status.auto-switch-settings":   "Auto Switch Settings",
   "vacuum.status.mop-in-station":         "Mop In Station",
   "vacuum.status.mop-pad-installed":      "Mop Pad Installed",
+  "vacuum.status.mop-handling-pulse":     "Mop Handling Pulse",
   "vacuum.status.task-type":              "Task Type",
   "vacuum.status.drainage-status":        "Drainage Status",
   "vacuum.status.cleaning-progress":      "Cleaning Progress",

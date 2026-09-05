@@ -550,6 +550,36 @@ class Dreame extends utils.Adapter {
     await this.setStateAsync(MARKER, true, true);
   }
 
+  // One-time per-device migration: delete the SIID 4 / PIID 52 (mop-in-station) state on
+  // r6001* devices. Confirmed dead on this family - permanently 0, never updates (Issue #119,
+  // @SilentM1978 #issuecomment-5492429062). The REMOVE override stops it from being recreated;
+  // this only cleans up objects from installs that predate the override. Runs once per device,
+  // marks itself done via a per-device persistent state.
+  async _cleanupR6001MopInStation(did) {
+    const MARKER = `${did}.info.mopInStationCleanupV1`;
+    if (await this.getObjectAsync(MARKER)) return;
+
+    const path = `${did}.status.mop-in-station`;
+    const existing = await this.getObjectAsync(path);
+    if (existing) {
+      try {
+        await this.delObjectAsync(path);
+        this.log.info(`[r6001-cleanup] Deleted dead state: ${path}`);
+      } catch (e) {
+        this.log.warn(`[r6001-cleanup] Could not delete ${path}: ${e.message}`);
+      }
+    } else {
+      this.log.debug(`[r6001-cleanup] No mop-in-station state found for ${did}.`);
+    }
+
+    await this.extendObjectAsync(MARKER, {
+      type: 'state',
+      common: { name: 'r6001 mop-in-station Cleanup V1 done', type: 'boolean', role: 'indicator', write: false, read: true },
+      native: {},
+    });
+    await this.setStateAsync(MARKER, true, true);
+  }
+
   async onReady() {
     this.setState('info.connection', false, true);
     await this._cleanupPhantomRemoteStates();
@@ -3125,6 +3155,9 @@ class Dreame extends utils.Adapter {
         translate: (k) => I18n.translate(k),
         log: this.log,
       });
+      if (family === 'r6001') {
+        await this._cleanupR6001MopInStation(did);
+      }
     }
 
     this.log.info(

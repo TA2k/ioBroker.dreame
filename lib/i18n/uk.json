@@ -462,6 +462,7 @@
   "vacuum.status.map-object-name": "Назва об’єкта карти",
   "vacuum.status.map-recovery-status": "Статус відновлення карти",
   "vacuum.status.mop-cleaning-remainder": "Залишок від очищення шваброю",
+  "vacuum.status.mop-handling-pulse": "Імпульс поводження зі шваброю",
   "vacuum.status.mop-in-station": "Швабра в станції",
   "vacuum.status.mop-pad-installed": "Швабра встановлена",
   "vacuum.status.multi-floor-map": "Карта кількох поверхів",
