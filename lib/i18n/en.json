@@ -188,6 +188,10 @@
   "vacuum.state.changing-mop-paused":           "Changing mop paused",
   "vacuum.state.floor-maintaining":             "Floor maintaining",
   "vacuum.state.floor-maintaining-paused":      "Floor maintaining paused",
+  "vacuum.state.installing-mop":                "Installing mop pad",
+  "vacuum.state.removing-mop":                  "Removing mop pad",
+  "vacuum.state.entering-dock":                 "Entering dock",
+  "vacuum.state.exiting-dock":                  "Exiting dock",
 
   "vacuum.error.unknown":                       "Unknown",
   "vacuum.error.no-error":                      "No error",

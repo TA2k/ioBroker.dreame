@@ -193,6 +193,10 @@ const DEVICE_STATUS_STATES = Object.freeze({
     106: 'Changing mop paused',
     107: 'Floor maintaining',
     108: 'Floor maintaining paused',
+    116: 'Installing mop pad',
+    117: 'Removing mop pad',
+    121: 'Entering dock',
+    122: 'Exiting dock',
   },
   mower: {
     1: 'Working',
