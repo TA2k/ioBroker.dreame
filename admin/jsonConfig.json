@@ -141,7 +141,16 @@
       },
       "help": {
         "en": "Map fetch: loads the current map from the cloud on adapter start and every X minutes, and maintains room names and image data of the stored maps. Without this option, no map display.",
-        "de": "Kartenabruf: lädt beim Adapterstart und alle X Minuten die aktuelle Karte aus der Cloud, pflegt Raumnamen und Bilddaten der gespeicherten Karten. Ohne diese Option keine Kartenanzeige."
+        "de": "Kartenabruf: lädt beim Adapterstart und alle X Minuten die aktuelle Karte aus der Cloud, pflegt Raumnamen und Bilddaten der gespeicherten Karten. Ohne diese Option keine Kartenanzeige.",
+        "ru": "Загрузка карты: при запуске адаптера и каждые X минут загружает текущую карту из облака, поддерживает названия помещений и данные изображений сохранённых карт. Без этой опции карта не отображается.",
+        "pt": "Obtenção do mapa: ao iniciar o adaptador e a cada X minutos, carrega o mapa atual da nuvem e mantém os nomes dos quartos e os dados de imagem dos mapas armazenados. Sem esta opção, o mapa não é exibido.",
+        "nl": "Kaart ophalen: laadt bij het starten van de adapter en elke X minuten de huidige kaart uit de cloud en houdt de kamernamen en afbeeldingsgegevens van de opgeslagen kaarten bij. Zonder deze optie wordt er geen kaart weergegeven.",
+        "fr": "Récupération de la carte : au démarrage de l'adaptateur et toutes les X minutes, charge la carte actuelle depuis le cloud et gère les noms des pièces ainsi que les données d'image des cartes enregistrées. Sans cette option, aucune carte n'est affichée.",
+        "it": "Recupero della mappa: all'avvio dell'adattatore e ogni X minuti carica la mappa corrente dal cloud e mantiene i nomi delle stanze e i dati immagine delle mappe memorizzate. Senza questa opzione la mappa non viene visualizzata.",
+        "es": "Obtención del mapa: al iniciar el adaptador y cada X minutos carga el mapa actual desde la nube y mantiene los nombres de las habitaciones y los datos de imagen de los mapas almacenados. Sin esta opción, no se muestra el mapa.",
+        "pl": "Pobieranie mapy: przy uruchomieniu adaptera i co X minut ładuje bieżącą mapę z chmury oraz utrzymuje nazwy pomieszczeń i dane obrazu zapisanych map. Bez tej opcji mapa nie jest wyświetlana.",
+        "uk": "Завантаження карти: під час запуску адаптера та кожні X хвилин завантажує поточну карту з хмари, підтримує назви приміщень і дані зображень збережених карт. Без цієї опції карта не відображається.",
+        "zh-cn": "获取地图：在适配器启动时以及每 X 分钟从云端加载当前地图，并维护已保存地图的房间名称和图像数据。若不启用此选项，则不显示地图。"
       }
     },
 
@@ -169,7 +178,16 @@
       },
       "help": {
         "en": "Controls the cycle in which the adapter actively fetches data from the Dreame cloud — map image AND general device status (battery, cleaning status, etc.). Higher values reduce cloud requests but also delay normal status updates.",
-        "de": "Steuert den Zyklus, in dem der Adapter aktiv Daten aus der Dreame-Cloud abruft — Kartenbild UND allgemeiner Gerätestatus (Akku, Reinigungsstatus usw.). Höhere Werte reduzieren Cloud-Requests, verzögern aber auch normale Status-Updates."
+        "de": "Steuert den Zyklus, in dem der Adapter aktiv Daten aus der Dreame-Cloud abruft — Kartenbild UND allgemeiner Gerätestatus (Akku, Reinigungsstatus usw.). Höhere Werte reduzieren Cloud-Requests, verzögern aber auch normale Status-Updates.",
+        "ru": "Управляет циклом, в котором адаптер активно запрашивает данные из облака Dreame — изображение карты И общий статус устройства (батарея, статус уборки и т. д.). Более высокие значения уменьшают количество запросов к облаку, но также задерживают обычные обновления статуса.",
+        "pt": "Controla o ciclo no qual o adaptador busca ativamente dados da nuvem Dreame — imagem do mapa E status geral do dispositivo (bateria, status de limpeza, etc.). Valores mais altos reduzem as solicitações à nuvem, mas também atrasam as atualizações normais de status.",
+        "nl": "Bepaalt de cyclus waarin de adapter actief gegevens uit de Dreame-cloud ophaalt — kaartafbeelding ÉN algemene apparaatstatus (batterij, reinigingsstatus, enz.). Hogere waarden verminderen het aantal cloudverzoeken, maar vertragen ook normale statusupdates.",
+        "fr": "Contrôle le cycle selon lequel l'adaptateur récupère activement les données du cloud Dreame — image de la carte ET état général de l'appareil (batterie, état du nettoyage, etc.). Des valeurs plus élevées réduisent les requêtes vers le cloud, mais retardent aussi les mises à jour d'état normales.",
+        "it": "Controlla il ciclo con cui l'adattatore recupera attivamente i dati dal cloud Dreame — immagine della mappa E stato generale del dispositivo (batteria, stato della pulizia, ecc.). Valori più alti riducono le richieste al cloud, ma ritardano anche i normali aggiornamenti di stato.",
+        "es": "Controla el ciclo en el que el adaptador obtiene activamente datos de la nube de Dreame — imagen del mapa Y estado general del dispositivo (batería, estado de limpieza, etc.). Los valores más altos reducen las solicitudes a la nube, pero también retrasan las actualizaciones normales de estado.",
+        "pl": "Steruje cyklem, w którym adapter aktywnie pobiera dane z chmury Dreame — obraz mapy ORAZ ogólny stan urządzenia (bateria, stan sprzątania itp.). Wyższe wartości zmniejszają liczbę żądań do chmury, ale też opóźniają normalne aktualizacje stanu.",
+        "uk": "Керує циклом, у якому адаптер активно отримує дані з хмари Dreame — зображення карти ТА загальний стан пристрою (батарея, стан прибирання тощо). Вищі значення зменшують кількість запитів до хмари, але також затримують звичайні оновлення стану.",
+        "zh-cn": "控制适配器主动从 Dreame 云端获取数据的周期 —— 地图图像以及设备的总体状态（电量、清洁状态等）。数值越大，云端请求越少，但也会延迟正常的状态更新。"
       }
     }
   }
