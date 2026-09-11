@@ -30,10 +30,7 @@ const TANK_WARNTEXT_KEY = {
   critical: 'panel.frischwasser.warnung.critical',
 };
 
-// mop-pad-installed (main.js Zeile ~1756) und mop-in-station (main.js Zeile ~1755) haben beide
-// keine states-Wertetabelle in der Spec-Definition -- welcher State wann was genau aussagt, ist
-// noch nicht am echten Geraet verifiziert (David-Entscheidung: beide Zeilen parallel anzeigen,
-// um das empirisch zu klaeren). Reine Anzeigezeilen ohne Trigger-Logik, geringes Risiko.
+// IST_EINS: "Mopp montiert"-Quelle liefert 1 = montiert, alles andere = nicht montiert.
 const IST_EINS = wert => Number(wert) === 1;
 
 class WasserMoppPanel extends Panel {
@@ -47,7 +44,6 @@ class WasserMoppPanel extends Panel {
     { id: 'wasch-zyklen', labelKey: 'panel.frischwasser.wasch-zyklen.label' },
     { id: 'tank-status', labelKey: 'panel.frischwasser.tank-status.label' },
     { id: 'mopp-montiert', labelKey: 'panel.frischwasser.mopp-montiert.label' },
-    { id: 'mopp-in-station', labelKey: 'panel.frischwasser.mopp-in-station.label' },
     { id: 'feuchtigkeit', labelKey: 'panel.frischwasser.feuchtigkeit.label' },
     { id: 'reinigungsmittel', labelKey: 'panel.frischwasser.reinigungsmittel.label' },
     { id: 'temperatur', labelKey: 'panel.frischwasser.temperatur.label' },
@@ -81,8 +77,8 @@ class WasserMoppPanel extends Panel {
       'config.tank.status': 'status',
       'status.clean-water-tank-installed': 'tankInstalled',
       'status.clean-water-tank-low': 'tankLow',
-      'status.mop-pad-installed': 'moppStatus',
-      'status.mop-in-station': 'moppInStation',
+      'status.mop-pad-installed': 'moppStatusPuls',
+      'status.water-tank': 'moppStatusPersist',
       'remote.wetness-level': 'wetness',
       'remote.water-temperature': 'temperatur',
       'status.detergent-left': 'detergentLeft',
@@ -96,6 +92,22 @@ class WasserMoppPanel extends Panel {
   }
 
   neueDaten(stateId, wert) {
+    // status.water-tank common.states EINMALIG laden: generisch {0,1,10}, auf r6001/r9419
+    // per Modell-Override auf exakt {0,1} remapped -> nur dann ist der State die
+    // verlaessliche "Mopp montiert"-Quelle (sonst Fallback auf den Puls-State piid 53).
+    // Sentinel wtCommon (undefined -> null -> common|null) verhindert Doppel-Load bei
+    // parallelen neueDaten-Ticks. Kein aktives Re-Render: der Framework-Loop treibt
+    // neueDaten weiter, der naechste Tick nutzt die dann korrekte Auswahl.
+    if (this.wtCommon === undefined) {
+      this.wtCommon = null;
+      Daten.getObject(`dreame.0.${this.did}.status.water-tank`)
+        .then(o => {
+          this.wtCommon = (o && o.common) || null;
+          const st = this.wtCommon && this.wtCommon.states;
+          this._waterTankIsRemapped =
+            !!st && Object.keys(st).length === 2 && '0' in st && '1' in st;
+        });
+    }
     const key = this._idZuKey[stateId];
     if (!key) return;
     this.werte[key] = wert;
@@ -160,13 +172,10 @@ class WasserMoppPanel extends Panel {
           : t('panel.frischwasser.tank-status.eingesetzt');
       zeilen.push(`<div><span>${t('panel.frischwasser.tank-status.label')}</span><span>${wert}</span></div>`);
     }
-    if (w.moppStatus != null && !this.feldVersteckt('mopp-montiert')) {
-      const drin = IST_EINS(w.moppStatus);
+    const moppQuelle = this._waterTankIsRemapped === true ? w.moppStatusPersist : w.moppStatusPuls;
+    if (moppQuelle != null && !this.feldVersteckt('mopp-montiert')) {
+      const drin = IST_EINS(moppQuelle);
       zeilen.push(`<div><span>${t('panel.frischwasser.mopp-montiert.label')}</span><span>${drin ? '✓' : '✗'}</span></div>`);
-    }
-    if (w.moppInStation != null && !this.feldVersteckt('mopp-in-station')) {
-      const inStation = IST_EINS(w.moppInStation);
-      zeilen.push(`<div><span>${t('panel.frischwasser.mopp-in-station.label')}</span><span>${inStation ? '✓' : '✗'}</span></div>`);
     }
     if (w.wetness != null && !this.feldVersteckt('feuchtigkeit')) {
       zeilen.push(`<div><span>${t('panel.frischwasser.feuchtigkeit.label')}</span><span>${w.wetness}</span></div>`);
