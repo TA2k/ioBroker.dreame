@@ -555,7 +555,7 @@ class Dreame extends utils.Adapter {
   // @SilentM1978 #issuecomment-5492429062). The REMOVE override stops it from being recreated;
   // this only cleans up objects from installs that predate the override. Runs once per device,
   // marks itself done via a per-device persistent state.
-  async _cleanupR6001MopInStation(did) {
+  async _cleanupDeadMopInStation(did) {
     const MARKER = `${did}.info.mopInStationCleanupV1`;
     if (await this.getObjectAsync(MARKER)) return;
 
@@ -3146,19 +3146,17 @@ class Dreame extends utils.Adapter {
     });
 
     const family = getModelFamily(device);
-    if (family) {
-      applyModelOverrides(family, did, {
-        props:  this.specPropsToIdDict[did],
-        meta:   this.specMetaDict[did],
-        status: this.specStatusDict,
-      }, {
-        translate: (k) => I18n.translate(k),
-        log: this.log,
-      });
-      if (family === 'r6001') {
-        await this._cleanupR6001MopInStation(did);
-      }
-    }
+    // all-vacuum overrides apply to every vacuum, so call unconditionally;
+    // applyModelOverrides() handles family === null internally.
+    applyModelOverrides(family, did, {
+      props:  this.specPropsToIdDict[did],
+      meta:   this.specMetaDict[did],
+      status: this.specStatusDict,
+    }, {
+      translate: (k) => I18n.translate(k),
+      log: this.log,
+    });
+    await this._cleanupDeadMopInStation(did);
 
     this.log.info(
       `Vacuum states created: ${statusStates.length} status, ${remoteStates.length} remote, ${autoSwitchRemotes.length} autoSwitch, ${actionStates.length} actions`,
