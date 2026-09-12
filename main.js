@@ -72,6 +72,18 @@ const SCHEDULE_TYPE_KEYS = Object.freeze({
   shortcut: 'vacuum.schedule.type.shortcut',
 });
 
+// Issue #141: die Dreame-Cloud liefert diese drei Leaf-Felder inkonsistent mal als number,
+// mal als string. setMapInfos() leitet common.type per typeof ab (getType()) - ohne
+// Normalisierung flackert der Typ bei jedem Wechsel und ioBroker loggt "State value to set
+// ... has to be type X but received type Y" (~165 Zeilen/Minute waehrend Reinigungslaeufen).
+// Je nach Nachrichtenform stehen die Felder in setMapInfos()' Mirror-Schleife entweder direkt
+// auf oberster Ebene (live auf r9419h verifiziert: map.timestamp_ms/.moptype/.l2r) oder
+// verschachtelt unter einem 'cover'-Override-Objekt (map.cover.timestamp_ms/...), siehe
+// lib/haDecode.js "'cover' in dataJson" - dieselbe Normalisierung greift an beiden Stellen.
+// Allowlist statt Inline-Checks, damit spaetere aehnliche Faelle (siehe #3, #82) sich leicht
+// ergaenzen lassen - bewusst NICHT auf alle map.*-Felder generalisiert.
+const MAP_COVER_NUMERIC_FIELDS = new Set(['timestamp_ms', 'moptype', 'l2r']);
+
 const BRAND_CONFIG = {
   dreame: {
     domain: 'eu.iot.dreame.tech:13267',
@@ -4558,11 +4570,28 @@ class Dreame extends utils.Adapter {
       if (Object.prototype.toString.call(value) !== '[object Object]') {
         if (value != null) {
           const pathMap = In_path + key;
-          await this.getType(value, pathMap);
-          if (typeof value === 'object' && value !== null) {
-            this.setState(pathMap, JSON.stringify(value), true);
+          if (MAP_COVER_NUMERIC_FIELDS.has(key)) {
+            // Issue #141: konsistent auf number coercen, bevor Typ/Wert geschrieben werden -
+            // sonst flackert common.type zwischen 'number' und 'string' (Dreame-Cloud liefert
+            // diese Felder inkonsistent).
+            const coerced = Number(value);
+            if (Number.isNaN(coerced)) {
+              this.log.debug(
+                `[MAP-TYPE] ${key}: Wert "${value}" liess sich nicht in eine Zahl wandeln, Original-Verhalten (Issue #141)`,
+              );
+              await this.getType(value, pathMap);
+              this.setState(pathMap, value, true);
+            } else {
+              await this.getType(coerced, pathMap);
+              this.setState(pathMap, coerced, true);
+            }
           } else {
-            this.setState(pathMap, value, true);
+            await this.getType(value, pathMap);
+            if (typeof value === 'object' && value !== null) {
+              this.setState(pathMap, JSON.stringify(value), true);
+            } else {
+              this.setState(pathMap, value, true);
+            }
           }
         }
       }
@@ -4648,6 +4677,20 @@ class Dreame extends utils.Adapter {
                       }
                     }
                   }
+                }
+              } else if (key === 'cover' && MAP_COVER_NUMERIC_FIELDS.has(Subkey)) {
+                // Issue #141: konsistent auf number coercen, bevor Typ/Wert geschrieben
+                // werden - sonst flackert common.type zwischen 'number' und 'string'.
+                const coerced = Number(Subvalue);
+                if (Number.isNaN(coerced)) {
+                  this.log.debug(
+                    `[MAP-TYPE] map.cover.${Subkey}: Wert "${Subvalue}" liess sich nicht in eine Zahl wandeln, Original-Verhalten (Issue #141)`,
+                  );
+                  await this.getType(Subvalue, pathMap);
+                  this.setState(pathMap, JSON.stringify(Subvalue), true);
+                } else {
+                  await this.getType(coerced, pathMap);
+                  this.setState(pathMap, coerced, true);
                 }
               } else {
                 await this.getType(Subvalue, pathMap);
