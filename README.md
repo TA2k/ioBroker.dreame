@@ -697,6 +697,9 @@ translations should be submitted as PRs against the respective
 
 ## Changelog
 
+### 0.4.9 (2026-09-12)
+- Fix: map.cover type-mismatch log flood during cleaning runs (#141)
+
 ### 0.4.8 (2026-09-12)
 - Fix Issue #119 for Dreame L40s / X40 Ultra (r9419*): SIID 4 PIID 6 is remapped to reflect mop-pad presence 1:1, same as r6001a in v0.4.7, based on an isolated pad-remove/reinstall test on an r9419h device in this development cycle. Generalize the mop-in-station / mop-pad-installed fixes from v0.4.7 across all vacuum models: the permanently-0 mop-in-station property is now removed from every vacuum device's object tree at spec load time, and mop-pad-installed is renamed to mop-handling-pulse since it only emits ~1s pulses during mechanical mop handling (state id unchanged so existing user scripts keep working). The frischwasser widget's Mopp-montiert indicator now uses the mop-pad-presence state on models where the REMAP is active — visible after the first cloud poll cycle following the update. Also completes missing UI translations (Issue #122). Thanks to @SilentM1978 and @ralfheitz for confirming the pulse behavior on their devices.
 
