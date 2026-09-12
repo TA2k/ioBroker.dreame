@@ -4730,6 +4730,15 @@ class Dreame extends utils.Adapter {
         this.log.error(error);
       });
 
+      if (!mapsContent || !mapsContent.data) {
+        // Issue #138: der obige catch liefert hier undefined statt zu werfen — ohne diese
+        // Pruefung wuerde der folgende Zugriff auf mapsContent.data einen unbehandelten
+        // TypeError auswerfen, der nur als generisches "Error updating room names" im
+        // aeusseren try/catch landet.
+        this.log.debug(`No map content received for ${device.did}, skipping room name update`);
+        return;
+      }
+
       if (!fetchAllMaps) {
         mapsContent.data = [{ id: mapsContent.data.curr_id, info: mapsContent.data.mapstr }];
       }
