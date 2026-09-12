@@ -697,6 +697,9 @@ translations should be submitted as PRs against the respective
 
 ## Changelog
 
+### 0.4.10 (2026-09-12)
+- Fix: axios bumped to 1.20.0 for upstream security fixes; Node.js built-in requires now use the node: prefix (lib/haDecode.js, lib/mapMerge.js)
+
 ### 0.4.9 (2026-09-12)
 - Fix: map.cover type-mismatch log flood during cleaning runs (#141)
 
