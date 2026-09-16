@@ -592,6 +592,96 @@ class Dreame extends utils.Adapter {
     await this.setStateAsync(MARKER, true, true);
   }
 
+  /**
+   * One-time-per-device migration that syncs common metadata
+   * (name, states, type, role, unit) from this.specMetaDict to
+   * existing state objects.
+   *
+   * For common.states specifically the merge behavior of
+   * extendObjectAsync (which recursively merges instead of
+   * replacing) makes it unsuitable for pruning stale keys
+   * (e.g. the old "10" entry in status.water-tank after a REMAP).
+   * We therefore setObjectAsync the whole object with a freshly
+   * built states-map, which cleanly replaces the field.
+   *
+   * Needed because _lazyCreateState only updates common when the
+   * cloud actually sends a get_properties response for the
+   * corresponding PIID. For infrequently-changing properties like
+   * SIID 4/PIID 6 (water-tank / mop-pad presence via REMAP) this
+   * may never happen in practice, leaving objects stuck with
+   * pre-REMAP metadata.
+   *
+   * Marker: <did>.info.remapMetaSyncV2 (per-device). V1 marker
+   * from an earlier version of this migration is retained but
+   * ignored — the V2 pass runs regardless and correctly
+   * rebuilds affected states-maps.
+   *
+   * See Issue #119.
+   */
+  async _syncRemapObjectMetadata(did) {
+    const markerId = `${did}.info.remapMetaSyncV2`;
+    const markerObj = await this.getObjectAsync(markerId);
+    if (markerObj) return;
+
+    const meta = this.specMetaDict[did] || {};
+    const idMap = this.specPropsToIdDict[did] || {};
+    let synced = 0;
+
+    for (const key in meta) {
+      const stateId = idMap[key];
+      if (!stateId) continue;
+
+      const existing = await this.getObjectAsync(stateId);
+      if (!existing) continue;
+      if (existing.type !== 'state') {
+        this.log.debug(`[remap-sync] skipping ${stateId} (type=${existing.type})`);
+        continue;
+      }
+
+      const m = meta[key];
+      const common = { ...existing.common };
+      let touched = false;
+
+      if (m.nameKey) {
+        common.name = I18n.getTranslatedObject(m.nameKey);
+        touched = true;
+      }
+      if (m.stateKeys) {
+        common.states = {};
+        for (const k in m.stateKeys) {
+          common.states[k] = I18n.translate(m.stateKeys[k]);
+        }
+        touched = true;
+      }
+      if (m.type) { common.type = m.type; touched = true; }
+      if (m.role) { common.role = m.role; touched = true; }
+      if (m.unit !== undefined) { common.unit = m.unit; touched = true; }
+
+      if (!touched) continue;
+
+      await this.setObjectAsync(stateId, { ...existing, common });
+      synced++;
+    }
+
+    await this.setObjectNotExistsAsync(markerId, {
+      type: 'state',
+      common: {
+        name: 'REMAP metadata sync v2 done',
+        type: 'boolean',
+        role: 'indicator',
+        read: true,
+        write: false,
+        def: false,
+      },
+      native: {},
+    });
+    await this.setStateAsync(markerId, true, true);
+
+    if (synced > 0) {
+      this.log.info(`[remap-sync] Synced common metadata for ${synced} states (${did})`);
+    }
+  }
+
   async onReady() {
     this.setState('info.connection', false, true);
     await this._cleanupPhantomRemoteStates();
@@ -3169,6 +3259,7 @@ class Dreame extends utils.Adapter {
       log: this.log,
     });
     await this._cleanupDeadMopInStation(did);
+    await this._syncRemapObjectMetadata(did);
 
     this.log.info(
       `Vacuum states created: ${statusStates.length} status, ${remoteStates.length} remote, ${autoSwitchRemotes.length} autoSwitch, ${actionStates.length} actions`,
