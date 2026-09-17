@@ -697,6 +697,9 @@ translations should be submitted as PRs against the respective
 
 ## Changelog
 
+### 0.4.11 (2026-09-17)
+- Fix Issue #119: sync REMAP'd common metadata (name, states) to existing state objects at adapter start. In v0.4.8 the REMAP change for SIID 4/PIID 6 was correctly written to the in-memory spec but not to the persisted ioBroker objects, because _lazyCreateState only updates common.states when the cloud sends a get_properties response for that property — which may never happen for infrequently-changing properties. The frischwasser widget's mop-pad-presence detection then fell back to the pulse-only source and displayed permanent not-installed even on REMAP'd devices. A new one-time-per-device migration (_syncRemapObjectMetadata, marker <did>.info.remapMetaSyncV2) now rebuilds the state objects with the correct metadata at adapter start. Thanks to @SilentM1978 for the diagnostic widget test that isolated the root cause to metadata persistence rather than the REMAP logic itself.
+
 ### 0.4.10 (2026-09-12)
 - Fix: axios bumped to 1.20.0 for upstream security fixes; Node.js built-in requires now use the node: prefix (lib/haDecode.js, lib/mapMerge.js)
 

@@ -1,224 +1,224 @@
 {
-    "common": {
-        "name": "dreame",
-        "version": "0.4.10",
-        "news": {
-            "0.4.4": {
-                "en": "Fix for issue #124 (Layer 2): map payload for r2253c, r2253w and similar newer Dreame models is AES-256-CBC encrypted; the adapter now derives the AES key from the object_name comma suffix (SHA256, first 32 hex chars as UTF-8), uses a model-specific IV, and decrypts the payload before zlib inflation. Combined with the 0.4.3 comma-truncation fix, this closes the full end-to-end map download path for r2253 models. Also fixes a long-standing bug in lib/dreame.js where the persistent MAP_LIST path used an empty IV instead of the model-specific one. Models without a comma suffix in the object_name (e.g. r9419h/L40s) are unchanged. Thanks to luckyheiko and ralfheitz for the diagnostic logs.",
-                "de": "Fix für Issue #124 (Layer 2): Karten-Payload bei r2253c, r2253w und ähnlichen neueren Dreame-Modellen ist AES-256-CBC-verschlüsselt; der Adapter leitet den AES-Key jetzt aus dem Komma-Suffix des object_name ab (SHA256, erste 32 Hex-Zeichen als UTF-8), benutzt einen modellspezifischen IV und entschlüsselt die Payload vor der zlib-Dekomprimierung. Zusammen mit dem 0.4.3-Komma-Kürzungs-Fix schließt das den kompletten End-to-End-Karten-Download für die r2253-Familie. Behebt zusätzlich einen langjährigen Bug in lib/dreame.js, wo der persistente MAP_LIST-Pfad einen leeren IV statt des modellspezifischen verwendete. Modelle ohne Komma-Suffix im object_name (z.B. r9419h/L40s) bleiben unverändert. Dank an luckyheiko und ralfheitz für die Diagnose-Logs.",
-                "ru": "Исправления и улучшения",
-                "pt": "Correções e melhorias",
-                "nl": "Fixes en verbeteringen",
-                "fr": "Corrections et améliorations",
-                "it": "Correzioni e miglioramenti",
-                "es": "Correcciones y mejoras",
-                "pl": "Poprawki i usprawnienia",
-                "uk": "Виправлення та покращення",
-                "zh-cn": "修复和改进"
-            },
-            "0.4.5": {
-                "en": "Fix for issue #124 (Layer 3): map rendering could crash on the frontend when the device reported detected carpets with an invalid polygon field (null or malformed). Adds a filter in lib/mapMerge.js so invalid carpets never reach the frontend, a defensive guard in the carpet drawing routine in www/js/karte/merger.js, and a generic try/catch around overlay drawing so a single bad overlay never breaks the whole map rendering. The unreferenced legacy widget page www/legacy.html, which carried the same bug, is removed. Combined with 0.4.3 (comma-truncation) and 0.4.4 (AES decryption), this closes the full end-to-end map path for r2253c/r2253w. Thanks to luckyheiko for identifying the root cause and proposing the fix approach.",
-                "de": "Fix für Issue #124 (Layer 3): Karten-Rendering konnte im Frontend abstürzen, wenn das Gerät einen erkannten Teppich mit ungültigem Polygon-Feld (null oder fehlerhaft) meldete. Ergänzt einen Filter in lib/mapMerge.js damit ungültige Teppiche das Frontend gar nicht erst erreichen, einen defensiven Guard in der Teppich-Zeichenroutine in www/js/karte/merger.js, und ein generisches try/catch um die Overlay-Zeichenschleifen damit ein einzelnes fehlerhaftes Overlay nicht das gesamte Karten-Rendering bricht. Die nicht mehr referenzierte Alt-Widget-Seite www/legacy.html mit demselben Bug wird entfernt. Zusammen mit 0.4.3 (Komma-Kürzung) und 0.4.4 (AES-Entschlüsselung) schließt das den kompletten End-to-End-Karten-Pfad für r2253c/r2253w. Dank an luckyheiko für die Identifikation der Ursache und den Fix-Vorschlag.",
-                "ru": "Исправления и улучшения",
-                "pt": "Correções e melhorias",
-                "nl": "Fixes en verbeteringen",
-                "fr": "Corrections et améliorations",
-                "it": "Correzioni e miglioramenti",
-                "es": "Correcciones y mejoras",
-                "pl": "Poprawki i usprawnienia",
-                "uk": "Виправлення та покращення",
-                "zh-cn": "修复和改进"
-            },
-            "0.4.6": {
-                "en": "Attempted fix for issue #124 layer 4 (missing pixel raster on r2253c/r2253w): map background, walls, and room fills were not rendered even though overlays and metadata came through correctly. Adds a fallback to combined_pixel_type when the base pixel raster is empty (matching Home Assistant's renderer), and introduces permanent [MERGE-DEBUG] info-level logging (dimensions, pixel counts, wall/segment counts) so this failure mode is instantly diagnosable if it returns. Models whose base raster is already populated (e.g. r9419h) are unchanged. Thanks to luckyheiko for the pinpoint analysis.",
-                "de": "Fix-Versuch für Issue #124 Layer 4 (fehlendes Pixel-Raster auf r2253c/r2253w): Karten-Hintergrund, Wände und Raumfüllungen wurden nicht gerendert obwohl Overlays und Metadaten korrekt ankamen. Fügt einen Fallback auf combined_pixel_type ein wenn das Basis-Pixelraster leer ist (wie im Home-Assistant-Renderer), plus dauerhaftes [MERGE-DEBUG]-Info-Level-Logging (Dimensionen, Pixel-Zahlen, Wand-/Segment-Anzahl) damit dieser Fehlermodus falls er wiederkehrt sofort diagnostizierbar ist. Modelle mit bereits gefülltem Basis-Raster (z.B. r9419h) unverändert. Dank an luckyheiko für die punktgenaue Analyse.",
-                "ru": "Исправления и улучшения",
-                "pt": "Correções e melhorias",
-                "nl": "Fixes en verbeteringen",
-                "fr": "Corrections et améliorations",
-                "it": "Correzioni e miglioramenti",
-                "es": "Correcciones y mejoras",
-                "pl": "Poprawki i usprawnienia",
-                "uk": "Виправлення та покращення",
-                "zh-cn": "修复和改进"
-            },
-            "0.4.7": {
-                "en": "New tap-to-sequence widget for custom cleaning order directly on the map with room badges, plus a fresh-water/detergent widget for L20 Ultra. Fix Issue #126: clean-water-tank-status bit-mask handling and derived Boolean states for r2253* (L20 Ultra) models. Fix Issue #119: correct mop-pad status on Dreame X60 Pro Ultra Complete (r6001a) via a new model-override layer — removes the dead mop-in-station property, renames the mop-handling pulse, and remaps SIID 4 PIID 6 to actual mop-pad presence on r6001*. Adds status codes 116/117/121/122 (Installing mop, Removing mop, Entering dock, Exiting dock) globally for all vacuum models. Thanks to @SilentM1978 for the detailed live traces that made the r6001a fix possible.",
-                "de": "Neues Widget zur Auswahl der Reinigungsreihenfolge per Tipp auf die Karte mit Raum-Badges, plus ein Frischwasser-/Reinigungsmittel-Widget für den L20 Ultra. Fix Issue #126: Bit-Masken-Auswertung für clean-water-tank-status und abgeleitete Bool-States für r2253*-Modelle (L20 Ultra). Fix Issue #119: korrekte Mopp-Pad-Zustände auf dem Dreame X60 Pro Ultra Complete (r6001a) über eine neue Model-Override-Schicht — entfernt die tote mop-in-station-Property, benennt den Mopp-Handling-Puls um und mappt SIID 4 PIID 6 auf die tatsächliche Mopp-Pad-Präsenz auf r6001*. Ergänzt die Statuscodes 116/117/121/122 (Wischpad einbauen, Wischpad entfernen, Betreten des Docks, Verlassen des Docks) global für alle Saugroboter-Modelle. Danke an @SilentM1978 für die detaillierten Live-Traces, die den r6001a-Fix möglich gemacht haben.",
-                "ru": "Исправления и улучшения",
-                "pt": "Correções e melhorias",
-                "nl": "Fixes en verbeteringen",
-                "fr": "Corrections et améliorations",
-                "it": "Correzioni e miglioramenti",
-                "es": "Correcciones y mejoras",
-                "pl": "Poprawki i usprawnienia",
-                "uk": "Виправлення та покращення",
-                "zh-cn": "修复和改进"
-            },
-            "0.4.8": {
-                "en": "Fix Issue #119 for Dreame L40s / X40 Ultra (r9419*): SIID 4 PIID 6 is remapped to reflect mop-pad presence 1:1, same as r6001a in v0.4.7, based on an isolated pad-remove/reinstall test on an r9419h device in this development cycle. Generalize the mop-in-station / mop-pad-installed fixes from v0.4.7 across all vacuum models: the permanently-0 mop-in-station property is now removed from every vacuum device's object tree at spec load time, and mop-pad-installed is renamed to mop-handling-pulse since it only emits ~1s pulses during mechanical mop handling (state id unchanged so existing user scripts keep working). The frischwasser widget's Mopp-montiert indicator now uses the mop-pad-presence state on models where the REMAP is active — visible after the first cloud poll cycle following the update. Also completes missing UI translations (Issue #122). Thanks to @SilentM1978 and @ralfheitz for confirming the pulse behavior on their devices.",
-                "de": "Fix Issue #119 für Dreame L40s / X40 Ultra (r9419*): SIID 4 PIID 6 wird auf die tatsächliche Mopp-Pad-Präsenz gemappt, analog zum r6001a-Fix aus v0.4.7. Die mop-in-station/mop-pad-installed-Fixes aus v0.4.7 sind jetzt für alle Saugroboter-Modelle generalisiert: die dauerhaft auf 0 stehende mop-in-station-Property wird beim Spec-Laden aus dem Objekt-Baum jedes Vacuum-Geräts entfernt, und mop-pad-installed wird zu mop-handling-pulse umbenannt, da sie nur ~1s-Pulse beim mechanischen Mopp-Handling emittiert (State-ID unverändert, damit bestehende Nutzer-Skripte weiterlaufen). Das Frischwasser-Widget zeigt den Mopp-montiert-Status jetzt korrekt auf Modellen mit REMAP — sichtbar ab dem ersten Cloud-Poll-Zyklus nach dem Update. Ergänzt außerdem fehlende UI-Übersetzungen (Issue #122). Danke an @SilentM1978 und @ralfheitz für die Bestätigung des Puls-Verhaltens auf ihren Geräten.",
-                "ru": "Исправления и улучшения",
-                "pt": "Correções e melhorias",
-                "nl": "Fixes en verbeteringen",
-                "fr": "Corrections et améliorations",
-                "it": "Correzioni e miglioramenti",
-                "es": "Correcciones y mejoras",
-                "pl": "Poprawki i usprawnienia",
-                "uk": "Виправлення та покращення",
-                "zh-cn": "修复和改进"
-            },
-            "0.4.9": {
-                "en": "Fix: map.cover type-mismatch log flood during cleaning runs (#141)",
-                "de": "Fix: map.cover Typ-Mismatch Log-Flut während Reinigungsläufen (#141)",
-                "ru": "Исправления и улучшения",
-                "pt": "Correções e melhorias",
-                "nl": "Fixes en verbeteringen",
-                "fr": "Corrections et améliorations",
-                "it": "Correzioni e miglioramenti",
-                "es": "Correcciones y mejoras",
-                "pl": "Poprawki i usprawnienia",
-                "uk": "Виправлення та покращення",
-                "zh-cn": "修复和改进"
-            },
-            "0.4.10": {
-                "en": "Fix: axios bumped to 1.20.0 for upstream security fixes; Node.js built-in requires now use the node: prefix (lib/haDecode.js, lib/mapMerge.js)",
-                "de": "Fix: axios auf 1.20.0 angehoben (Upstream-Sicherheitsfixes); Node.js-Built-in-Requires nutzen jetzt das node:-Präfix (lib/haDecode.js, lib/mapMerge.js)",
-                "ru": "Исправления и улучшения",
-                "pt": "Correções e melhorias",
-                "nl": "Fixes en verbeteringen",
-                "fr": "Corrections et améliorations",
-                "it": "Correzioni e miglioramenti",
-                "es": "Correcciones y mejoras",
-                "pl": "Poprawki i usprawnienia",
-                "uk": "Виправлення та покращення",
-                "zh-cn": "修复和改进"
-            }
-        },
-        "titleLang": {
-            "en": "Dreame",
-            "de": "Dreame",
-            "ru": "Dreame",
-            "pt": "Dreame",
-            "nl": "Dreame",
-            "fr": "Dreame",
-            "it": "Dreame",
-            "es": "Dreame",
-            "pl": "Dreame",
-            "uk": "Dreame",
-            "zh-cn": "Dreame"
-        },
-        "desc": {
-            "en": "Adapter for dreame home devices",
-            "de": "Adapter für Dreame-Home-Geräte",
-            "ru": "Адаптер для домашних устройств Dreame",
-            "pt": "Adaptador para dispositivos domésticos dreame",
-            "nl": "Adapter voor Dreame Home-apparaten",
-            "fr": "Adaptateur pour appareils dreame home",
-            "it": "Adattatore per dispositivi Dreame Home",
-            "es": "Adaptador para dispositivos domésticos de ensueño",
-            "pl": "Adapter do urządzeń Dreame Home",
-            "uk": "Адаптер для домашніх пристроїв Dreame",
-            "zh-cn": "Dreame 家用设备适配器"
-        },
-        "authors": [
-            "TA2k <tombox2020@gmail.com>",
-            "Ricardo Hipp"
-        ],
-        "keywords": [
-            "dreame",
-            "dreamehome"
-        ],
-        "licenseInformation": {
-            "type": "free",
-            "license": "MIT"
-        },
-        "platform": "Javascript/Node.js",
-        "localLinks": {
-            "_default": {
-                "link": "%web_protocol%://%ip%:%web_port%/dreame/",
-                "name": "Dreame-Map",
-                "intro": true
-            }
-        },
-        "icon": "dreame.png",
-        "enabled": true,
-        "extIcon": "https://raw.githubusercontent.com/TA2k/ioBroker.dreame/main/admin/dreame.png",
-        "readme": "https://github.com/TA2k/ioBroker.dreame/blob/main/README.md",
-        "loglevel": "info",
-        "tier": 3,
-        "mode": "daemon",
-        "type": "household",
-        "compact": true,
-        "connectionType": "cloud",
-        "dataSource": "poll",
-        "adminUI": {
-            "config": "json"
-        },
-        "dependencies": [
-            {
-                "js-controller": ">=7.0.4"
-            }
-        ],
-        "globalDependencies": [
-            {
-                "admin": ">=7.8.23"
-            }
-        ],
-        "plugins": {
-            "sentry": {
-                "dsn": "https://802f699c7aa84a62b0bcb54b31485352@sentry.iobroker.net/226"
-            }
-        }
+  "common": {
+    "name": "dreame",
+    "version": "0.4.11",
+    "news": {
+      "0.4.5": {
+        "en": "Fix for issue #124 (Layer 3): map rendering could crash on the frontend when the device reported detected carpets with an invalid polygon field (null or malformed). Adds a filter in lib/mapMerge.js so invalid carpets never reach the frontend, a defensive guard in the carpet drawing routine in www/js/karte/merger.js, and a generic try/catch around overlay drawing so a single bad overlay never breaks the whole map rendering. The unreferenced legacy widget page www/legacy.html, which carried the same bug, is removed. Combined with 0.4.3 (comma-truncation) and 0.4.4 (AES decryption), this closes the full end-to-end map path for r2253c/r2253w. Thanks to luckyheiko for identifying the root cause and proposing the fix approach.",
+        "de": "Fix für Issue #124 (Layer 3): Karten-Rendering konnte im Frontend abstürzen, wenn das Gerät einen erkannten Teppich mit ungültigem Polygon-Feld (null oder fehlerhaft) meldete. Ergänzt einen Filter in lib/mapMerge.js damit ungültige Teppiche das Frontend gar nicht erst erreichen, einen defensiven Guard in der Teppich-Zeichenroutine in www/js/karte/merger.js, und ein generisches try/catch um die Overlay-Zeichenschleifen damit ein einzelnes fehlerhaftes Overlay nicht das gesamte Karten-Rendering bricht. Die nicht mehr referenzierte Alt-Widget-Seite www/legacy.html mit demselben Bug wird entfernt. Zusammen mit 0.4.3 (Komma-Kürzung) und 0.4.4 (AES-Entschlüsselung) schließt das den kompletten End-to-End-Karten-Pfad für r2253c/r2253w. Dank an luckyheiko für die Identifikation der Ursache und den Fix-Vorschlag.",
+        "ru": "Исправления и улучшения",
+        "pt": "Correções e melhorias",
+        "nl": "Fixes en verbeteringen",
+        "fr": "Corrections et améliorations",
+        "it": "Correzioni e miglioramenti",
+        "es": "Correcciones y mejoras",
+        "pl": "Poprawki i usprawnienia",
+        "uk": "Виправлення та покращення",
+        "zh-cn": "修复和改进"
+      },
+      "0.4.6": {
+        "en": "Attempted fix for issue #124 layer 4 (missing pixel raster on r2253c/r2253w): map background, walls, and room fills were not rendered even though overlays and metadata came through correctly. Adds a fallback to combined_pixel_type when the base pixel raster is empty (matching Home Assistant's renderer), and introduces permanent [MERGE-DEBUG] info-level logging (dimensions, pixel counts, wall/segment counts) so this failure mode is instantly diagnosable if it returns. Models whose base raster is already populated (e.g. r9419h) are unchanged. Thanks to luckyheiko for the pinpoint analysis.",
+        "de": "Fix-Versuch für Issue #124 Layer 4 (fehlendes Pixel-Raster auf r2253c/r2253w): Karten-Hintergrund, Wände und Raumfüllungen wurden nicht gerendert obwohl Overlays und Metadaten korrekt ankamen. Fügt einen Fallback auf combined_pixel_type ein wenn das Basis-Pixelraster leer ist (wie im Home-Assistant-Renderer), plus dauerhaftes [MERGE-DEBUG]-Info-Level-Logging (Dimensionen, Pixel-Zahlen, Wand-/Segment-Anzahl) damit dieser Fehlermodus falls er wiederkehrt sofort diagnostizierbar ist. Modelle mit bereits gefülltem Basis-Raster (z.B. r9419h) unverändert. Dank an luckyheiko für die punktgenaue Analyse.",
+        "ru": "Исправления и улучшения",
+        "pt": "Correções e melhorias",
+        "nl": "Fixes en verbeteringen",
+        "fr": "Corrections et améliorations",
+        "it": "Correzioni e miglioramenti",
+        "es": "Correcciones y mejoras",
+        "pl": "Poprawki i usprawnienia",
+        "uk": "Виправлення та покращення",
+        "zh-cn": "修复和改进"
+      },
+      "0.4.7": {
+        "en": "New tap-to-sequence widget for custom cleaning order directly on the map with room badges, plus a fresh-water/detergent widget for L20 Ultra. Fix Issue #126: clean-water-tank-status bit-mask handling and derived Boolean states for r2253* (L20 Ultra) models. Fix Issue #119: correct mop-pad status on Dreame X60 Pro Ultra Complete (r6001a) via a new model-override layer — removes the dead mop-in-station property, renames the mop-handling pulse, and remaps SIID 4 PIID 6 to actual mop-pad presence on r6001*. Adds status codes 116/117/121/122 (Installing mop, Removing mop, Entering dock, Exiting dock) globally for all vacuum models. Thanks to @SilentM1978 for the detailed live traces that made the r6001a fix possible.",
+        "de": "Neues Widget zur Auswahl der Reinigungsreihenfolge per Tipp auf die Karte mit Raum-Badges, plus ein Frischwasser-/Reinigungsmittel-Widget für den L20 Ultra. Fix Issue #126: Bit-Masken-Auswertung für clean-water-tank-status und abgeleitete Bool-States für r2253*-Modelle (L20 Ultra). Fix Issue #119: korrekte Mopp-Pad-Zustände auf dem Dreame X60 Pro Ultra Complete (r6001a) über eine neue Model-Override-Schicht — entfernt die tote mop-in-station-Property, benennt den Mopp-Handling-Puls um und mappt SIID 4 PIID 6 auf die tatsächliche Mopp-Pad-Präsenz auf r6001*. Ergänzt die Statuscodes 116/117/121/122 (Wischpad einbauen, Wischpad entfernen, Betreten des Docks, Verlassen des Docks) global für alle Saugroboter-Modelle. Danke an @SilentM1978 für die detaillierten Live-Traces, die den r6001a-Fix möglich gemacht haben.",
+        "ru": "Исправления и улучшения",
+        "pt": "Correções e melhorias",
+        "nl": "Fixes en verbeteringen",
+        "fr": "Corrections et améliorations",
+        "it": "Correzioni e miglioramenti",
+        "es": "Correcciones y mejoras",
+        "pl": "Poprawki i usprawnienia",
+        "uk": "Виправлення та покращення",
+        "zh-cn": "修复和改进"
+      },
+      "0.4.8": {
+        "en": "Fix Issue #119 for Dreame L40s / X40 Ultra (r9419*): SIID 4 PIID 6 is remapped to reflect mop-pad presence 1:1, same as r6001a in v0.4.7, based on an isolated pad-remove/reinstall test on an r9419h device in this development cycle. Generalize the mop-in-station / mop-pad-installed fixes from v0.4.7 across all vacuum models: the permanently-0 mop-in-station property is now removed from every vacuum device's object tree at spec load time, and mop-pad-installed is renamed to mop-handling-pulse since it only emits ~1s pulses during mechanical mop handling (state id unchanged so existing user scripts keep working). The frischwasser widget's Mopp-montiert indicator now uses the mop-pad-presence state on models where the REMAP is active — visible after the first cloud poll cycle following the update. Also completes missing UI translations (Issue #122). Thanks to @SilentM1978 and @ralfheitz for confirming the pulse behavior on their devices.",
+        "de": "Fix Issue #119 für Dreame L40s / X40 Ultra (r9419*): SIID 4 PIID 6 wird auf die tatsächliche Mopp-Pad-Präsenz gemappt, analog zum r6001a-Fix aus v0.4.7. Die mop-in-station/mop-pad-installed-Fixes aus v0.4.7 sind jetzt für alle Saugroboter-Modelle generalisiert: die dauerhaft auf 0 stehende mop-in-station-Property wird beim Spec-Laden aus dem Objekt-Baum jedes Vacuum-Geräts entfernt, und mop-pad-installed wird zu mop-handling-pulse umbenannt, da sie nur ~1s-Pulse beim mechanischen Mopp-Handling emittiert (State-ID unverändert, damit bestehende Nutzer-Skripte weiterlaufen). Das Frischwasser-Widget zeigt den Mopp-montiert-Status jetzt korrekt auf Modellen mit REMAP — sichtbar ab dem ersten Cloud-Poll-Zyklus nach dem Update. Ergänzt außerdem fehlende UI-Übersetzungen (Issue #122). Danke an @SilentM1978 und @ralfheitz für die Bestätigung des Puls-Verhaltens auf ihren Geräten.",
+        "ru": "Исправления и улучшения",
+        "pt": "Correções e melhorias",
+        "nl": "Fixes en verbeteringen",
+        "fr": "Corrections et améliorations",
+        "it": "Correzioni e miglioramenti",
+        "es": "Correcciones y mejoras",
+        "pl": "Poprawki i usprawnienia",
+        "uk": "Виправлення та покращення",
+        "zh-cn": "修复和改进"
+      },
+      "0.4.9": {
+        "en": "Fix: map.cover type-mismatch log flood during cleaning runs (#141)",
+        "de": "Fix: map.cover Typ-Mismatch Log-Flut während Reinigungsläufen (#141)",
+        "ru": "Исправления и улучшения",
+        "pt": "Correções e melhorias",
+        "nl": "Fixes en verbeteringen",
+        "fr": "Corrections et améliorations",
+        "it": "Correzioni e miglioramenti",
+        "es": "Correcciones y mejoras",
+        "pl": "Poprawki i usprawnienia",
+        "uk": "Виправлення та покращення",
+        "zh-cn": "修复和改进"
+      },
+      "0.4.10": {
+        "en": "Fix: axios bumped to 1.20.0 for upstream security fixes; Node.js built-in requires now use the node: prefix (lib/haDecode.js, lib/mapMerge.js)",
+        "de": "Fix: axios auf 1.20.0 angehoben (Upstream-Sicherheitsfixes); Node.js-Built-in-Requires nutzen jetzt das node:-Präfix (lib/haDecode.js, lib/mapMerge.js)",
+        "ru": "Исправления и улучшения",
+        "pt": "Correções e melhorias",
+        "nl": "Fixes en verbeteringen",
+        "fr": "Corrections et améliorations",
+        "it": "Correzioni e miglioramenti",
+        "es": "Correcciones y mejoras",
+        "pl": "Poprawki i usprawnienia",
+        "uk": "Виправлення та покращення",
+        "zh-cn": "修复和改进"
+      },
+      "0.4.11": {
+        "en": "Fix Issue #119: sync REMAP'd common metadata (name, states) to existing state objects at adapter start. In v0.4.8 the REMAP change for SIID 4/PIID 6 was correctly written to the in-memory spec but not to the persisted ioBroker objects, because _lazyCreateState only updates common.states when the cloud sends a get_properties response for that property — which may never happen for infrequently-changing properties. The frischwasser widget's mop-pad-presence detection then fell back to the pulse-only source and displayed permanent not-installed even on REMAP'd devices. A new one-time-per-device migration (_syncRemapObjectMetadata, marker <did>.info.remapMetaSyncV2) now rebuilds the state objects with the correct metadata at adapter start. Thanks to @SilentM1978 for the diagnostic widget test that isolated the root cause to metadata persistence rather than the REMAP logic itself.",
+        "de": "Fix Issue #119: Synchronisiert REMAP-Metadata (name, states) mit bestehenden State-Objekten beim Adapter-Start. In v0.4.8 wurde die REMAP-Änderung für SIID 4/PIID 6 korrekt in die In-Memory-Spec geschrieben, aber nicht in die persistierten ioBroker-Objekte, weil _lazyCreateState common.states nur updated wenn die Cloud eine get_properties-Antwort für die Property schickt — was bei selten wechselnden Properties nie passieren kann. Das Frischwasser-Widget fiel dann auf den Puls-State zurück und zeigte dauerhaft nicht-installiert auch auf REMAP-fähigen Geräten. Eine neue Einmal-pro-Gerät-Migration (_syncRemapObjectMetadata, Marker <did>.info.remapMetaSyncV2) baut die State-Objekte beim Adapter-Start mit den korrekten Metadaten neu auf. Dank an @SilentM1978 für den Widget-Diagnose-Test, der die Ursache auf die Metadata-Persistierung eingegrenzt hat (statt auf die REMAP-Logik selbst).",
+        "ru": "Исправления и улучшения",
+        "pt": "Correções e melhorias",
+        "nl": "Fixes en verbeteringen",
+        "fr": "Corrections et améliorations",
+        "it": "Correzioni e miglioramenti",
+        "es": "Correcciones y mejoras",
+        "pl": "Poprawki i usprawnienia",
+        "uk": "Виправлення та покращення",
+        "zh-cn": "修复和改进"
+      }
     },
-    "encryptedNative": [
-        "password"
-    ],
-    "protectedNative": [
-        "password"
-    ],
-    "native": {
-        "cloudService": "dreame",
-        "username": "",
-        "password": "",
-        "interval": 30,
-        "getMap": true
+    "titleLang": {
+      "en": "Dreame",
+      "de": "Dreame",
+      "ru": "Dreame",
+      "pt": "Dreame",
+      "nl": "Dreame",
+      "fr": "Dreame",
+      "it": "Dreame",
+      "es": "Dreame",
+      "pl": "Dreame",
+      "uk": "Dreame",
+      "zh-cn": "Dreame"
     },
-    "objects": [],
-    "instanceObjects": [
-        {
-            "_id": "info",
-            "type": "channel",
-            "common": {
-                "name": "Information"
-            },
-            "native": {}
-        },
-        {
-            "_id": "info.connection",
-            "type": "state",
-            "common": {
-                "role": "indicator.connected",
-                "name": "Device or service connected",
-                "type": "boolean",
-                "read": true,
-                "write": false,
-                "def": false
-            },
-            "native": {}
-        },
-        {
-            "_id": "info.devices",
-            "type": "state",
-            "common": {
-                "role": "json",
-                "name": "List of known devices (did, name, typ)",
-                "type": "string",
-                "read": true,
-                "write": false,
-                "def": "[]"
-            },
-            "native": {}
-        }
-    ]
+    "desc": {
+      "en": "Adapter for dreame home devices",
+      "de": "Adapter für Dreame-Home-Geräte",
+      "ru": "Адаптер для домашних устройств Dreame",
+      "pt": "Adaptador para dispositivos domésticos dreame",
+      "nl": "Adapter voor Dreame Home-apparaten",
+      "fr": "Adaptateur pour appareils dreame home",
+      "it": "Adattatore per dispositivi Dreame Home",
+      "es": "Adaptador para dispositivos domésticos de ensueño",
+      "pl": "Adapter do urządzeń Dreame Home",
+      "uk": "Адаптер для домашніх пристроїв Dreame",
+      "zh-cn": "Dreame 家用设备适配器"
+    },
+    "authors": [
+      "TA2k <tombox2020@gmail.com>",
+      "Ricardo Hipp"
+    ],
+    "keywords": [
+      "dreame",
+      "dreamehome"
+    ],
+    "licenseInformation": {
+      "type": "free",
+      "license": "MIT"
+    },
+    "platform": "Javascript/Node.js",
+    "localLinks": {
+      "_default": {
+        "link": "%web_protocol%://%ip%:%web_port%/dreame/",
+        "name": "Dreame-Map",
+        "intro": true
+      }
+    },
+    "icon": "dreame.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/TA2k/ioBroker.dreame/main/admin/dreame.png",
+    "readme": "https://github.com/TA2k/ioBroker.dreame/blob/main/README.md",
+    "loglevel": "info",
+    "tier": 3,
+    "mode": "daemon",
+    "type": "household",
+    "compact": true,
+    "connectionType": "cloud",
+    "dataSource": "poll",
+    "adminUI": {
+      "config": "json"
+    },
+    "dependencies": [
+      {
+        "js-controller": ">=7.0.4"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=7.8.23"
+      }
+    ],
+    "plugins": {
+      "sentry": {
+        "dsn": "https://802f699c7aa84a62b0bcb54b31485352@sentry.iobroker.net/226"
+      }
+    }
+  },
+  "encryptedNative": [
+    "password"
+  ],
+  "protectedNative": [
+    "password"
+  ],
+  "native": {
+    "cloudService": "dreame",
+    "username": "",
+    "password": "",
+    "interval": 30,
+    "getMap": true
+  },
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info",
+      "type": "channel",
+      "common": {
+        "name": "Information"
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "role": "indicator.connected",
+        "name": "Device or service connected",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.devices",
+      "type": "state",
+      "common": {
+        "role": "json",
+        "name": "List of known devices (did, name, typ)",
+        "type": "string",
+        "read": true,
+        "write": false,
+        "def": "[]"
+      },
+      "native": {}
+    }
+  ]
 }
