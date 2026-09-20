@@ -1,0 +1,15 @@
+/*
+ * The tab fills the frame the admin gives it.
+ *
+ * Without an explicit height the root collapses to its content, and a map that sizes itself to
+ * its container then has nothing to size against.
+ */
+html,
+body,
+#root {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+}

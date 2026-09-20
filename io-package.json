@@ -155,6 +155,22 @@
     "adminUI": {
       "config": "json"
     },
+    "adminTab": {
+      "name": {
+        "en": "Dreame",
+        "de": "Dreame",
+        "ru": "Dreame",
+        "pt": "Dreame",
+        "nl": "Dreame",
+        "fr": "Dreame",
+        "it": "Dreame",
+        "es": "Dreame",
+        "pl": "Dreame",
+        "uk": "Dreame",
+        "zh-cn": "Dreame"
+      },
+      "singleton": true
+    },
     "dependencies": [
       {
         "js-controller": ">=7.0.4"
