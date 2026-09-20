@@ -6,13 +6,13 @@
  * anderen Module (config.js, geraete.js, trigger.js, Panels) reden nur mit Daten, nie
  * direkt mit Socket.io oder einer Adapter-Instanz.
  *
- * Verbindungsaufbau (Server-Adresse ermitteln, Socket.io-Client nachladen) folgt demselben
+ * Verbindungsaufbau (Server-Adresse ermitteln, Client nachladen) folgt demselben
  * bewaehrten Muster wie das bisherige Widget (www/legacy.html, Bereich "Verbindung") — hier
  * als eigenstaendiges Modul neu geschrieben, keine Extraktion wie bei den Karten-Dateien
- * (WIDGET_UMBAU_PLAN.md Etappe B, Commit B3 ist Neubau).
+ * (WIDGET_UMBAU_PLAN.md Etappe B, Commit B3 ist Neubau). Unterstuetzt beide Clients, die
+ * der web-Adapter unter diesem Pfad ausliefern kann -- socket.io und den ws-Shim, siehe
+ * verbindungsFunktion().
  */
-
-/* global io */
 
 const Daten = (() => {
   const _par = new URLSearchParams(location.search);
@@ -48,14 +48,47 @@ const Daten = (() => {
     });
   }
 
+  /** Verbindungsfunktion des geladenen Clients ermitteln.
+   *
+   * Unter <IOB>/socket.io/socket.io.js liefert der web-Adapter je nach Instanz-Konfiguration
+   * ZWEI verschiedene Bibliotheken aus (ioBroker.web, getSocketIoFile()): steht "pure web
+   * sockets" an oder zeigt die Instanz auf ein ws.x, kommt der Shim aus
+   * @iobroker/ws-server-library, sonst der echte socket.io-Client. Der ws-Adapter selbst
+   * antwortet ebenso auf jede URL, die "socket.io.js" enthaelt. Die beiden unterscheiden
+   * sich genau an dieser Stelle:
+   *   socket.io-client : module.exports = lookup  -> io(url, opts) ist aufrufbar
+   *   ws-Shim          : globalThis.io = { connect } -> NUR io.connect(url, opts)
+   * Ein blosser io(...)-Aufruf scheiterte deshalb am ws-Shim mit "io is not a function" --
+   * und weil der Fehler unten in verbinden() stumm gefangen wurde, sah das nach aussen aus
+   * wie ein nicht laufender web-Adapter. Beide connect-Funktionen sind standalone (nutzen
+   * kein this), die Zuweisung an eine Variable ist daher unkritisch.
+   */
+  function verbindungsFunktion() {
+    const client = window.io;
+    if (typeof client === 'function') return client;
+    if (client && typeof client.connect === 'function') return client.connect;
+    return null;
+  }
+
   function socketOeffnen() {
     return new Promise(res => {
-      if (!window.io) { res(null); return; }
-      const s = io(IOB, { transports: ['websocket', 'polling'], timeout: 5000 });
+      const verbinde = verbindungsFunktion();
+      if (!verbinde) { res(null); return; }
+      // transports/timeout gelten nur fuer socket.io. Der ws-Shim ignoriert sie und arbeitet
+      // mit eigenen Werten (connectTimeout 3000, pingInterval 5000, connectMaxAttempt 5);
+      // Polling gibt es dort gar nicht. Fuer socket.io bleiben sie unveraendert wirksam.
+      const s = verbinde(IOB, { transports: ['websocket', 'polling'], timeout: 5000 });
       let fertig = false;
       const abschliessen = v => { if (!fertig) { fertig = true; res(v); } };
       s.on('connect', () => abschliessen(s));
+      // 'connect_error' kennt nur socket.io -- das on() des ws-Shims behandelt ausschliesslich
+      // connect/disconnect/reconnect/error gesondert und legt jeden anderen Namen in seine
+      // Nachrichten-Tabelle, wo er nie feuert. 'error' deckt den Shim zusaetzlich ab, greift
+      // dort allerdings erst NACH erfolgreichem Connect (sein onerror prueft this.connected),
+      // fuer einen fehlgeschlagenen Erstverbindungsversuch bleibt der Riegel unten zustaendig.
+      // Feuert 'error' spaeter im laufenden Betrieb, ist abschliessen() dank fertig ein No-op.
       s.on('connect_error', () => abschliessen(null));
+      s.on('error', () => abschliessen(null));
       setTimeout(() => abschliessen(null), 6000);
     });
   }
@@ -77,7 +110,14 @@ const Daten = (() => {
     try {
       await ladeScript(IOB + '/socket.io/socket.io.js');
       sock = await socketOeffnen();
-    } catch (e) { sock = null; }
+    } catch (e) {
+      // Frueher stumm: ein inkompatibler Client (siehe socketOeffnen()) oder ein nicht
+      // erreichbares socket.io.js landete hier ohne jede Spur, nach aussen sichtbar nur
+      // als generisches "Keine Verbindung" in main.js. Jetzt steht der echte Grund in der
+      // Browser-Konsole und ist aus einem Issue-Screenshot heraus erkennbar.
+      console.error('[daten] Verbindungsaufbau fehlgeschlagen:', e);
+      sock = null;
+    }
     if (!sock) { meldeVerbindung(false); return null; }
     sock.on('stateChange', (id, st) => {
       if (!st) return;

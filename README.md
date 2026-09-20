@@ -1,4 +1,4 @@
-![Logo](admin/dreame.png)
+<img src="admin/dreame.png" width="128" />
 
 # ioBroker.dreame
 
@@ -40,7 +40,7 @@ https://github.com/ioBroker/ioBroker.repositories/pull/6200).
 
 ### Via CLI
 
-```
+```shell
 iobroker install dreame@latest
 ```
 
@@ -48,7 +48,7 @@ iobroker install dreame@latest
 
 If you want to contribute to the adapter code itself (not just use it):
 
-```
+```shell
 git clone https://github.com/TA2k/ioBroker.dreame.git
 cd ioBroker.dreame
 npm install
@@ -696,6 +696,9 @@ translations should be submitted as PRs against the respective
 ---
 
 ## Changelog
+
+### **WORK IN PROGRESS**
+- Live map widget: fix "no connection" when the web adapter is configured for pure WebSockets (ioBroker.ws) instead of socket.io. Under `/socket.io/socket.io.js` the web adapter serves one of two different client libraries depending on its instance configuration: the real socket.io client, which exports a callable `io(url, opts)`, or the shim from `@iobroker/ws-server-library`, which only exposes `io.connect(url, opts)`. The widget called `io(...)` unconditionally, so on a ws setup it died with "io is not a function" before the first request — and because `verbinden()` swallowed that error without logging it, the only visible symptom was the generic "Is the web adapter running?" message, pointing the user at an adapter that was working fine. The data layer (`www/js/core/daten.js`) now picks whichever entry point the loaded client actually offers, additionally listens for the shim's `error` event alongside socket.io's `connect_error`, and logs the real cause to the browser console. Everything above the connection is unaffected — both setups speak the same command set from `@iobroker/socket-classes`, so `getState`/`getStates`/`getObject`/`getObjects`/`setState`/`subscribe` and the `stateChange` event work unchanged.
 
 ### 0.4.12 (2026-09-17)
 - Fix Issue #138: three robustness/functionality fixes for map handling on newer models with AES-encrypted map payloads (r2253c/w and similar). 1) A silent crash in the room-name fallback path (main.js): when the map file request failed, an unhandled TypeError showed up only as a generic error; now an early return with a clear debug message. 2) A model without an AES-IV table entry can never load its base map — this is now a persistent, recognizable condition (unsupportedMapModel) instead of the generic please-restart-the-adapter hint. 3) The old_map_data (piid 13) property, pushed specifically during active cleaning, could carry the same object_name-plus-AES-key format as the already-working piid 3 path, but was previously only logged as unimplemented and discarded; it now reuses the existing, already-verified decrypt pipeline (confirmed against the Home Assistant reference implementation), with a Debug-level log that masks the key material so it is safe to share in a public issue. Thanks to @luckyheiko for the detailed reports that made all three fixes possible.
