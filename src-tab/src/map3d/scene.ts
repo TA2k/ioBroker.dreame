@@ -70,7 +70,12 @@ export const LIGHT_COLOURS: SceneColours = {
  * @param model What to draw.
  * @param colours Palette matching the admin's theme.
  */
-export function buildScene(model: Map3DModel, colours: SceneColours): SceneBundle {
+export function buildScene(
+	model: Map3DModel,
+	colours: SceneColours,
+	/** What the GPU allows; read from the renderer, which this function does not own. */
+	limits: TextureLimits = DEFAULT_TEXTURE_LIMITS,
+): SceneBundle {
 	const scene = new THREE.Scene();
 	scene.background = new THREE.Color(colours.background);
 
@@ -90,7 +95,7 @@ export function buildScene(model: Map3DModel, colours: SceneColours): SceneBundl
 	// --- Floor ---------------------------------------------------------------------------------
 	// The 2D bitmap with the driven path drawn onto it, so the 3D floor shows what the 2D one
 	// does. The path is strokes rather than pixels, so this goes through a canvas.
-	const texture = track(buildFloorTexture(model));
+	const texture = track(buildFloorTexture(model, limits));
 
 	const floorGeometry = track(new THREE.PlaneGeometry(width, height));
 	const floorMaterial = track(
@@ -295,16 +300,38 @@ export function buildScene(model: Map3DModel, colours: SceneColours): SceneBundl
  * `colorSpace` is set explicitly. three.js renders to sRGB, and a texture that does not say what
  * space its data is in is treated as linear and converted again on the way out - which washes
  * every room colour out towards white. The symptom looks like a lighting problem and is not.
+ *
+ * ## Resolution
+ *
+ * The texture is drawn at several texels per cell, not one. At one per cell the vacuum line - 1.1
+ * cells wide - is a single texel, and on a floor seen at an angle the GPU averages it into the
+ * room colour behind it: the path looks like faint hatching where the 2D view, drawing the same
+ * line as a vector at screen resolution, shows it crisp. The rooms are enlarged without smoothing,
+ * so their cell edges stay as hard as before; only the path gains detail.
  */
-function buildFloorTexture(model: Map3DModel): THREE.Texture {
+function buildFloorTexture(model: Map3DModel, limits: TextureLimits): THREE.Texture {
 	const { floor, trail } = model;
+	const scale = floorTextureScale(floor.width, floor.height, limits.maxTextureSize);
+
+	// The room bitmap at its own resolution first, as the source for the enlargement below.
+	const source = document.createElement("canvas");
+	source.width = floor.width;
+	source.height = floor.height;
+	source.getContext("2d")?.putImageData(new ImageData(floor.rgba, floor.width, floor.height), 0, 0);
+
 	const canvas = document.createElement("canvas");
-	canvas.width = floor.width;
-	canvas.height = floor.height;
+	canvas.width = floor.width * scale;
+	canvas.height = floor.height * scale;
 
 	const context = canvas.getContext("2d");
 	if (context) {
-		context.putImageData(new ImageData(floor.rgba, floor.width, floor.height), 0, 0);
+		// Enlarged cell by cell: every cell becomes a hard-edged square of `scale` texels.
+		context.imageSmoothingEnabled = false;
+		context.drawImage(source, 0, 0, canvas.width, canvas.height);
+
+		// The path in the same cell coordinates as before, drawn at the enlarged resolution. Stroke
+		// widths stay in cells, so they match the 2D overlay whatever the scale.
+		context.setTransform(scale, 0, 0, scale, 0, 0);
 
 		// Same widths, colours and order as the 2D overlay: the wide mopping band first, the thin
 		// vacuum line over it.
@@ -329,13 +356,60 @@ function buildFloorTexture(model: Map3DModel): THREE.Texture {
 	const texture = new THREE.CanvasTexture(canvas);
 	// See the note above: without this every room colour comes out pale.
 	texture.colorSpace = THREE.SRGBColorSpace;
-	// Nearest-neighbour when magnified keeps cell edges hard, the same choice the 2D canvas makes;
-	// mipmaps keep the floor from shimmering when it is small on screen.
-	texture.magFilter = THREE.NearestFilter;
+	// Linear now rather than nearest: the cells are already hard-edged in the enlarged canvas, and
+	// nearest would turn the path's smooth edges into visible texel steps when zoomed in.
+	texture.magFilter = THREE.LinearFilter;
 	texture.minFilter = THREE.LinearMipmapLinearFilter;
 	texture.generateMipmaps = true;
+	// The floor is almost always seen at an angle, which is exactly where plain mipmapping blurs
+	// most: it picks a level for the steepest direction and smears the other. Anisotropic filtering
+	// samples along the slant instead and keeps thin lines thin.
+	texture.anisotropy = limits.maxAnisotropy;
 	texture.needsUpdate = true;
 	return texture;
+}
+
+/** What the GPU allows, read from the renderer by the caller. */
+export interface TextureLimits {
+	/** Largest texture edge in texels. */
+	maxTextureSize: number;
+	/** Highest anisotropic filtering level; 1 means none. */
+	maxAnisotropy: number;
+}
+
+/**
+ * Safe values for a renderer that has not been asked.
+ *
+ * 4096 is a texture size every GPU the admin runs on supports; anisotropy 1 is simply "off".
+ */
+export const DEFAULT_TEXTURE_LIMITS: TextureLimits = { maxTextureSize: 4096, maxAnisotropy: 1 };
+
+/** Texels per cell never go above this: past it the path is no sharper and memory keeps growing. */
+export const MAX_FLOOR_SCALE = 8;
+
+/**
+ * Upper bound on floor texels, about 32 MB of RGBA before mipmaps.
+ *
+ * GPU memory is the constraint on a phone or a small integrated chip, not the texture size limit
+ * - a large flat at full scale could otherwise ask for several hundred megabytes for one floor.
+ */
+export const FLOOR_TEXEL_BUDGET = 8_000_000;
+
+/**
+ * How many texels per cell the floor texture gets.
+ *
+ * The largest scale that fits all three limits: the GPU's maximum texture edge, the memory budget,
+ * and {@link MAX_FLOOR_SCALE}. Never below 1 - an enormous map is drawn at one texel per cell, the
+ * way it was before, rather than failing.
+ */
+export function floorTextureScale(width: number, height: number, maxTextureSize: number): number {
+	const longest = Math.max(width, height, 1);
+	const area = Math.max(width * height, 1);
+
+	const bySize = Math.floor(maxTextureSize / longest);
+	const byBudget = Math.floor(Math.sqrt(FLOOR_TEXEL_BUDGET / area));
+
+	return Math.max(1, Math.min(MAX_FLOOR_SCALE, bySize, byBudget));
 }
 
 /** Vertical field of view, in degrees. */

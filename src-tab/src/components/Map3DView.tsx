@@ -58,7 +58,10 @@ export function Map3DView({ map, hiddenRooms, rooms }: Map3DViewProps): React.JS
 		renderer.domElement.style.height = "100%";
 
 		const model = buildModel(map, hiddenRooms, rooms);
-		const bundle = buildScene(model, dark ? DARK_COLOURS : LIGHT_COLOURS);
+		const bundle = buildScene(model, dark ? DARK_COLOURS : LIGHT_COLOURS, {
+			maxTextureSize: renderer.capabilities.maxTextureSize,
+			maxAnisotropy: renderer.capabilities.getMaxAnisotropy(),
+		});
 		bundleRef.current = bundle;
 
 		const controls = new OrbitControls(bundle.camera, renderer.domElement);
