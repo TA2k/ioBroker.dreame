@@ -1,5 +1,9 @@
 /**
- * Backs {@link TabConnection} with the admin's own socket.
+ * Backs {@link TabConnection} with an ioBroker socket - the admin's, vis-2's or the devices app's.
+ *
+ * All three hosts hand their widgets or tabs a `Connection` from `@iobroker/socket-client`, and
+ * every method used here is on that base class, not on the admin's subclass. So one adapter
+ * serves the tab, both widget sets and any host added later.
  *
  * The tab runs inside the admin, so it does not open a connection of its own the way the widget
  * in `www/` does - `GenericApp` from `@iobroker/gui-components` has one up before the first
@@ -10,7 +14,7 @@
  * has to turn a wildcard pattern into the id range the admin's object view actually takes.
  */
 
-import type { AdminConnection } from "@iobroker/gui-components";
+import type { Connection } from "@iobroker/gui-components";
 import type { StateHandler, StateValue, TabConnection } from "./types";
 
 /**
@@ -29,8 +33,8 @@ export function patternToRange(pattern: string): { start: string; end: string } 
 	return { start: prefix, end: prefix + ID_RANGE_END };
 }
 
-export class AdminTabConnection implements TabConnection {
-	public constructor(private readonly socket: AdminConnection) {}
+export class SocketConnection implements TabConnection {
+	public constructor(private readonly socket: Connection) {}
 
 	public async getState(id: string): Promise<StateValue | null> {
 		const state = await this.socket.getState(id);

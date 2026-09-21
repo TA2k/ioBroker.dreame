@@ -15,7 +15,7 @@ const segment = (name?: string): SegmentInfo => ({
 
 function pkg(cells: number[], width: number, height: number, meta: MapMeta = {}): MapPackage {
 	return {
-		header: { gridSize: 50, width, height, origin: { x: 0, y: 0 }, robot: null },
+		header: { gridSize: 50, width, height, origin: { x: 0, y: 0 }, robot: null, charger: null, mapId: 1 },
 		cells: new Uint8Array(cells),
 		meta,
 	};

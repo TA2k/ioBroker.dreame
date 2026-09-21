@@ -38,3 +38,7 @@ scripts/
 *.pyc
 __pycache__/
 
+
+# Intermediate output of the widget builds; the deliverables are copied to admin/dm-widgets and widgets/
+src-devices/build/
+src-widgets/build/

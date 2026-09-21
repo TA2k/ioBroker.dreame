@@ -8,6 +8,8 @@ const header: MapHeader = {
 	height: 10,
 	origin: { x: 0, y: 0 },
 	robot: null,
+	charger: null,
+	mapId: 1,
 };
 
 function mapWith(points: PathPoint[], over: Partial<MapHeader> = {}): MapPackage {

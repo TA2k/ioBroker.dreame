@@ -23,7 +23,7 @@ import {
 	type GenericAppState,
 } from "@iobroker/gui-components";
 
-import { AdminTabConnection } from "./connection/AdminTabConnection";
+import { SocketConnection } from "./connection/SocketConnection";
 import { DeviceWorkspace } from "./components/DeviceWorkspace";
 
 import enLang from "@i18n/en.json";
@@ -78,10 +78,10 @@ export default class App extends GenericApp<GenericAppProps, AppState> {
 	 * tear down and rebuild every subscription each time the component re-renders - a resubscribe
 	 * loop rather than a live map.
 	 */
-	private connection: AdminTabConnection | null = null;
+	private connection: SocketConnection | null = null;
 
 	public override onConnectionReady(): void {
-		if (this.socket) this.connection = new AdminTabConnection(this.socket);
+		if (this.socket) this.connection = new SocketConnection(this.socket);
 		this.setState({ ready: true });
 	}
 

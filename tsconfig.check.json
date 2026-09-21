@@ -3,5 +3,5 @@
     "extends": "./tsconfig.json",
     "compilerOptions": {},
     "include": ["**/*.js", "**/*.d.ts"],
-    "exclude": ["**/build", "node_modules/", "widgets/", "admin/assets/", "src-tab/"]
+    "exclude": ["**/build", "node_modules/", "widgets/", "admin/assets/", "admin/dm-widgets/", "src-tab/", "src-devices/", "src-widgets/"]
 }

@@ -21,11 +21,8 @@
 
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Box, IconButton, Stack, Tooltip } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import RemoveIcon from "@mui/icons-material/Remove";
-import FitScreenIcon from "@mui/icons-material/FitScreen";
-import { useTheme } from "@mui/material/styles";
+import { Box, IconButton, Stack, Tooltip, useTheme } from "@mui/material";
+import { Add as AddIcon, Remove as RemoveIcon, FitScreen as FitScreenIcon } from "@mui/icons-material";
 
 import { I18n } from "@iobroker/gui-components";
 
@@ -35,16 +32,7 @@ import type { LabelledRoom } from "../map/rooms";
 import type { MapPackage } from "../map/mapPackage";
 import { isSegment } from "../map/mapPackage";
 import { sequencePosition } from "../panels/sequence";
-import {
-	FITTED,
-	MAX_SCALE,
-	MIN_SCALE,
-	ZOOM_STEP,
-	clampPan,
-	isClick,
-	isFitted,
-	zoomAbout,
-} from "../map/viewport";
+import { FITTED, MAX_SCALE, MIN_SCALE, ZOOM_STEP, clampPan, isClick, isFitted, zoomAbout } from "../map/viewport";
 import type { Viewport } from "../map/viewport";
 
 /** Label size on screen, matching the widget's `.rlabel`. */
@@ -64,6 +52,13 @@ export interface MapViewProps {
 	onRoomClick?: (roomId: number) => void;
 	/** Room ids in cleaning order, shown as numbered badges. Empty or absent draws none. */
 	sequenceOrder?: readonly number[];
+	/**
+	 * False turns the map into a picture: no zoom, no panning, no room taps, no controls.
+	 *
+	 * For a tile, where a click belongs to the tile - it opens the full view - and a map that also
+	 * wanted to be dragged would swallow half the clicks meant for it.
+	 */
+	interactive?: boolean;
 }
 
 export function MapView({
@@ -72,6 +67,7 @@ export function MapView({
 	hiddenRooms,
 	onRoomClick,
 	sequenceOrder,
+	interactive = true,
 }: MapViewProps): React.JSX.Element {
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
 	const boxRef = useRef<HTMLDivElement | null>(null);
@@ -101,7 +97,7 @@ export function MapView({
 	 */
 	useEffect(() => {
 		const outer = outerRef.current;
-		if (!outer) return;
+		if (!outer || !interactive) return;
 
 		const onWheel = (event: WheelEvent): void => {
 			event.preventDefault();
@@ -122,7 +118,7 @@ export function MapView({
 
 		outer.addEventListener("wheel", onWheel, { passive: false });
 		return () => outer.removeEventListener("wheel", onWheel);
-	}, []);
+	}, [interactive]);
 
 	// Watched rather than measured once: the admin's sidebar collapses, the window resizes, and a
 	// label sized against a stale width is the kind of wrong that only shows up on someone else's
@@ -260,9 +256,9 @@ export function MapView({
 	return (
 		<Box
 			ref={outerRef}
-			onPointerDown={handlePointerDown}
-			onPointerMove={handlePointerMove}
-			onPointerUp={handlePointerUp}
+			onPointerDown={interactive ? handlePointerDown : undefined}
+			onPointerMove={interactive ? handlePointerMove : undefined}
+			onPointerUp={interactive ? handlePointerUp : undefined}
 			onPointerCancel={() => {
 				dragRef.current = null;
 			}}
@@ -278,8 +274,11 @@ export function MapView({
 				// Otherwise a drag selects the page text behind the map, and on a touch screen the
 				// browser pans its own scroll container instead of the map.
 				userSelect: "none",
-				touchAction: "none",
-				cursor: onRoomClick ? "pointer" : "grab",
+				// Only while the map takes gestures itself. As a picture it must let them through, or on a
+				// phone the dashboard around a map tile could no longer be scrolled.
+				touchAction: interactive ? "none" : "auto",
+				// A picture has no cursor of its own; the tile around it decides.
+				cursor: !interactive ? "inherit" : onRoomClick ? "pointer" : "grab",
 				// Through CSS rather than from `dragRef`, which is a ref and so does not re-render.
 				"&:active": { cursor: "grabbing" },
 			}}
@@ -406,52 +405,54 @@ export function MapView({
 
 			{/*
 			 * Controls sit outside the transformed box, so they keep their size and place while
-			 * the map moves under them. Bottom right, where the widget puts them.
+			 * the map moves under them. Bottom right, where the widget puts them. Absent on a picture.
 			 */}
-			<Stack
-				spacing={0.5}
-				sx={{ position: "absolute", right: 12, bottom: 12, zIndex: 1 }}
-				// The buttons are inside the element that handles dragging, so a press on one would
-				// otherwise start a pan as well.
-				onPointerDown={event => event.stopPropagation()}
-			>
-				<Tooltip title={I18n.t("tab.zoom.rein")} placement="left">
-					<span>
-						<IconButton
-							size="small"
-							disabled={view.scale >= MAX_SCALE}
-							onClick={() => applyZoom(view.scale * ZOOM_STEP)}
-							sx={{ bgcolor: "background.paper", "&:hover": { bgcolor: "background.paper" } }}
-						>
-							<AddIcon fontSize="small" />
-						</IconButton>
-					</span>
-				</Tooltip>
-				<Tooltip title={I18n.t("tab.zoom.raus")} placement="left">
-					<span>
-						<IconButton
-							size="small"
-							disabled={view.scale <= MIN_SCALE}
-							onClick={() => applyZoom(view.scale / ZOOM_STEP)}
-							sx={{ bgcolor: "background.paper", "&:hover": { bgcolor: "background.paper" } }}
-						>
-							<RemoveIcon fontSize="small" />
-						</IconButton>
-					</span>
-				</Tooltip>
-				<Tooltip title={I18n.t("tab.zoom.einpassen")} placement="left">
-					<span>
-						<IconButton
-							size="small"
-							disabled={isFitted(view)}
-							onClick={() => setView(FITTED)}
-							sx={{ bgcolor: "background.paper", "&:hover": { bgcolor: "background.paper" } }}
-						>
-							<FitScreenIcon fontSize="small" />
-						</IconButton>
-					</span>
-				</Tooltip>
-			</Stack>
+			{interactive ? (
+				<Stack
+					spacing={0.5}
+					sx={{ position: "absolute", right: 12, bottom: 12, zIndex: 1 }}
+					// The buttons are inside the element that handles dragging, so a press on one would
+					// otherwise start a pan as well.
+					onPointerDown={event => event.stopPropagation()}
+				>
+					<Tooltip title={I18n.t("tab.zoom.rein")} placement="left">
+						<span>
+							<IconButton
+								size="small"
+								disabled={view.scale >= MAX_SCALE}
+								onClick={() => applyZoom(view.scale * ZOOM_STEP)}
+								sx={{ bgcolor: "background.paper", "&:hover": { bgcolor: "background.paper" } }}
+							>
+								<AddIcon fontSize="small" />
+							</IconButton>
+						</span>
+					</Tooltip>
+					<Tooltip title={I18n.t("tab.zoom.raus")} placement="left">
+						<span>
+							<IconButton
+								size="small"
+								disabled={view.scale <= MIN_SCALE}
+								onClick={() => applyZoom(view.scale / ZOOM_STEP)}
+								sx={{ bgcolor: "background.paper", "&:hover": { bgcolor: "background.paper" } }}
+							>
+								<RemoveIcon fontSize="small" />
+							</IconButton>
+						</span>
+					</Tooltip>
+					<Tooltip title={I18n.t("tab.zoom.einpassen")} placement="left">
+						<span>
+							<IconButton
+								size="small"
+								disabled={isFitted(view)}
+								onClick={() => setView(FITTED)}
+								sx={{ bgcolor: "background.paper", "&:hover": { bgcolor: "background.paper" } }}
+							>
+								<FitScreenIcon fontSize="small" />
+							</IconButton>
+						</span>
+					</Tooltip>
+				</Stack>
+			) : null}
 		</Box>
 	);
 }

@@ -12,7 +12,7 @@
 
 import type React from "react";
 import { Box, IconButton, LinearProgress, Stack, Tooltip, Typography } from "@mui/material";
-import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import { RestartAlt as RestartAltIcon } from "@mui/icons-material";
 import { I18n } from "@iobroker/gui-components";
 
 import { PanelSection, useCommandRunner } from "./PanelSection";

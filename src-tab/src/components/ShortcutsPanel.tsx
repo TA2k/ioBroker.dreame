@@ -10,8 +10,7 @@
 
 import type React from "react";
 import { Button, Stack } from "@mui/material";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
-import HourglassTopIcon from "@mui/icons-material/HourglassTop";
+import { PlayArrow as PlayArrowIcon, HourglassTop as HourglassTopIcon } from "@mui/icons-material";
 import { I18n } from "@iobroker/gui-components";
 
 import { PanelSection, useCommandRunner } from "./PanelSection";

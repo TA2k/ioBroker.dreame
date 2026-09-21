@@ -14,7 +14,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { StateHandler, TabConnection } from "./types";
-import { patternToRegExp } from "./AdminTabConnection";
+import { patternToRegExp } from "./SocketConnection";
 
 /** Current values by state id. A state that does not exist is absent rather than null. */
 export type StateValues = Readonly<Record<string, unknown>>;

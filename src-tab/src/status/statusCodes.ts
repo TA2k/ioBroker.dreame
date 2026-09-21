@@ -97,3 +97,17 @@ export function statusTextKey(code: number | null | undefined): string | null {
 	if (code == null) return null;
 	return STATUS_TEXT_KEY[code] ?? null;
 }
+
+/**
+ * Status codes at which the robot is out doing a job, as opposed to docked, charging or idle.
+ *
+ * The widget's own set (`www/js/panels/kopf.js`), used there to decide when the run time is worth
+ * showing. Here it also decides whether a tile is drawn as active - a lit tile should mean the
+ * robot is working, not merely that it has power.
+ */
+export const WORKING_STATUS_CODES: ReadonlySet<number> = new Set([1, 7, 12, 21, 25, 27, 37, 38, 101, 102]);
+
+/** True while the robot is out doing a job. */
+export function isWorking(code: number | null | undefined): boolean {
+	return code != null && WORKING_STATUS_CODES.has(code);
+}

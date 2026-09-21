@@ -11,7 +11,7 @@ const compat = new FlatCompat({
 
 module.exports = [
   {
-    ignores: ['**/.prettierrc.js', '**/.eslintrc.js', 'admin/words.js', '.docu/**', 'admin/assets/**', 'src-tab/**'],
+    ignores: ['**/.prettierrc.js', '**/.eslintrc.js', 'admin/words.js', '.docu/**', 'admin/assets/**', 'admin/dm-widgets/**', 'widgets/**', 'src-tab/**', 'src-devices/**', 'src-widgets/**'],
   },
   ...compat.extends('eslint:recommended'),
   {

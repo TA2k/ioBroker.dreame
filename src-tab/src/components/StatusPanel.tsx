@@ -9,11 +9,9 @@
 
 import type React from "react";
 import { Alert, Box, Button, LinearProgress, Snackbar, Stack, Typography } from "@mui/material";
+import { PlayArrow as PlayArrowIcon, Stop as StopIcon, Home as HomeIcon } from "@mui/icons-material";
 import { useState } from "react";
 import { I18n } from "@iobroker/gui-components";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
-import StopIcon from "@mui/icons-material/Stop";
-import HomeIcon from "@mui/icons-material/Home";
 
 import { statusTextKey } from "../status/statusCodes";
 import { asNumber } from "../connection/useStates";

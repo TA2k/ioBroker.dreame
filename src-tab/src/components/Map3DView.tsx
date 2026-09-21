@@ -15,8 +15,7 @@
 
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Box } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
+import { Alert, Box, useTheme } from "@mui/material";
 import { I18n } from "@iobroker/gui-components";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";

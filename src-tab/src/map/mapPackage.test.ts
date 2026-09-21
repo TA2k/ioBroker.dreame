@@ -26,6 +26,8 @@ function buildPackage(options: {
 	height: number;
 	origin?: { x: number; y: number };
 	robot?: { x: number; y: number } | null;
+	charger?: { x: number; y: number } | null;
+	mapId?: number;
 	cells?: Uint8Array;
 	meta?: MapMeta | string;
 	omitMeta?: boolean;
@@ -34,8 +36,12 @@ function buildPackage(options: {
 	const gridSize = options.gridSize ?? 50;
 	const origin = options.origin ?? { x: -1000, y: -2000 };
 	const robot = options.robot === undefined ? { x: 120, y: -340 } : options.robot;
+	const charger = options.charger === undefined ? { x: -60, y: 80 } : options.charger;
 
 	const header = Buffer.alloc(MAP_HEADER_SIZE);
+	header.writeInt16LE(options.mapId ?? 3, 0);
+	header.writeInt16LE(charger === null ? 32767 : charger.x, 11);
+	header.writeInt16LE(charger === null ? 32767 : charger.y, 13);
 	header.writeInt16LE(robot === null ? 32767 : robot.x, 5);
 	header.writeInt16LE(robot === null ? 32767 : robot.y, 7);
 	header.writeInt16LE(gridSize, 17);
@@ -99,6 +105,8 @@ describe("readHeader", () => {
 			height: 3,
 			origin: { x: -1000, y: -2000 },
 			robot: { x: 120, y: -340 },
+			charger: { x: -60, y: 80 },
+			mapId: 3,
 		});
 	});
 
@@ -217,5 +225,25 @@ describe("base64ToBytes", () => {
 		const bytes = base64ToBytes(Buffer.from([0, 1, 254, 255]).toString("base64"));
 
 		expect(Array.from(bytes)).toEqual([0, 1, 254, 255]);
+	});
+});
+
+describe("readHeader: map id and dock", () => {
+	it("reads the map id, which is how a view knows which floor the live data is", async () => {
+		const { header } = await decodeMapPackage(buildPackage({ width: 2, height: 2, mapId: 53 }));
+
+		expect(header.mapId).toBe(53);
+	});
+
+	it("reads the dock position from the package itself", async () => {
+		const { header } = await decodeMapPackage(buildPackage({ width: 2, height: 2, charger: { x: -800, y: 1200 } }));
+
+		expect(header.charger).toEqual({ x: -800, y: 1200 });
+	});
+
+	it("reports no dock where the map has none", async () => {
+		const { header } = await decodeMapPackage(buildPackage({ width: 2, height: 2, charger: null }));
+
+		expect(header.charger).toBeNull();
 	});
 });

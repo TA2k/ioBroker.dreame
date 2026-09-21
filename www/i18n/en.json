@@ -333,5 +333,14 @@
   "tab.zoom.einpassen": "Fit to view",
   "tab.3d.keinWebgl": "3D is not available in this browser (no WebGL).",
   "tab.ansicht.2d": "2D",
-  "tab.ansicht.3d": "3D"
+  "tab.ansicht.3d": "3D",
+
+  "tab.floor.label": "Floor",
+  "tab.floor.live": "Where the robot is",
+  "tab.floor.roboterHier": "robot is here",
+  "tab.floor.gespeichert": "Stored floor – not live",
+  "tab.floor.keinBild": "There is no picture of this floor. Enable “fetch all maps” in the adapter.",
+  "tab.floor.kein3d": "3D is only available for the floor the robot is on",
+  "tile.keinGeraet": "No device selected",
+  "tile.akku": "Battery"
 }

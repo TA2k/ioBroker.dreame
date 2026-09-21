@@ -51,7 +51,7 @@ export function Sidebar({
 	const shared = { connection, instanceId, did };
 
 	return (
-		<Box sx={{ width: 300, px: 2, pb: 2, overflowY: "auto", height: "100%" }}>
+		<Box sx={{ width: "100%", px: 2, pb: 2 }}>
 			<Stack divider={<Divider flexItem />}>
 				{/* Faults first: the panel is empty unless something is wrong, so it costs nothing
 				    when all is well and is impossible to miss when it is not. */}

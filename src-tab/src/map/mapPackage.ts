@@ -75,6 +75,16 @@ export interface MapHeader {
 	 * The separate state arrives on its own schedule and in no fixed order relative to the map.
 	 */
 	robot: WorldPoint | null;
+	/** Dock position carried by the package, or null where the map has none. */
+	charger: WorldPoint | null;
+	/**
+	 * Which stored map this package is, as the robot numbers them.
+	 *
+	 * This is how a view knows which floor the live data belongs to. The alternative,
+	 * `remote.custom-room-cleaning.active-map`, is a user's choice for room cleaning and can point at
+	 * a different floor from the one the robot is standing on.
+	 */
+	mapId: number;
 }
 
 /** One piece of furniture, as the map reports it. */
@@ -266,15 +276,22 @@ export function readHeader(buffer: Uint8Array): MapHeader {
 	}
 
 	const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-	const robotX = view.getInt16(5, true);
-	const robotY = view.getInt16(7, true);
+	const point = (xOffset: number, yOffset: number): WorldPoint | null => {
+		const x = view.getInt16(xOffset, true);
+		const y = view.getInt16(yOffset, true);
+		return x === NO_POSITION && y === NO_POSITION ? null : { x, y };
+	};
 
 	return {
+		// Offset 0 is the map id, written by `lib/mapMerge.js` (`toWire`) as the first header field.
+		mapId: view.getInt16(0, true),
 		gridSize: view.getInt16(17, true),
 		width: view.getInt16(19, true),
 		height: view.getInt16(21, true),
 		origin: { x: view.getInt16(23, true), y: view.getInt16(25, true) },
-		robot: robotX === NO_POSITION && robotY === NO_POSITION ? null : { x: robotX, y: robotY },
+		robot: point(5, 7),
+		// Same "no fix" convention as the robot: 32767 in both axes means the map has no dock.
+		charger: point(11, 13),
 	};
 }
 
