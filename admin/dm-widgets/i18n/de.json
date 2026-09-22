@@ -1,0 +1,22 @@
+{
+  "dreame_caption": "Beschriftung",
+  "dreame_caption_auto": "Automatisch (Roboter, bei gewählter Etage mit Etage)",
+  "dreame_caption_custom": "Eigener Text",
+  "dreame_caption_none": "Keine",
+  "dreame_caption_text": "Eigene Beschriftung",
+  "dreame_caption_text_help": "Leer gelassen, erscheint die automatische Beschriftung",
+  "dreame_content": "Inhalt der Kachel",
+  "dreame_content_auto": "Automatisch (Karte bei 2×2, sonst Status)",
+  "dreame_content_map": "Karte",
+  "dreame_content_status": "Status",
+  "dreame_device": "Roboter",
+  "dreame_device_auto": "Automatisch (erster Roboter von dreame.0)",
+  "dreame_dialog_2d": "2D",
+  "dreame_dialog_3d": "3D",
+  "dreame_dialog_mode": "Ansicht im Dialog",
+  "dreame_floor": "Etage der Karte",
+  "dreame_floor_follow": "Automatisch (Etage, auf der der Roboter ist)",
+  "dreame_floor_help": "Jede andere Etage erscheint als Standbild, das der Adapter speichert",
+  "dreame_no_device": "Kein Dreame-Roboter gefunden",
+  "dreame_size": "Größe"
+}

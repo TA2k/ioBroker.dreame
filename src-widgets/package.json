@@ -1,0 +1,31 @@
+{
+	"name": "iobroker.vis-2-widgets-dreame",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"description": "vis-2 widget set of ioBroker.dreame. Built into ../widgets/dreame.",
+	"scripts": {
+		"build": "vite build",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {},
+	"devDependencies": {
+		"@emotion/react": "^11.14.0",
+		"@emotion/styled": "^11.14.1",
+		"@iobroker/gui-components": "^10.3.1",
+		"@iobroker/types": "^7.2.3",
+		"@iobroker/types-vis-2": "~2.20.1",
+		"@module-federation/vite": "^1.22.1",
+		"@mui/icons-material": "^9.4.0",
+		"@mui/material": "^9.4.0",
+		"@types/react": "^19.3.0",
+		"@types/react-dom": "^19.3.0",
+		"@types/three": "^0.180.0",
+		"@vitejs/plugin-react": "^6.1.1",
+		"react": "^19.3.0",
+		"react-dom": "^19.3.0",
+		"three": "^0.186.0",
+		"typescript": "^5.9.3",
+		"vite": "^8.3.0"
+	}
+}

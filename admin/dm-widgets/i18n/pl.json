@@ -1,0 +1,22 @@
+{
+  "dreame_caption": "literowanie",
+  "dreame_caption_auto": "Automatyczny (robot, z wybranym piętrem)",
+  "dreame_caption_custom": "Mój własny tekst",
+  "dreame_caption_none": "Nic",
+  "dreame_caption_text": "Własny podpis",
+  "dreame_caption_text_help": "Jeśli pole pozostanie puste, wyświetlany jest automatyczny podpis",
+  "dreame_content": "Zawartość kafelka",
+  "dreame_content_auto": "Automatyczna (mapa 2×2, status inny)",
+  "dreame_content_map": "Mapa",
+  "dreame_content_status": "Status",
+  "dreame_device": "Robot",
+  "dreame_device_auto": "Automatyczny (pierwszy robot dreame.0)",
+  "dreame_dialog_2d": "2D",
+  "dreame_dialog_3d": "3D",
+  "dreame_dialog_mode": "Wyświetl w oknie dialogowym",
+  "dreame_floor": "Mapa piętra",
+  "dreame_floor_follow": "Automatyczny (podłoga, na której znajduje się robot)",
+  "dreame_floor_help": "Każda inna podłoga jest pokazana jako nieruchomy obraz, który przechowuje adapter",
+  "dreame_no_device": "Nie znaleziono robota Dreame",
+  "dreame_size": "Rozmiar"
+}

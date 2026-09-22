@@ -1,0 +1,22 @@
+{
+  "dreame_caption": "letras",
+  "dreame_caption_auto": "Automático (robô, com andar selecionado)",
+  "dreame_caption_custom": "Texto próprio",
+  "dreame_caption_none": "Nenhum",
+  "dreame_caption_text": "Legenda própria",
+  "dreame_caption_text_help": "Se deixado em branco, a legenda automática será exibida.",
+  "dreame_content": "Conteúdo do bloco",
+  "dreame_content_auto": "Automático (mapa em 2×2, status caso contrário)",
+  "dreame_content_map": "Mapa",
+  "dreame_content_status": "Status",
+  "dreame_device": "Robô",
+  "dreame_device_auto": "Automático (primeiro robô de dreame.0)",
+  "dreame_dialog_2d": "2D",
+  "dreame_dialog_3d": "3D",
+  "dreame_dialog_mode": "Visualizar na caixa de diálogo",
+  "dreame_floor": "Mapa do andar",
+  "dreame_floor_follow": "Automático (o andar em que o robô está)",
+  "dreame_floor_help": "Qualquer outro andar é mostrado como a imagem estática armazenada no adaptador.",
+  "dreame_no_device": "Nenhum robô Dreame encontrado",
+  "dreame_size": "Tamanho"
+}

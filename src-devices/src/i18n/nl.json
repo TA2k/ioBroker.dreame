@@ -1,0 +1,22 @@
+{
+  "dreame_caption": "belettering",
+  "dreame_caption_auto": "Automatisch (robot, met geselecteerde verdieping)",
+  "dreame_caption_custom": "Mijn eigen tekst",
+  "dreame_caption_none": "Geen",
+  "dreame_caption_text": "Eigen onderschrift",
+  "dreame_caption_text_help": "Als dit veld leeg wordt gelaten, wordt het automatische onderschrift weergegeven.",
+  "dreame_content": "Tegelinhoud",
+  "dreame_content_auto": "Automatisch (kaart op 2×2, status anders)",
+  "dreame_content_map": "Kaart",
+  "dreame_content_status": "Status",
+  "dreame_device": "Robot",
+  "dreame_device_auto": "Automatisch (eerste robot van dreame.0)",
+  "dreame_dialog_2d": "2D",
+  "dreame_dialog_3d": "3D",
+  "dreame_dialog_mode": "Weergave in het dialoogvenster",
+  "dreame_floor": "Plattegrond",
+  "dreame_floor_follow": "Automatisch (de verdieping waarop de robot zich bevindt)",
+  "dreame_floor_help": "Elke andere verdieping wordt weergegeven als een stilstaand beeld; de adapter slaat de gegevens op.",
+  "dreame_no_device": "Geen Dreame-robot gevonden",
+  "dreame_size": "Maat"
+}

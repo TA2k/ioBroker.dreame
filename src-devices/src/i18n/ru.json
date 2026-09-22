@@ -1,0 +1,22 @@
+{
+  "dreame_caption": "надписи",
+  "dreame_caption_auto": "Автоматический режим (робот, с выбранным этажом)",
+  "dreame_caption_custom": "Собственный текст",
+  "dreame_caption_none": "Никто",
+  "dreame_caption_text": "Собственная подпись",
+  "dreame_caption_text_help": "Если оставить поле пустым, отобразится автоматический текст.",
+  "dreame_content": "Содержимое плитки",
+  "dreame_content_auto": "Автоматический режим (карта 2×2, статус в противном случае)",
+  "dreame_content_map": "Карта",
+  "dreame_content_status": "Статус",
+  "dreame_device": "Робот",
+  "dreame_device_auto": "Автоматический (первый робот dreame.0)",
+  "dreame_dialog_2d": "2D",
+  "dreame_dialog_3d": "3D",
+  "dreame_dialog_mode": "Просмотреть в диалоговом окне",
+  "dreame_floor": "План этажа",
+  "dreame_floor_follow": "Автоматический режим (пол, на котором находится робот)",
+  "dreame_floor_help": "Любой другой этаж отображается в виде статичного изображения, которое сохраняет адаптер.",
+  "dreame_no_device": "Робот Dreame не найден.",
+  "dreame_size": "Размер"
+}

@@ -1,0 +1,22 @@
+{
+  "dreame_caption": "字母",
+  "dreame_caption_auto": "自动（机器人，已选定楼层）",
+  "dreame_caption_custom": "原文",
+  "dreame_caption_none": "没有任何",
+  "dreame_caption_text": "自制标题",
+  "dreame_caption_text_help": "如果留空，则显示自动生成的字幕。",
+  "dreame_content": "图块内容",
+  "dreame_content_auto": "自动（地图大小为 2×2，其他状态）",
+  "dreame_content_map": "地图",
+  "dreame_content_status": "地位",
+  "dreame_device": "机器人",
+  "dreame_device_auto": "自动（dreame.0 的首款机器人）",
+  "dreame_dialog_2d": "二维",
+  "dreame_dialog_3d": "3D",
+  "dreame_dialog_mode": "在对话框中查看",
+  "dreame_floor": "地图地板",
+  "dreame_floor_follow": "自动（机器人所在的楼层）",
+  "dreame_floor_help": "其他楼层都显示为适配器存储的静止图像。",
+  "dreame_no_device": "未找到Dreame机器人",
+  "dreame_size": "尺寸"
+}

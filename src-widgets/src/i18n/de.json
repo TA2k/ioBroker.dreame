@@ -1,0 +1,21 @@
+{
+  "DreameRobot": "Dreame-Roboter",
+  "device": "Roboter",
+  "device_auto": "Automatisch (erster Roboter von dreame.0)",
+  "mode": "Anzeige",
+  "mode_status": "Status (Klick öffnet Dialog)",
+  "mode_map": "Karte (Klick öffnet Dialog)",
+  "mode_full": "Alles im Widget, ohne Dialog",
+  "floor": "Etage der Karte",
+  "floor_follow": "Automatisch (Etage, auf der der Roboter ist)",
+  "floor_help": "Jede andere Etage erscheint als Standbild, das der Adapter speichert",
+  "dialogMode": "Ansicht",
+  "noCard": "Ohne Rahmen",
+  "caption": "Beschriftung",
+  "caption_auto": "Automatisch (Roboter, bei gewählter Etage mit Etage)",
+  "caption_custom": "Eigener Text",
+  "caption_none": "Keine",
+  "captionText": "Eigene Beschriftung",
+  "captionText_help": "Leer gelassen, erscheint die automatische Beschriftung",
+  "no_device": "Kein Dreame-Roboter gefunden"
+}

@@ -1,0 +1,22 @@
+{
+  "dreame_caption": "lettere",
+  "dreame_caption_auto": "Automatico (robot, con piano selezionato)",
+  "dreame_caption_custom": "Testo mio",
+  "dreame_caption_none": "Nessuno",
+  "dreame_caption_text": "Didascalia propria",
+  "dreame_caption_text_help": "Se lasciato vuoto, viene visualizzata la didascalia automatica",
+  "dreame_content": "Contenuto piastrellato",
+  "dreame_content_auto": "Automatico (mappa 2×2, altrimenti stato)",
+  "dreame_content_map": "Mappa",
+  "dreame_content_status": "Stato",
+  "dreame_device": "Robot",
+  "dreame_device_auto": "Automatico (primo robot di dreame.0)",
+  "dreame_dialog_2d": "2D",
+  "dreame_dialog_3d": "3D",
+  "dreame_dialog_mode": "Visualizza nella finestra di dialogo",
+  "dreame_floor": "Piano della mappa",
+  "dreame_floor_follow": "Automatico (il piano su cui si trova il robot)",
+  "dreame_floor_help": "Qualsiasi altro piano viene mostrato come l'immagine fissa memorizzata dall'adattatore",
+  "dreame_no_device": "Nessun robot Dreame trovato",
+  "dreame_size": "Misurare"
+}

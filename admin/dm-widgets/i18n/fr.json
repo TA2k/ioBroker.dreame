@@ -1,0 +1,22 @@
+{
+  "dreame_caption": "caractères",
+  "dreame_caption_auto": "Automatique (robot, avec étage sélectionné)",
+  "dreame_caption_custom": "Mon propre texte",
+  "dreame_caption_none": "Aucun",
+  "dreame_caption_text": "Légende personnelle",
+  "dreame_caption_text_help": "Si ce champ est laissé vide, la légende automatique s'affiche.",
+  "dreame_content": "Contenu des tuiles",
+  "dreame_content_auto": "Automatique (carte à 2×2, statut sinon)",
+  "dreame_content_map": "Carte",
+  "dreame_content_status": "Statut",
+  "dreame_device": "Robot",
+  "dreame_device_auto": "Automatique (premier robot de dreame.0)",
+  "dreame_dialog_2d": "2D",
+  "dreame_dialog_3d": "3D",
+  "dreame_dialog_mode": "Afficher dans la boîte de dialogue",
+  "dreame_floor": "Plan du sol",
+  "dreame_floor_follow": "Automatique (l'étage sur lequel se trouve le robot)",
+  "dreame_floor_help": "Tout autre étage est représenté par l'image fixe stockée par l'adaptateur.",
+  "dreame_no_device": "Aucun robot Dreame trouvé",
+  "dreame_size": "Taille"
+}
