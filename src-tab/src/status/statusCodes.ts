@@ -111,3 +111,39 @@ export const WORKING_STATUS_CODES: ReadonlySet<number> = new Set([1, 7, 12, 21, 
 export function isWorking(code: number | null | undefined): boolean {
 	return code != null && WORKING_STATUS_CODES.has(code);
 }
+
+/** Task status values that mean "no task", from Home Assistant's `DreameVacuumTaskStatus`. */
+const TASK_COMPLETED = 0;
+const TASK_DOCKING_PAUSED = 11;
+
+/**
+ * Robot `status` values of a running task: cleaning, partial, room, zone and spot cleaning, fast
+ * mapping, cruising and shortcuts - Home Assistant's `DreameVacuumStatus`. Returning home (3) is
+ * not among them; a task that is returning mid-job is still caught by its task status.
+ */
+const TASK_STATUSES: ReadonlySet<number> = new Set([2, 4, 18, 19, 20, 21, 22, 23, 25]);
+
+/**
+ * Whether the robot has a task under way, paused or not.
+ *
+ * Home Assistant's `started` (device.py), as the widget ports it. Wider than
+ * {@link isWorking}: a task that is paused, or on its way back to the dock to empty and carry
+ * on, is still started. That is what decides whether the job's settings may change and whether
+ * its progress means anything.
+ *
+ * One deliberate departure from Home Assistant, again the widget's: with nothing known about the
+ * device yet, the answer is "not started". HA reads a missing task status as unknown, which is
+ * neither "completed" nor "paused at the dock" - and so as started.
+ */
+export function isStarted(taskStatus: number | null, robotStatus: number | null, cleaningPaused: boolean): boolean {
+	if (taskStatus == null && robotStatus == null) return false;
+	const task = taskStatus ?? -1;
+	return (
+		(task !== TASK_COMPLETED && task !== TASK_DOCKING_PAUSED) ||
+		cleaningPaused ||
+		(robotStatus != null && TASK_STATUSES.has(robotStatus))
+	);
+}
+
+/** Robot states in which the mop is being dried: drying, and drying the dust bag. */
+export const DRYING_STATES: ReadonlySet<number> = new Set([8, 35]);

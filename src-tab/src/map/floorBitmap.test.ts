@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SCHEME, SEGMENT_COLOURS, cellColour, labelColour, mix, renderFloor, rgbCss, segmentGroup } from "./floorBitmap";
+import { SCHEME, SEGMENT_COLOURS, cellColour, mix, renderFloor, rgbCss, segmentGroup } from "./floorBitmap";
 import { PixelType } from "./mapPackage";
 import type { MapMeta, MapPackage } from "./mapPackage";
 
@@ -41,8 +41,22 @@ describe("cellColour", () => {
 		expect(cellColour(PixelType.OUTSIDE, baseContext)).toBeNull();
 	});
 
-	it("gives a plain room its group colour", () => {
-		expect(cellColour(1, baseContext)).toEqual(SEGMENT_COLOURS[0]![0]);
+	it("gives a room its strong group colour while nothing is picked, which means all rooms", () => {
+		expect(cellColour(1, baseContext)).toEqual(SEGMENT_COLOURS[0]![1]);
+		expect(cellColour(1, { ...baseContext, selectedRooms: new Set<number>() })).toEqual(SEGMENT_COLOURS[0]![1]);
+	});
+
+	it("keeps picked rooms strong and pales the ones a partial pick leaves out", () => {
+		const context = { ...baseContext, selectedRooms: new Set([1]) };
+		expect(cellColour(1, context)).toEqual(SEGMENT_COLOURS[0]![1]);
+		// Room 2 falls in the yellow group; its light colour halfway to white.
+		expect(cellColour(2, context)).toEqual(mix(SEGMENT_COLOURS[1]![0], [255, 255, 255], 0.5));
+	});
+
+	it("lets a running job win over the selection", () => {
+		const context = { ...baseContext, activeSegments: new Set([2]), selectedRooms: new Set([1]) };
+		expect(cellColour(1, context)).toEqual(SCHEME.passiveSegment);
+		expect(cellColour(2, context)).toEqual(SEGMENT_COLOURS[1]![0]);
 	});
 
 	// The branch order is the part that is easy to break and invisible when broken, so each
@@ -91,7 +105,7 @@ describe("cellColour", () => {
 	});
 
 	it("treats every segment as known when there is no stored room structure", () => {
-		expect(cellColour(42, { ...baseContext, knownRooms: null })).toEqual(segmentGroup(42, undefined)[0]);
+		expect(cellColour(42, { ...baseContext, knownRooms: null })).toEqual(segmentGroup(42, undefined)[1]);
 	});
 
 	it("draws nothing for a room hidden in this view", () => {
@@ -181,7 +195,7 @@ describe("renderFloor", () => {
 	});
 });
 
-describe("mix / rgbCss / labelColour", () => {
+describe("mix / rgbCss", () => {
 	it("keeps the source colour at factor 0 and reaches the target at 1", () => {
 		expect(mix([10, 20, 30], [110, 120, 130], 0)).toEqual([10, 20, 30]);
 		expect(mix([10, 20, 30], [110, 120, 130], 1)).toEqual([110, 120, 130]);
@@ -193,15 +207,5 @@ describe("mix / rgbCss / labelColour", () => {
 
 	it("formats a colour for CSS", () => {
 		expect(rgbCss([1, 2, 3])).toBe("rgb(1,2,3)");
-	});
-
-	it("darkens a room's strong colour for its label, keeping the hue recognisable", () => {
-		// Room 1 without an index falls into group 0, whose strong colour is [121,170,255].
-		// Taken 60% to black: [48,68,102] - still blue, dark enough to read on the pale fill.
-		expect(labelColour(1, undefined)).toBe("rgb(48,68,102)");
-	});
-
-	it("follows the adapter's colour index rather than the room id", () => {
-		expect(labelColour(1, { "1": 1 })).toBe(rgbCss(mix(SEGMENT_COLOURS[1]![1], [0, 0, 0], 0.6)));
 	});
 });

@@ -26,11 +26,7 @@ export interface MapPackageState {
  * @param instanceId Adapter instance, e.g. `dreame.0`.
  * @param did Device whose map to follow, or null for none.
  */
-export function useMapPackage(
-	connection: TabConnection,
-	instanceId: string,
-	did: string | null,
-): MapPackageState {
+export function useMapPackage(connection: TabConnection, instanceId: string, did: string | null): MapPackageState {
 	const [state, setState] = useState<MapPackageState>({ map: null, loading: true, error: null });
 
 	useEffect(() => {

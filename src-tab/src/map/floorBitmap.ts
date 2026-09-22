@@ -57,6 +57,8 @@ export const SEGMENT_COLOURS: readonly (readonly [Rgb, Rgb])[] = [
 ];
 
 /** The non-room colours of Home Assistant's "Dreame Light" scheme. */
+const WHITE: Rgb = [255, 255, 255];
+
 export const SCHEME = {
 	floor: [221, 221, 221] as Rgb,
 	wall: [159, 159, 159] as Rgb,
@@ -79,6 +81,11 @@ export interface FloorOptions {
 	 * their own. Costs a neighbourhood scan, so it is only done when something is actually hidden.
 	 */
 	hideOrphanedWalls?: boolean;
+	/**
+	 * Rooms picked for the next start. Empty or absent means "all rooms", which is drawn exactly
+	 * like a full pick: only a partial pick greys out the rooms it leaves out.
+	 */
+	selectedRooms?: ReadonlySet<number>;
 }
 
 /** A finished RGBA buffer, ready for `ImageData` or a three.js texture. */
@@ -98,7 +105,8 @@ export interface FloorBitmap {
 export function segmentGroup(segment: number, colourIndex: Record<string, number> | undefined): readonly [Rgb, Rgb] {
 	const index = colourIndex?.[String(segment)];
 	const resolved = index != null ? index : segment - 1;
-	const group = SEGMENT_COLOURS[((resolved % SEGMENT_COLOURS.length) + SEGMENT_COLOURS.length) % SEGMENT_COLOURS.length];
+	const group =
+		SEGMENT_COLOURS[((resolved % SEGMENT_COLOURS.length) + SEGMENT_COLOURS.length) % SEGMENT_COLOURS.length];
 	// The modulo above cannot miss, but `noUncheckedIndexedAccess` cannot know that.
 	return group ?? SEGMENT_COLOURS[0]!;
 }
@@ -117,6 +125,7 @@ export function cellColour(
 		activeSegments: ReadonlySet<number>;
 		zoneCleaning: boolean;
 		colourIndex: Record<string, number> | undefined;
+		selectedRooms?: ReadonlySet<number>;
 	},
 ): Rgb | null {
 	if (!isSegment(cell)) {
@@ -144,8 +153,14 @@ export function cellColour(
 		return context.activeSegments.has(cell) ? segmentGroup(cell, context.colourIndex)[0] : SCHEME.passiveSegment;
 	}
 
-	// 5. Nothing special about this room: its own colour.
-	return segmentGroup(cell, context.colourIndex)[0];
+	// 5. No job: the selection decides, as in the widget. Picked - or nothing picked, which means
+	// everything - is the room's strong colour; left out of a partial pick, its light colour
+	// halfway to white. The job's own light colour above stays apart from both, so a running job
+	// never looks like a selection.
+	const group = segmentGroup(cell, context.colourIndex);
+	const selected = context.selectedRooms;
+	if (selected && selected.size > 0 && !selected.has(cell)) return mix(group[0], WHITE, 0.5);
+	return group[1];
 }
 
 /**
@@ -167,8 +182,7 @@ export function renderFloor(map: MapPackage, options: FloorOptions = {}): FloorB
 	// widget does - it is the difference between "this room is new" and "we have no room list".
 	const knownRooms = map.meta.seg_inf ? new Set(Object.keys(map.meta.seg_inf).map(Number)) : null;
 
-	const wallVisible =
-		options.hideOrphanedWalls && hiddenLocally.size > 0 ? visibleWalls(map, hiddenLocally) : null;
+	const wallVisible = options.hideOrphanedWalls && hiddenLocally.size > 0 ? visibleWalls(map, hiddenLocally) : null;
 
 	const context = {
 		knownRooms,
@@ -177,6 +191,7 @@ export function renderFloor(map: MapPackage, options: FloorOptions = {}): FloorB
 		activeSegments,
 		zoneCleaning: ha.zoneCleaning === true,
 		colourIndex: ha.colorIndex,
+		selectedRooms: options.selectedRooms,
 	};
 
 	for (let y = 0; y < height; y++) {
@@ -251,15 +266,4 @@ export function mix(from: Rgb, towards: Rgb, factor: number): Rgb {
 /** Formats a colour for CSS. */
 export function rgbCss(colour: Rgb): string {
 	return `rgb(${colour[0]},${colour[1]},${colour[2]})`;
-}
-
-/**
- * The colour a room's label is written in.
- *
- * The room's own strong colour taken most of the way to black: dark enough to read on the pale
- * fill, but still recognisably the room's colour, so a label belongs to its room by hue as well
- * as by position. Taken from the widget's `labelStyle`.
- */
-export function labelColour(segment: number, colourIndex: Record<string, number> | undefined): string {
-	return rgbCss(mix(segmentGroup(segment, colourIndex)[1], [0, 0, 0], 0.6));
 }

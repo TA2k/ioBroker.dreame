@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import german from "@i18n/de.json";
-import { KNOWN_STATUS_CODES, STATUS_TEXT_KEY, statusTextKey } from "./statusCodes";
+import english from "@i18n/en.json";
+import { KNOWN_STATUS_CODES, STATUS_TEXT_KEY, isStarted, statusTextKey } from "./statusCodes";
 
 describe("statusTextKey", () => {
 	it("resolves codes the robot reports every day", () => {
@@ -34,8 +34,35 @@ describe("STATUS_TEXT_KEY", () => {
 	it("names only keys that the translation files actually carry", () => {
 		// The whole point of reusing the widget's keys is that the 11 language files already have
 		// them. A key with no translation would render as the key itself, in every language.
-		const missing = Object.values(STATUS_TEXT_KEY).filter(key => !(key in (german as Record<string, string>)));
+		const missing = Object.values(STATUS_TEXT_KEY).filter(key => !(key in (english as Record<string, string>)));
 
 		expect(missing).toEqual([]);
+	});
+});
+
+describe("isStarted", () => {
+	it("is not started while nothing is known about the device", () => {
+		expect(isStarted(null, null, false)).toBe(false);
+	});
+
+	it("is not started with the task completed or paused at the dock, and the robot idle", () => {
+		expect(isStarted(0, 13, false)).toBe(false);
+		expect(isStarted(11, 13, false)).toBe(false);
+	});
+
+	it("is started by any other task status, as Home Assistant reads it", () => {
+		expect(isStarted(1, 13, false)).toBe(true);
+		// Only the robot status known: the missing task status counts as unknown, so started.
+		expect(isStarted(null, 13, false)).toBe(true);
+	});
+
+	it("is started while paused, or while the robot status is a task's", () => {
+		expect(isStarted(0, 13, true)).toBe(true);
+		expect(isStarted(0, 18, false)).toBe(true);
+		expect(isStarted(0, 25, false)).toBe(true);
+	});
+
+	it("does not count returning home as a task of its own", () => {
+		expect(isStarted(0, 3, false)).toBe(false);
 	});
 });

@@ -350,23 +350,42 @@ Schedule channels are rebuilt automatically on adapter start and removed automat
 
 ---
 
-### Live Map Widget
+### Live Map
 
-The adapter includes a browser-based live map widget: robot position, cleaning trail and cleaned rooms, updating in real time while the robot cleans. It is served directly by this adapter — no vis widget or extra adapter needed, and it's ready to embed as an iframe in vis, Grafana or a custom dashboard.
+The adapter brings its own live map: robot position and heading, cleaning trail, rooms, zones, furniture and carpets, updating in real time while the robot cleans, with every control of the robot beside it. The same view appears in four places, built from the same code:
+
+| Where | How to open it |
+| --- | --- |
+| Web page | `%web_protocol%://%ip%:%web_port%/dreame/`, e.g. `http://<your-iobroker>:8082/dreame/` - served by the **web** adapter. A ready-made link ("Dreame-Map") is on the ioBroker start page and next to this instance in the adapter list. Ready to embed as an iframe in vis, Grafana or any dashboard. |
+| Admin tab | "Dreame" in the admin's left-hand menu. |
+| Devices app | The "Dreame robot" tile for ioBroker.devices: status or map on the tile, the full view in a dialog. |
+| vis-2 | The "Dreame robot" widget: status or map with the full view in a dialog, or the full view in the widget itself. |
 
 #### Setup
 
-- Requires the ioBroker **web** adapter (any instance) to serve the page.
-- Open it at `%web_protocol%://%ip%:%web_port%/dreame/` — e.g. `http://<your-iobroker>:8082/dreame/`. A ready-made link ("Dreame-Map") is on the ioBroker start page and next to this instance in the adapter list.
-- **Get Map** must be enabled (see [Configuration](#configuration)) — without it the widget has no data.
+- **Get Map** must be enabled (see [Configuration](#configuration)) - without it there is no map.
 - If no map is shown yet, start the adapter once while the robot sits in its dock so the first full map can load.
-- Multiple robots on the same instance: the widget shows a device switcher in the header when more than one device is found, or pick one directly with `?did=<did>` in the address.
+- Several robots: a device switcher appears in the header, or pick one with `?did=<did>`. Another adapter instance: `?instance=1`.
+- A page opened from elsewhere - a file on a tablet - finds ioBroker with `?iob=http://<your-iobroker>:8082`; the browser remembers it.
 
-> **Camera/VSLAM robots are not supported.** Devices that navigate by camera instead of lidar (e.g. Mijia 1C/1T, Dreame F9) are not covered by the map widget — it is built and tested for lidar robots only. The adapter logs a warning and the map stays empty for these devices.
+> **Camera/VSLAM robots are not supported.** Devices that navigate by camera instead of lidar (e.g. Mijia 1C/1T, Dreame F9) are not covered by the map - it is built and tested for lidar robots only. The adapter logs a warning and the map stays empty for these devices.
 
-#### Appearance
+#### Features
 
-All appearance settings live in the widget itself — open the gear icon in the top-right corner. Four color modes are available:
+- 2D and 3D map; floor selector for robots with several stored maps
+- Tap rooms to pick them; Start then cleans just those, otherwise the whole home. A cleaning order can be set by tapping as well
+- Robot and dock with Home Assistant's icons and status badges; the robot drives along its trail instead of jumping between map updates
+- No-go and no-mop zones, virtual walls, curtains, furniture and carpets on the map
+- Panels: status, faults, cleaning, order, station, water & mop, shortcuts, schedules, maintenance, statistics - a mower shows only what applies to it
+- 11 languages, following the ioBroker system language
+
+#### Settings
+
+Behind the gear, stored per robot in `<did>.config.widget` - so they apply wherever the robot is shown:
+
+- Map rotation, sidebar left or right, UI zoom, sidebar width
+- Each panel on or off, and single rows or buttons inside them; shortcuts are hidden with the eye beside each while the settings are open
+- On the web page also the colours, in four modes:
 
 | Mode | Description |
 | --- | --- |
@@ -382,28 +401,15 @@ All appearance settings live in the widget itself — open the gear icon in the 
 </tr>
 </table>
 
-#### Features
-
-- Device switcher in the header for setups with multiple robots
-- Customizable layout: sidebar left/right, UI zoom, sidebar width, map rotation
-- Panels can be shown or hidden individually (Cleaning, Shortcuts, Station, Maintenance, Water & Mop, Statistics) — some panels additionally let you hide individual rows/tiles inside them (e.g. suction level or moisture on the Cleaning panel)
-- Shortcuts panel: one tile per app shortcut, tap to start it directly from the widget
-- Schedules button opens a table of all schedules created in the Dreame app (time, weekdays, type, per-room or whole-floor settings) with an on/off switch for each — a schedule pointing at a deleted shortcut shows a locked switch instead of silently doing nothing
-- Widget UI is available in German and English, following the ioBroker system language
-- Kiosk mode (`?gear=0`) hides the settings gear — for read-only displays (wall tablets, dashboards)
-- Current appearance and panel settings can be exported as a compact link (`?cfg=<blob>`), for quickly sharing or reusing a setup across multiple embeds without touching the stored configuration
-- Tank and mop consumption counters (Water & Mop panel)
-- One-click reset back to default appearance and panel settings, independent of the stored adapter configuration
-
 #### Kiosk / iframe example
 
-Combine `?gear=0` (hide settings) with a `?cfg=` link generated in the settings panel to embed a pre-configured, read-only view:
+The web page's settings can put the current look into a link (`?cfg=<blob>`); `?gear=0` hides the gear, for read-only displays such as wall tablets:
 
 ```
 http://<your-iobroker>:8082/dreame/?gear=0&cfg=<blob>
 ```
 
-The `<blob>` is generated by the "Link" section in the widget's settings panel and only affects that browser tab/embed — it never overwrites the settings stored for the widget itself.
+The link only affects that browser tab or embed - it never overwrites the settings stored for the robot. Links made with the previous web interface keep working.
 
 ---
 
@@ -714,7 +720,14 @@ translations should be submitted as PRs against the respective
 - Admin tab: furniture in 3D is drawn from parts instead of a single block — a bed is a mattress with a headboard and pillows, a table is a top on four legs, a sofa has a back and two arms, a plant is foliage over a pot. All 30 furniture types the map can report have a shape, and a type without one still appears as a block at the measured size rather than not at all. What stays measured is the footprint, the position and the angle, all from the robot; what each piece looks like is drawn from scratch here, which is a deliberately weaker claim. No model files from the Dreame app are used — those live inside the app package, and shipping them would mean redistributing Dreame's assets. The parts of every piece are pooled into two instanced meshes, so a flat of thirty pieces is two draw calls rather than hundreds of objects.
 - Admin tab: fix the blurred cleaning path in 3D. The floor texture held one texel per map cell, so the vacuum line — 1.1 cells wide — was a single texel, and on a floor seen at an angle the GPU averaged it into the room colour behind it; the 2D view, drawing the same line as a vector at screen resolution, showed it crisp. The texture is now drawn at up to eight texels per cell, bounded by the GPU's largest texture and a memory budget so a large flat on a phone does not ask for hundreds of megabytes, and it uses anisotropic filtering, which keeps thin lines thin on a surface seen at a slant. The rooms are enlarged without smoothing, so their cell edges stay as hard as before.
 - Admin tab: floor selector for robots with more than one stored map. The robot's own floor is shown live — rooms, path, sequence, 2D and 3D — while any other floor is shown as the picture the adapter stores under `map.maps.<id>.image`; only the floor the robot is on arrives as raw map data, so the others cannot be drawn, rotated or clicked, and the 3D switch is disabled for them with a tooltip saying why. The adapter draws those pictures when it starts, so a change made in the app to a floor the robot is not on appears after its next start. The map header's floor id and charger position are now decoded as well; the floor id is what tells which stored map the robot is on.
-- New widgets for the devices app (ioBroker.devices) and for vis-2, both built from the same views as the admin tab. The devices tile shows the robot's status on the small sizes and its map on a 2x2 tile — or whichever of the two is picked in its settings — together with the floor the map should show; a click opens the full view in a dialog, 2D or 3D with the floor selector and every panel. The vis-2 widget offers the same two displays and a third that puts the full view straight into the widget, without a dialog, for a view built around the robot. All of them lay themselves out by the size of the widget rather than of the screen, so a narrow widget stacks what a wide one puts side by side, and the dialog goes full screen on a phone. Robot and floor are picked from drop-down lists of the robots and floors there are, under the names the Dreame app gives them, rather than from the object browser, which offers every object of the installation; changing the robot clears the floor, which belonged to the old one. In the devices app these lists are json-config custom fields served from the tile's own bundle. A devices tile is captioned, where the app's own tiles put their name: automatically with the robot's name — and the floor's, where the map is pinned to one, so two tiles of two floors can be told apart — or with a text of the user's, or not at all; a custom caption also titles the dialog. On a map the caption sits below the map rather than over it, so it hides no room. Without a robot picked, they show the first robot of `dreame.0`, so a widget works the moment it is placed. In the vis-2 editor the widget is inert, so it can be moved and resized without zooming the map or opening dialogs. Build with `npm run build`; the bundles go to `admin/dm-widgets` and `widgets/dreame`. The words of the widgets' own settings are translated into German; the other nine languages show English for now.
+- New widgets for the devices app (ioBroker.devices) and for vis-2, both built from the same views as the admin tab. The devices tile shows the robot's status on the small sizes and its map on a 2x2 tile — or whichever of the two is picked in its settings — together with the floor the map should show; a click opens the full view in a dialog, 2D or 3D with the floor selector and every panel. The vis-2 widget offers the same two displays and a third that puts the full view straight into the widget, without a dialog, for a view built around the robot. All of them lay themselves out by the size of the widget rather than of the screen, so a narrow widget stacks what a wide one puts side by side, and the dialog goes full screen on a phone. Robot and floor are picked from drop-down lists of the robots and floors there are, under the names the Dreame app gives them, rather than from the object browser, which offers every object of the installation; changing the robot clears the floor, which belonged to the old one. In the devices app these lists are json-config custom fields served from the tile's own bundle. Both widgets are captioned — a devices tile at the bottom, where the app's own tiles put their name, a vis-2 widget at the top, where a card's title sits and where the full view names the robot; in vis-2 this replaces the usual title field, which only knew a text of the user's: automatically with the robot's name — and the floor's, where the map is pinned to one, so two tiles of two floors can be told apart — or with a text of the user's, or not at all; a custom caption also titles the dialog. On a map the caption sits beside the map rather than over it, so it hides no room. Without a robot picked, they show the first robot of `dreame.0`, so a widget works the moment it is placed. In the vis-2 editor the widget is inert, so it can be moved and resized without zooming the map or opening dialogs. Build with `npm run build`; the bundles go to `admin/dm-widgets` and `widgets/dreame`. The words of the widgets' own settings are translated into German; the other nine languages show English for now.
+- The web page at `/dreame/` is now the same view as the admin tab and the widgets, built from the same code; the old page in `www/` is gone, and `www/` now holds only the build of the new one. Everything the old page could do is there - compared feature by feature, and what was missing was added to the shared view first, so the admin tab and both widgets gained it too. Its addresses and parameters keep working: `?did=`, `?gear=0` for kiosk displays, `?cfg=` links made with the old page, and `?iob=` for a page opened from elsewhere. It connects through the web adapter whether that speaks socket.io or pure websockets, and loads nothing of the admin's app frame: only the connection and the translations are taken from gui-components, which keeps the page some 500 KB lighter. The translations moved from `www/i18n` to `src-tab/i18n`.
+- Map: rooms are picked by tapping them, through the adapter's `remote.custom-room-cleaning` switches, and Start then cleans just those - or, with none picked, the whole home, as before. The selection is the adapter's, not the page's: a tap writes the room's switch, and the map shows the pick when it comes back, so a script, the old page and a second browser all see one selection. The pick is cleared only after the adapter has acknowledged the start, which is when it has read it; the old page cleared it straight after sending, racing the adapter. The switches of the map the robot is on are used, and `active-map` is pointed there before a start, so a pick made on one floor never starts rooms of another. Editing the cleaning order now picks the rooms with it, since the adapter follows an order only for a pick of exactly its rooms, and the order panel says so when the two part. Rooms are drawn as the old page drew them - strong colours, paled where a partial pick leaves them out - and their names in the text colour outlined in the background, readable on every room colour and in both themes.
+- Map: robot and dock are drawn with Home Assistant's icons, sized by the map, the robot turned to its heading, each with its status badge - cleaning, charging, sleeping or a fault on the robot; emptying, washing, drying or drying the dust bag on the dock, hot where the water is. The robot drives along its trail instead of jumping every few seconds: each new piece of trail is played back over the time until the next map arrives, the trail growing only behind the robot, which faces the way it drives and turns to its reported heading at the end; without a trail, as on the way home, it glides between reported positions and faces backwards where it reverses. Where the system asks for reduced motion, it moves at once.
+- Map: no-go and no-mop zones, virtual walls, curtains, furniture pictures and carpets on the 2D map, drawn as Home Assistant draws them, including the widget's corrections for pixel-exact zone outlines and the half-grid origin of carpets; carpets as HA's checkerboard, the mopping band clipped to the rooms so it no longer spills over walls. Rooms picked for the next start, or cleaned by the running job, carry a badge with the suction level and water amount.
+- Panels: the header shows battery, cleaning progress and area, the last two only while a job runs - the robot keeps no "last cleaning" figures, and a stale 29 m² read like a result - and the drying progress while the mop dries. The cleaning panel says which rooms the next start covers, locks the mode during a job, puts the route back to standard when a new mode has no place for it, and shows no route field on a robot that reports none. The station offers only what it has - no station buttons on a robot without a station - with pause and resume for a wash, and a tooltip on every greyed-out button saying why. Water & mop shows the tank as the adapter counts it, coloured and warned by its status, the tank, mop, wetness, detergent and water temperature rows, and a button to reset the counter after a refill. Maintenance turns orange at 20 % and red at 10 %, and a missing dust bag red. Schedules show their type. The connection to the Dreame cloud shows as Live, Offline or Connecting. On a mower the panels that do not apply stay away. The line between panels is no longer drawn twice where a panel has nothing to show.
+- Settings behind the gear, in every view: map rotation, sidebar left or right, UI zoom, sidebar width, each panel on or off and single rows or buttons inside it - shortcuts with an eye beside each while the settings are open - and, on the web page, the four colour modes, the share link and a reset that asks twice. Stored per robot in `config.widget`, in the old page's format and migration, so settings made there carry over.
+- vis-2 widget: captioned automatically as well - the robot's name, and the floor's where the map is pinned to one - or with a text of the user's, or not at all. The option "without card" is now called "without frame", since "card" read as the map in German.
 
 ### 0.4.12 (2026-09-17)
 - Fix Issue #138: three robustness/functionality fixes for map handling on newer models with AES-encrypted map payloads (r2253c/w and similar). 1) A silent crash in the room-name fallback path (main.js): when the map file request failed, an unhandled TypeError showed up only as a generic error; now an early return with a clear debug message. 2) A model without an AES-IV table entry can never load its base map — this is now a persistent, recognizable condition (unsupportedMapModel) instead of the generic please-restart-the-adapter hint. 3) The old_map_data (piid 13) property, pushed specifically during active cleaning, could carry the same object_name-plus-AES-key format as the already-working piid 3 path, but was previously only logged as unimplemented and discarded; it now reuses the existing, already-verified decrypt pipeline (confirmed against the Home Assistant reference implementation), with a Debug-level log that masks the key material so it is safe to share in a public issue. Thanks to @luckyheiko for the detailed reports that made all three fixes possible.

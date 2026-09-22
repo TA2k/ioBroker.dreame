@@ -22,6 +22,14 @@ export const STATUS_SUFFIX = {
 	cleanedArea: "cleaned-area",
 	cleaningTime: "cleaning-time",
 	waterTank: "water-tank",
+	/** Home Assistant's `status`, not `state`: what the robot is doing, as opposed to how it is. */
+	robotStatus: "status",
+	washStatus: "self-wash-base-status",
+	emptyStatus: "auto-empty-status",
+	hotWater: "hot-water-status",
+	mopInStation: "mop-in-station",
+	drainage: "drainage-status",
+	dustCollection: "dust-collection",
 } as const;
 
 export type StatusField = keyof typeof STATUS_SUFFIX;
@@ -36,17 +44,10 @@ const FIELDS = Object.keys(STATUS_SUFFIX) as StatusField[];
  * @param instanceId Adapter instance, e.g. `dreame.0`.
  * @param did Device to follow, or null.
  */
-export function useDeviceStatus(
-	connection: TabConnection,
-	instanceId: string,
-	did: string | null,
-): DeviceStatus {
+export function useDeviceStatus(connection: TabConnection, instanceId: string, did: string | null): DeviceStatus {
 	const prefix = did ? `${instanceId}.${did}.status.` : null;
 
-	const ids = useMemo(
-		() => (prefix ? FIELDS.map(field => prefix + STATUS_SUFFIX[field]) : []),
-		[prefix],
-	);
+	const ids = useMemo(() => (prefix ? FIELDS.map(field => prefix + STATUS_SUFFIX[field]) : []), [prefix]);
 
 	const values = useStates(connection, ids);
 

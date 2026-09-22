@@ -20,19 +20,47 @@
  */
 
 import type React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Box, IconButton, Stack, Tooltip, useTheme } from "@mui/material";
 import { Add as AddIcon, Remove as RemoveIcon, FitScreen as FitScreenIcon } from "@mui/icons-material";
 
 import { I18n } from "@iobroker/gui-components";
 
-import { labelColour, renderFloor } from "../map/floorBitmap";
-import { buildTrailPaths } from "../map/trail";
+import { renderFloor } from "../map/floorBitmap";
+import { buildTrailPaths, worldToImage } from "../map/trail";
+import { HA_ICONS } from "../map/haIcons";
+import { badgeBox, markerSizes } from "../map/markers";
+import type { Badge } from "../map/markers";
+import { useTrailPlayback } from "../map/useTrailPlayback";
+import {
+	CURTAIN_STROKE,
+	OVERLAY_COLOURS,
+	VIRTUAL_WALL_STROKE,
+	ZONE_STROKE,
+	buildOverlays,
+	carpetBitmap,
+	carpetCells,
+	mopMaskBitmap,
+} from "../map/overlays";
+import { furnitureImage } from "../map/furnitureImages";
+import { BADGE, layoutBadge } from "../map/roomBadges";
+import type { RoomBadges } from "../map/roomBadges";
+import type { WorldPoint } from "../map/playback";
 import type { LabelledRoom } from "../map/rooms";
 import type { MapPackage } from "../map/mapPackage";
 import { isSegment } from "../map/mapPackage";
 import { sequencePosition } from "../panels/sequence";
-import { FITTED, MAX_SCALE, MIN_SCALE, ZOOM_STEP, clampPan, isClick, isFitted, zoomAbout } from "../map/viewport";
+import {
+	FITTED,
+	MAX_SCALE,
+	MIN_SCALE,
+	ZOOM_STEP,
+	clampPan,
+	isClick,
+	isFitted,
+	unrotate,
+	zoomAbout,
+} from "../map/viewport";
 import type { Viewport } from "../map/viewport";
 
 /** Label size on screen, matching the widget's `.rlabel`. */
@@ -46,12 +74,29 @@ export interface MapViewProps {
 	/**
 	 * Called with the segment id of the room under a click, when one was hit.
 	 *
-	 * Absent means the map is not interactive, which is the normal state - rooms only respond
-	 * while the sequence is being edited.
+	 * Absent means rooms do not respond to taps; the map still zooms and pans.
 	 */
 	onRoomClick?: (roomId: number) => void;
 	/** Room ids in cleaning order, shown as numbered badges. Empty or absent draws none. */
 	sequenceOrder?: readonly number[];
+	/**
+	 * Rooms picked for the next start. Empty or absent means all rooms; a partial pick pales the
+	 * rooms it leaves out, and their labels with them.
+	 */
+	selectedRooms?: ReadonlySet<number>;
+	/** Live positions between maps, where the adapter reports them; see `useLivePositions`. */
+	liveRobot?: WorldPoint | null;
+	liveCharger?: WorldPoint | null;
+	/** Status badges on the robot and the charger; see `map/markers.ts`. */
+	robotBadge?: Badge | null;
+	stationBadge?: Badge | null;
+	/** Suction and water under the names of the rooms about to be, or being, cleaned. */
+	roomBadges?: RoomBadges | null;
+	/**
+	 * Turns the map clockwise by 0, 90, 180 or 270 degrees, as the widget's setting did. Labels and
+	 * badges stay upright; the robot turns with the map, since its heading is part of it.
+	 */
+	rotation?: 0 | 90 | 180 | 270;
 	/**
 	 * False turns the map into a picture: no zoom, no panning, no room taps, no controls.
 	 *
@@ -67,9 +112,20 @@ export function MapView({
 	hiddenRooms,
 	onRoomClick,
 	sequenceOrder,
+	selectedRooms,
+	liveRobot,
+	liveCharger,
+	robotBadge,
+	stationBadge,
+	roomBadges,
+	rotation = 0,
 	interactive = true,
 }: MapViewProps): React.JSX.Element {
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
+	const carpetRef = useRef<HTMLCanvasElement | null>(null);
+	// Unique per view: a page can hold several maps, and SVG ids are document-wide.
+	const maskId = `mop-mask-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+	const [maskUrl, setMaskUrl] = useState<string | null>(null);
 	const boxRef = useRef<HTMLDivElement | null>(null);
 	const outerRef = useRef<HTMLDivElement | null>(null);
 	const [boxWidth, setBoxWidth] = useState(0);
@@ -141,7 +197,10 @@ export function MapView({
 		const canvas = canvasRef.current;
 		if (!canvas) return;
 
-		const bitmap = renderFloor(map, hiddenRooms ? { hiddenLocally: hiddenRooms, hideOrphanedWalls: true } : {});
+		const bitmap = renderFloor(map, {
+			...(hiddenRooms ? { hiddenLocally: hiddenRooms, hideOrphanedWalls: true } : {}),
+			selectedRooms,
+		});
 
 		canvas.width = bitmap.width;
 		canvas.height = bitmap.height;
@@ -153,9 +212,44 @@ export function MapView({
 		// blurs the cell edges the pixel-per-cell approach exists to keep sharp.
 		context.imageSmoothingEnabled = false;
 		context.putImageData(new ImageData(bitmap.rgba, bitmap.width, bitmap.height), 0, 0);
+	}, [map, hiddenRooms, selectedRooms]);
+
+	// Carpets: a canvas of their own at twice the resolution, for the checkerboard of half cells.
+	useEffect(() => {
+		const canvas = carpetRef.current;
+		if (!canvas) return;
+		const bitmap = carpetBitmap(map, carpetCells(map), hiddenRooms);
+		const context = canvas.getContext("2d");
+		if (!bitmap || !context) {
+			canvas.width = 0;
+			canvas.height = 0;
+			return;
+		}
+		canvas.width = bitmap.width;
+		canvas.height = bitmap.height;
+		context.putImageData(new ImageData(bitmap.rgba, bitmap.width, bitmap.height), 0, 0);
 	}, [map, hiddenRooms]);
 
-	const trail = useMemo(() => buildTrailPaths(map), [map]);
+	// The rooms the mopping band may cover, as an image for an SVG mask.
+	useEffect(() => {
+		const bitmap = mopMaskBitmap(map, hiddenRooms);
+		const canvas = document.createElement("canvas");
+		canvas.width = bitmap.width;
+		canvas.height = bitmap.height;
+		const context = canvas.getContext("2d");
+		if (!context) return;
+		context.putImageData(new ImageData(bitmap.rgba, bitmap.width, bitmap.height), 0, 0);
+		setMaskUrl(canvas.toDataURL());
+	}, [map, hiddenRooms]);
+
+	const overlays = useMemo(() => buildOverlays(map, hiddenRooms), [map, hiddenRooms]);
+
+	// The trail as far as the robot has driven it, and the robot where the playback has it.
+	const playback = useTrailPlayback(map, liveRobot ?? null);
+	const trail = useMemo(() => buildTrailPaths(map, playback.cut), [map, playback.cut]);
+	// The adapter sends no map rotation (`mra`), so the width is always the side that counts.
+	const sizes = markerSizes(width, height);
+	const charger = liveCharger ?? map.header.charger;
 
 	/**
 	 * Label size in cell units, so that it comes out at {@link LABEL_PX} on screen.
@@ -169,7 +263,13 @@ export function MapView({
 	 */
 	// Divided by the zoom as well: the labels keep a constant size on screen, so zooming in shows
 	// more map rather than bigger words. The widget does the same through `skaliereMarken`.
-	const fontSize = boxWidth > 0 ? (LABEL_PX * width) / (boxWidth * view.scale) : 0;
+	const sideways = rotation === 90 || rotation === 270;
+	// A quarter turn lays the map's width along the box's height.
+	const mapWidthPx = sideways ? (boxWidth * width) / height : boxWidth;
+	const fontSize = mapWidthPx > 0 ? (LABEL_PX * width) / (mapWidthPx * view.scale) : 0;
+	/** Turns a label or badge back upright about its own centre. */
+	const upright = (x: number, y: number): string | undefined =>
+		rotation ? `rotate(${-rotation} ${x.toFixed(2)} ${y.toFixed(2)})` : undefined;
 
 	/**
 	 * Finds the room at a point.
@@ -188,8 +288,10 @@ export function MapView({
 		const rect = box.getBoundingClientRect();
 		if (rect.width === 0 || rect.height === 0) return null;
 
-		const x = Math.floor(((clientX - rect.left) / rect.width) * width);
-		const imageY = Math.floor(((clientY - rect.top) / rect.height) * height);
+		// The box is upright; the map inside it may be turned. Back to the map's own fractions first.
+		const onMap = unrotate((clientX - rect.left) / rect.width, (clientY - rect.top) / rect.height, rotation);
+		const x = Math.floor(onMap.x * width);
+		const imageY = Math.floor(onMap.y * height);
 		if (x < 0 || x >= width || imageY < 0 || imageY >= height) return null;
 
 		const cell = map.cells[(height - 1 - imageY) * width + x];
@@ -287,7 +389,7 @@ export function MapView({
 				ref={boxRef}
 				sx={{
 					position: "relative",
-					aspectRatio: `${width} / ${height}`,
+					aspectRatio: sideways ? `${height} / ${width}` : `${width} / ${height}`,
 					maxWidth: "100%",
 					maxHeight: "100%",
 					// Without a width the flex parent gives an aspect-ratio box no size to start from.
@@ -298,109 +400,249 @@ export function MapView({
 					imageRendering: "pixelated",
 				}}
 			>
-				<canvas
-					ref={canvasRef}
-					style={{
-						width: "100%",
-						height: "100%",
-						display: "block",
-						imageRendering: "pixelated",
+				{/*
+				 * The map itself, turned inside the box. For a quarter turn it is as wide as the box is
+				 * high and the other way round, which the percentages below work out.
+				 */}
+				<Box
+					sx={{
+						position: "absolute",
+						left: "50%",
+						top: "50%",
+						width: sideways ? `${(width / height) * 100}%` : "100%",
+						height: sideways ? `${(height / width) * 100}%` : "100%",
+						transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
 					}}
-				/>
-				<svg
-					viewBox={`0 0 ${width} ${height}`}
-					style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
 				>
-					{/*
-					 * Mopping band first, vacuum line on top. A section that does both is in each, and
-					 * that overlap - the thin line running along the middle of the wide band - is what
-					 * makes a vacuum-and-mop run recognisable.
-					 *
-					 * Widths are in map cells, so they scale with the map instead of the viewport. The
-					 * band is 8 cells because Home Assistant's ratio against its own much thinner
-					 * vacuum line would come out at about 11 cells here, which at 50 mm per cell is
-					 * over half a metre of paint.
-					 */}
-					{trail.mop ? (
-						<path
-							d={trail.mop}
-							fill="none"
-							stroke="#ffffff"
-							strokeWidth={8}
-							strokeLinejoin="round"
-							strokeLinecap="butt"
-							opacity={0.33}
-						/>
-					) : null}
-					{trail.vacuum ? (
-						<path
-							d={trail.vacuum}
-							fill="none"
-							stroke="#ffffff"
-							strokeWidth={1.1}
-							strokeLinejoin="round"
-							strokeLinecap="round"
-							opacity={0.85}
-						/>
-					) : null}
-					{fontSize > 0
-						? rooms.map(room => (
-								<text
-									key={room.id}
-									x={room.centre.x}
-									y={room.centre.y}
-									textAnchor="middle"
-									dominantBaseline="central"
-									fontSize={fontSize}
-									// The room's own colour taken most of the way to black, so a label belongs
-									// to its room by hue as well as by position, outlined in the page
-									// background so it stays legible where it crosses a wall or the trail.
-									fill={labelColour(room.id, map.meta.ha?.colorIndex)}
-									stroke={theme.palette.background.default}
-									strokeWidth={fontSize / 5}
-									paintOrder="stroke"
-									style={{ fontWeight: 800, letterSpacing: "0.2px" }}
-								>
-									{room.label}
-								</text>
-							))
-						: null}
+					<canvas
+						ref={canvasRef}
+						style={{
+							width: "100%",
+							height: "100%",
+							display: "block",
+							imageRendering: "pixelated",
+						}}
+					/>
+					<canvas
+						ref={carpetRef}
+						style={{
+							position: "absolute",
+							inset: 0,
+							width: "100%",
+							height: "100%",
+							imageRendering: "pixelated",
+							pointerEvents: "none",
+						}}
+					/>
+					<svg
+						viewBox={`0 0 ${width} ${height}`}
+						style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+					>
+						{/*
+						 * Mopping band first, vacuum line on top. A section that does both is in each, and
+						 * that overlap - the thin line running along the middle of the wide band - is what
+						 * makes a vacuum-and-mop run recognisable.
+						 *
+						 * Widths are in map cells, so they scale with the map instead of the viewport. The
+						 * band is 8 cells because Home Assistant's ratio against its own much thinner
+						 * vacuum line would come out at about 11 cells here, which at 50 mm per cell is
+						 * over half a metre of paint.
+						 */}
+						{maskUrl ? (
+							<defs>
+								<mask id={maskId} maskUnits="userSpaceOnUse" x={0} y={0} width={width} height={height}>
+									<image
+										href={maskUrl}
+										x={0}
+										y={0}
+										width={width}
+										height={height}
+										style={{ imageRendering: "pixelated" }}
+									/>
+								</mask>
+							</defs>
+						) : null}
 
-					{/*
-					 * Sequence badges sit above the label rather than replacing it: the order only
-					 * means something once you know which room it applies to. Drawn last so they are
-					 * never hidden behind a label of a neighbouring room.
-					 */}
-					{fontSize > 0 && sequenceOrder && sequenceOrder.length > 0
-						? rooms.map(room => {
-								const position = sequencePosition(sequenceOrder, room.id);
-								if (position == null) return null;
-								return (
-									<g key={`seq-${room.id}`}>
-										<circle
-											cx={room.centre.x}
-											cy={room.centre.y - fontSize * 1.4}
-											r={fontSize * 0.75}
-											fill={theme.palette.primary.main}
-											stroke={theme.palette.background.default}
-											strokeWidth={fontSize / 8}
+						{/* Zones and walls first, as Home Assistant layers them: rules about the floor, under everything done on it. */}
+						{overlays.noGo.map((zone, index) => (
+							<rect
+								key={`nogo-${index}`}
+								{...zone}
+								fill={OVERLAY_COLOURS.noGoFill}
+								stroke={OVERLAY_COLOURS.noGoLine}
+								strokeWidth={ZONE_STROKE}
+							/>
+						))}
+						{overlays.noMop.map((zone, index) => (
+							<rect
+								key={`nomop-${index}`}
+								{...zone}
+								fill={OVERLAY_COLOURS.noMopFill}
+								stroke={OVERLAY_COLOURS.noMopLine}
+								strokeWidth={ZONE_STROKE}
+							/>
+						))}
+						{overlays.virtualWalls.map((wall, index) => (
+							<line
+								key={`wall-${index}`}
+								{...wall}
+								stroke={OVERLAY_COLOURS.virtualWall}
+								strokeWidth={VIRTUAL_WALL_STROKE}
+								strokeLinecap="round"
+							/>
+						))}
+						{overlays.furniture.map((piece, index) => {
+							const href = furnitureImage(piece.type);
+							return href ? (
+								<image
+									key={`furniture-${index}`}
+									href={href}
+									x={piece.cx - piece.width / 2}
+									y={piece.cy - piece.height / 2}
+									width={piece.width}
+									height={piece.height}
+									opacity={235 / 255}
+									preserveAspectRatio="none"
+									transform={`rotate(${piece.angle} ${piece.cx} ${piece.cy})`}
+								/>
+							) : null;
+						})}
+						{overlays.curtains.map((points, index) => (
+							<polyline
+								key={`curtain-${index}`}
+								points={points}
+								fill="none"
+								stroke={OVERLAY_COLOURS.curtain}
+								strokeWidth={CURTAIN_STROKE}
+								strokeLinejoin="round"
+								strokeLinecap="round"
+							/>
+						))}
+
+						{trail.mop ? (
+							<path
+								mask={maskUrl ? `url(#${maskId})` : undefined}
+								d={trail.mop}
+								fill="none"
+								stroke="#ffffff"
+								strokeWidth={8}
+								strokeLinejoin="round"
+								strokeLinecap="butt"
+								opacity={0.33}
+							/>
+						) : null}
+						{trail.vacuum ? (
+							<path
+								d={trail.vacuum}
+								fill="none"
+								stroke="#ffffff"
+								strokeWidth={1.1}
+								strokeLinejoin="round"
+								strokeLinecap="round"
+								opacity={0.85}
+							/>
+						) : null}
+						{fontSize > 0
+							? rooms.map(room => (
+									<text
+										key={room.id}
+										x={room.centre.x}
+										y={room.centre.y}
+										transform={upright(room.centre.x, room.centre.y)}
+										textAnchor="middle"
+										dominantBaseline="central"
+										fontSize={fontSize}
+										// The page's text colour outlined in its background, as the widget's
+										// `.rlabel` does: legible on every room colour, on walls and on the trail,
+										// in a light theme and a dark one alike. A room left out of a partial pick
+										// fades with its fill, so the pick reads from the labels as well.
+										fill={theme.palette.text.primary}
+										stroke={theme.palette.background.default}
+										strokeWidth={fontSize / 5}
+										strokeLinejoin="round"
+										paintOrder="stroke"
+										opacity={selectedRooms && selectedRooms.size > 0 && !selectedRooms.has(room.id) ? 0.65 : 1}
+										style={{ fontWeight: 800, letterSpacing: "0.2px" }}
+									>
+										{room.label}
+									</text>
+								))
+							: null}
+
+						{fontSize > 0 && roomBadges
+							? rooms.map(room =>
+									roomBadges.rooms.has(room.id) && !hiddenRooms?.has(room.id) ? (
+										<RoomBadge
+											key={`badge-${room.id}`}
+											at={room.centre}
+											pixel={fontSize / LABEL_PX}
+											rotation={rotation}
+											badges={roomBadges}
+											fill={theme.palette.background.paper}
+											line={theme.palette.divider}
+											text={theme.palette.text.primary}
 										/>
-										<text
-											x={room.centre.x}
-											y={room.centre.y - fontSize * 1.4}
-											textAnchor="middle"
-											dominantBaseline="central"
-											fontSize={fontSize * 0.9}
-											fill={theme.palette.primary.contrastText}
-											style={{ fontWeight: 700 }}
-										>
-											{position}
-										</text>
-									</g>
-								);
-							})
-						: null}
-				</svg>
+									) : null,
+								)
+							: null}
+
+						{/* Above the labels, as in the widget. Charger first, so a robot standing in it is drawn on top. */}
+						{charger ? (
+							<Marker
+								at={worldToImage(charger.x, charger.y, map.header)}
+								icon={HA_ICONS.charger}
+								size={sizes.charger}
+								badge={stationBadge ?? null}
+								rotation={rotation}
+							/>
+						) : null}
+						{playback.robot ? (
+							<Marker
+								at={worldToImage(playback.robot.x, playback.robot.y, map.header)}
+								icon={HA_ICONS.robot}
+								size={sizes.robot}
+								heading={playback.robot.heading}
+								badge={robotBadge ?? null}
+								rotation={rotation}
+							/>
+						) : null}
+
+						{/*
+						 * Sequence badges sit above the label rather than replacing it: the order only
+						 * means something once you know which room it applies to. Drawn last so they are
+						 * never hidden behind a label of a neighbouring room.
+						 */}
+						{fontSize > 0 && sequenceOrder && sequenceOrder.length > 0
+							? rooms.map(room => {
+									const position = sequencePosition(sequenceOrder, room.id);
+									if (position == null) return null;
+									return (
+										<g key={`seq-${room.id}`} transform={upright(room.centre.x, room.centre.y)}>
+											<circle
+												cx={room.centre.x}
+												cy={room.centre.y - fontSize * 1.4}
+												r={fontSize * 0.75}
+												fill={theme.palette.primary.main}
+												stroke={theme.palette.background.default}
+												strokeWidth={fontSize / 8}
+											/>
+											<text
+												x={room.centre.x}
+												y={room.centre.y - fontSize * 1.4}
+												textAnchor="middle"
+												dominantBaseline="central"
+												fontSize={fontSize * 0.9}
+												fill={theme.palette.primary.contrastText}
+												style={{ fontWeight: 700 }}
+											>
+												{position}
+											</text>
+										</g>
+									);
+								})
+							: null}
+					</svg>
+				</Box>
 			</Box>
 
 			{/*
@@ -454,5 +696,118 @@ export function MapView({
 				</Stack>
 			) : null}
 		</Box>
+	);
+}
+
+interface MarkerProps {
+	/** Centre, in image cells. */
+	at: { x: number; y: number };
+	icon: string;
+	/** Edge length in cells. */
+	size: number;
+	/** Degrees counter-clockwise; the icon is drawn facing 0 and turned by it. */
+	heading?: number | null;
+	badge: Badge | null;
+	/** The map's turn, undone for the badge so that "above" stays above on screen. */
+	rotation: number;
+}
+
+/**
+ * A robot or charger icon with its status badge.
+ *
+ * The badge is placed as the widget places it - behind the icon, in its corner or above it - and
+ * turned with nothing: a warning sign lying on its side would read as something else.
+ */
+function Marker({ at, icon, size, heading, badge, rotation }: MarkerProps): React.JSX.Element {
+	const box = badge ? badgeBox(badge.placement, size) : null;
+	const badgeImage =
+		badge && box ? (
+			<image
+				href={HA_ICONS[badge.icon]}
+				x={box.x}
+				y={box.y}
+				width={box.size}
+				height={box.size}
+				transform={rotation ? `rotate(${-rotation})` : undefined}
+			/>
+		) : null;
+
+	return (
+		<g transform={`translate(${at.x.toFixed(2)} ${at.y.toFixed(2)})`}>
+			{badge?.placement === "behind" ? badgeImage : null}
+			<image
+				href={icon}
+				x={-size / 2}
+				y={-size / 2}
+				width={size}
+				height={size}
+				// The image's y axis points down, the world's up: a counter-clockwise heading is a
+				// negative rotation here.
+				transform={heading != null ? `rotate(${(-heading).toFixed(1)})` : undefined}
+			/>
+			{badge && badge.placement !== "behind" ? badgeImage : null}
+		</g>
+	);
+}
+
+interface RoomBadgeProps {
+	at: { x: number; y: number };
+	/** One screen pixel in map cells, so the badge keeps its size on screen like the labels. */
+	pixel: number;
+	badges: RoomBadges;
+	fill: string;
+	line: string;
+	text: string;
+	/** The map's turn, undone so the badge reads upright and sits under its label on screen. */
+	rotation: number;
+}
+
+/** A pill under a room's name, laid out in screen pixels as the widget lays it out. */
+function RoomBadge({ at, pixel, badges, fill, line, text, rotation }: RoomBadgeProps): React.JSX.Element | null {
+	const layout = layoutBadge(badges);
+	if (!layout) return null;
+	return (
+		<g
+			transform={`translate(${at.x} ${at.y}) rotate(${-rotation}) scale(${pixel}) translate(0 ${BADGE.height}) scale(${BADGE.scale})`}
+		>
+			<rect
+				x={-layout.width / 2}
+				y={-BADGE.height / 2}
+				width={layout.width}
+				height={BADGE.height}
+				rx={BADGE.height / 2}
+				fill={fill}
+				stroke={line}
+				strokeWidth={1}
+				opacity={0.96}
+			/>
+			{layout.parts.map(part => (
+				<g key={part.x}>
+					<g
+						transform={`translate(${part.x} ${-BADGE.icon / 2}) scale(${BADGE.icon / 24})`}
+						fill="none"
+						stroke={text}
+						// Thicker than Lucide's 2: at 14 pixels the thin stroke all but disappears.
+						strokeWidth={2.4}
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					>
+						{part.icon.map(d => (
+							<path key={d} d={d} />
+						))}
+					</g>
+					<text
+						x={part.x + BADGE.icon + BADGE.gap}
+						y={0}
+						dominantBaseline="central"
+						fontSize={12}
+						fill={text}
+						style={{ fontWeight: 800 }}
+					>
+						{part.value}
+					</text>
+				</g>
+			))}
+		</g>
 	);
 }

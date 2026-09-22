@@ -1,15 +1,11 @@
 import { describe, expect, it } from "vitest";
-import german from "@i18n/de.json";
-import {
-	ERROR_TEXT_KEY,
-	KNOWN_ERROR_CODES,
-	WARNING_CODES,
-	collectMessages,
-	isSuppressed,
-} from "./errors";
+import english from "@i18n/en.json";
+import { ERROR_TEXT_KEY, KNOWN_ERROR_CODES, WARNING_CODES, collectMessages, isSuppressed } from "./errors";
 import { parseOrder, sequencePosition, serialiseOrder, toggleRoom } from "./sequence";
 
-const translations = german as Record<string, string>;
+// English is the complete file: a language only carries what differs from it, and I18n falls
+// back to English for the rest.
+const translations = english as Record<string, string>;
 const noContext = { charging: null, wash: null };
 
 describe("ERROR_TEXT_KEY", () => {

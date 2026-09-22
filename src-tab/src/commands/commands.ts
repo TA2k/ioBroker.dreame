@@ -18,7 +18,46 @@
  * silently does something else.
  */
 
-import type { TabConnection } from "../connection/types";
+import type { StateHandler, TabConnection } from "../connection/types";
+import { roomCleaningId } from "../panels/roomSelection";
+
+/** How long a room start waits for the adapter's acknowledgement before clearing the selection. */
+export const START_ACK_TIMEOUT_MS = 15_000;
+
+/**
+ * Resolves when the adapter acknowledges a state, or after the timeout.
+ *
+ * Subscribes before returning, so the caller can write the state afterwards without the
+ * acknowledgement slipping past in between. Never rejects: a missing acknowledgement is waited
+ * out, not reported, since the command itself has been sent either way.
+ */
+export async function waitForAck(
+	connection: TabConnection,
+	stateId: string,
+	timeoutMs: number,
+): Promise<{ done: Promise<void>; cancel: () => void }> {
+	let finish: () => void = () => undefined;
+	const done = new Promise<void>(resolve => {
+		finish = resolve;
+	});
+	// The socket hands a new subscriber the current value while subscribing - here the
+	// acknowledgement of the previous start. Only what arrives after that counts.
+	let armed = false;
+	const handler: StateHandler = (_id, state) => {
+		if (armed && state?.ack) finish();
+	};
+	const timer = setTimeout(() => finish(), timeoutMs);
+
+	await connection.subscribe(stateId, handler);
+	armed = true;
+	return {
+		done,
+		cancel: () => {
+			clearTimeout(timer);
+			connection.unsubscribe(stateId, handler);
+		},
+	};
+}
 
 /** Builds the id of a trigger under `<did>.remote.`. */
 export function remoteId(instanceId: string, did: string, suffix: string): string {
@@ -52,6 +91,20 @@ export class DeviceCommands {
 
 	public startAutoEmpty(): Promise<void> {
 		return this.trigger("start-auto-empty", true);
+	}
+
+	/** Pauses a mop wash in progress, without ending the job it belongs to. */
+	public pauseWashing(): Promise<void> {
+		return this.trigger("pause-washing", JSON.stringify([{ piid: 10, value: "1,0" }]));
+	}
+
+	public resumeWashing(): Promise<void> {
+		return this.trigger("resume-washing", JSON.stringify([{ piid: 10, value: "1,1" }]));
+	}
+
+	/** Resets the fresh water counter after the tank was filled - `config.tank`, not a trigger. */
+	public resetTankCounter(): Promise<void> {
+		return this.connection.setState(`${this.instanceId}.${this.did}.config.tank.wash-counter`, 0);
 	}
 
 	/** Mop drying on. The pair `3,1` is the device's own property write, not a made-up encoding. */
@@ -109,12 +162,51 @@ export class DeviceCommands {
 		return this.setSequenceOrder([]);
 	}
 
+	/**
+	 * Picks a room for the next start, or drops it.
+	 *
+	 * A lasting value like the sequence: the map shows the selection once the switch comes back.
+	 */
+	public setRoomSelected(switchStateId: string, selected: boolean): Promise<void> {
+		return this.connection.setState(switchStateId, selected);
+	}
+
+	/**
+	 * Cleans the selected rooms of one map, then clears the selection.
+	 *
+	 * The adapter cleans the rooms of the map named in `active-map`, so that is pointed at the
+	 * map the rooms were picked on first - it may still name another floor. Only once the adapter
+	 * has acknowledged the start, which it does after reading the switches and sending the
+	 * command, are the switches cleared: clearing them any earlier could empty the selection
+	 * before the adapter has read it. Should the acknowledgement not come, they are cleared after
+	 * {@link START_ACK_TIMEOUT_MS} anyway - a start that went unanswered has been dealt with one
+	 * way or another, and a selection left standing would quietly narrow the next start.
+	 *
+	 * @param switchStateIds the switches of every room of that map, selected or not
+	 */
+	public async startSelectedRooms(mapId: number, switchStateIds: readonly string[]): Promise<void> {
+		const activeMapId = roomCleaningId(this.instanceId, this.did, "active-map");
+		const startId = roomCleaningId(this.instanceId, this.did, "start");
+
+		const activeMap = await this.connection.getState(activeMapId);
+		if (String(activeMap?.val ?? "") !== String(mapId)) {
+			await this.connection.setState(activeMapId, String(mapId));
+		}
+
+		const acknowledged = await waitForAck(this.connection, startId, START_ACK_TIMEOUT_MS);
+		try {
+			await this.connection.setState(startId, true);
+			await acknowledged.done;
+		} finally {
+			acknowledged.cancel();
+		}
+
+		await Promise.all(switchStateIds.map(id => this.connection.setState(id, false)));
+	}
+
 	/** Turns a schedule on or off. Unlike the triggers, this state holds a lasting value. */
 	public setScheduleEnabled(scheduleId: string, enabled: boolean): Promise<void> {
-		return this.connection.setState(
-			`${this.instanceId}.${this.did}.schedule.${scheduleId}.enabled`,
-			enabled,
-		);
+		return this.connection.setState(`${this.instanceId}.${this.did}.schedule.${scheduleId}.enabled`, enabled);
 	}
 
 	private trigger(suffix: string, value: unknown): Promise<void> {

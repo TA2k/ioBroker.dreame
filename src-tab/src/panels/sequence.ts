@@ -59,3 +59,15 @@ export function sequencePosition(order: readonly number[], roomId: number): numb
 export function serialiseOrder(order: readonly number[]): string {
 	return JSON.stringify([...order]);
 }
+
+/**
+ * Whether the adapter will follow the order on the next start.
+ *
+ * It follows it only for a room start whose pick is exactly the order's rooms - no room more, no
+ * room less (`_buildCustomRoomCleaningSelects` in the adapter). Anything else, including no pick
+ * at all, which starts a whole-home clean, runs in the robot's own order.
+ */
+export function orderApplies(order: readonly number[], selected: ReadonlySet<number>): boolean {
+	if (order.length === 0 || order.length !== selected.size) return false;
+	return order.every(roomId => selected.has(roomId));
+}

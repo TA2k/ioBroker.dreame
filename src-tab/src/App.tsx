@@ -5,7 +5,7 @@
  * the instance, which is the reason the tab is worth having at all: the widget in `www/` builds
  * every one of those itself, including its own connection handling.
  *
- * The 11 translation files are the widget's own (`www/i18n`), reused through the `@i18n` alias
+ * The 11 translation files are the widget's own (now `src-tab/i18n`), reused through the `@i18n` alias
  * rather than copied. Two stores of the same strings drift apart, and these already cover every
  * panel that still has to be brought across.
  */

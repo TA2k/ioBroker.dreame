@@ -88,6 +88,8 @@ function ScheduleRow({
 				</Typography>
 				<Typography variant="body2" color="text.secondary" sx={{ flex: "1 1 auto", minWidth: 0 }}>
 					{schedule.weekdays}
+					{/* Shown as the adapter wrote it, already in its language; only never branched on. */}
+					{schedule.typeText ? ` · ${schedule.typeText}` : ""}
 				</Typography>
 				<Switch
 					size="small"

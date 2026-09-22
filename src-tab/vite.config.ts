@@ -36,7 +36,7 @@ export default defineConfig({
 		alias: {
 			// The 11 translation files the existing widget already ships are reused as they are,
 			// rather than copied into a second store that would drift from the first.
-			"@i18n": fileURLToPath(new URL("../www/i18n", import.meta.url)),
+			"@i18n": fileURLToPath(new URL("./i18n", import.meta.url)),
 		},
 	},
 	server: {

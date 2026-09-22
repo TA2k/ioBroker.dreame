@@ -261,7 +261,9 @@ export async function inflate(bytes: Uint8Array): Promise<Uint8Array> {
 	// The cast bridges two lib definitions: `DecompressionStream` declares its writable side as
 	// `BufferSource`, while a `ReadableStream<Uint8Array>` offers exactly that but says so more
 	// narrowly. Nothing unsafe passes through it - only `Uint8Array` is ever enqueued above.
-	const inflated = source.pipeThrough(new DecompressionStream("deflate") as unknown as ReadableWritablePair<Uint8Array, Uint8Array>);
+	const inflated = source.pipeThrough(
+		new DecompressionStream("deflate") as unknown as ReadableWritablePair<Uint8Array, Uint8Array>,
+	);
 	return new Uint8Array(await new Response(inflated).arrayBuffer());
 }
 

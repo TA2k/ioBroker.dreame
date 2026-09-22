@@ -181,8 +181,7 @@ export function clusterRooms(rooms: RoomInfo[], gap = 20): RoomInfo[][] {
 
 /** True where two boxes overlap or come within `gap` cells of each other. */
 function boxesNear(a: RoomInfo["bounds"], b: RoomInfo["bounds"], gap: number): boolean {
-	const apart =
-		a.minX - b.maxX > gap || b.minX - a.maxX > gap || a.minY - b.maxY > gap || b.minY - a.maxY > gap;
+	const apart = a.minX - b.maxX > gap || b.minX - a.maxX > gap || a.minY - b.maxY > gap || b.minY - a.maxY > gap;
 	return !apart;
 }
 
@@ -235,7 +234,10 @@ export interface LabelledRoom extends RoomInfo {
  * @param translate Resolves a translation key, returning the key itself when there is no
  *   translation - which is how {@link roomDisplayName} is told to fall through to the next step.
  */
-export function labelRooms(rooms: readonly RoomInfo[], translate: (key: string, ...args: string[]) => string): LabelledRoom[] {
+export function labelRooms(
+	rooms: readonly RoomInfo[],
+	translate: (key: string, ...args: string[]) => string,
+): LabelledRoom[] {
 	return rooms.map(room => ({
 		...room,
 		label: roomDisplayName(

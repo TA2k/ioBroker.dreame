@@ -60,10 +60,7 @@ describe("parseSchedules", () => {
 	});
 
 	it("survives malformed JSON without losing the schedule", () => {
-		const schedules = parseSchedules(
-			{ [`${PREFIX}1.time`]: "07:30", [`${PREFIX}1.rooms`]: "{not json" },
-			PREFIX,
-		);
+		const schedules = parseSchedules({ [`${PREFIX}1.time`]: "07:30", [`${PREFIX}1.rooms`]: "{not json" }, PREFIX);
 
 		expect(schedules).toHaveLength(1);
 		expect(schedules[0]?.rooms).toBeUndefined();

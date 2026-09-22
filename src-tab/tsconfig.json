@@ -15,10 +15,10 @@
 		"isolatedModules": true,
 		"skipLibCheck": true,
 		"noEmit": true,
-		"types": ["vitest/globals", "@iobroker/types"],
+		"types": ["vite/client", "vitest/globals", "@iobroker/types"],
 		"paths": {
-			"@i18n/*": ["../www/i18n/*"]
+			"@i18n/*": ["./i18n/*"]
 		}
 	},
-	"include": ["src", "test", "vite.config.ts", "vitest.config.ts"]
+	"include": ["src", "test", "vite.config.ts", "vite.web.config.ts", "vitest.config.ts"]
 }

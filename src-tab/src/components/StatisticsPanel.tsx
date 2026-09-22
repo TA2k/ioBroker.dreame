@@ -18,12 +18,15 @@ export interface StatisticsPanelProps {
 	connection: TabConnection;
 	instanceId: string;
 	did: string;
+	/** Rows the user hid in the settings, by state name. */
+	hidden?: ReadonlySet<string>;
 }
 
 export function StatisticsPanel({
 	connection,
 	instanceId,
 	did,
+	hidden,
 }: StatisticsPanelProps): React.JSX.Element | null {
 	const prefix = `${instanceId}.${did}.status.`;
 	const values = useStates(
@@ -38,7 +41,7 @@ export function StatisticsPanel({
 	const rows = STATISTICS.map(entry => ({
 		entry,
 		value: asNumber(values[prefix + entry.state]),
-	})).filter(row => row.value != null);
+	})).filter(row => row.value != null && !hidden?.has(row.entry.state));
 
 	if (rows.length === 0) return null;
 

@@ -80,10 +80,7 @@ export function zoomAbout(view: Viewport, nextScale: number, d: { x: number; y: 
  *
  * @param content The map's fitted size in screen pixels, i.e. at scale 1.
  */
-export function clampPan(
-	view: Viewport,
-	content: { width: number; height: number },
-): Viewport {
+export function clampPan(view: Viewport, content: { width: number; height: number }): Viewport {
 	if (view.scale <= MIN_SCALE) return { scale: view.scale, x: 0, y: 0 };
 
 	// How far the scaled map extends past its fitted size, halved because the offset is measured
@@ -120,4 +117,17 @@ export const CLICK_SLOP_PX = 4;
 /** True where a press and release that far apart should be treated as a click. */
 export function isClick(from: { x: number; y: number }, to: { x: number; y: number }): boolean {
 	return Math.hypot(to.x - from.x, to.y - from.y) <= CLICK_SLOP_PX;
+}
+
+/**
+ * Maps a point on a map turned clockwise by `rotation` degrees back onto the unturned map.
+ *
+ * Both in fractions of the box, 0 to 1. Turning by 90 degrees puts the map's top left corner at
+ * the box's top right, so a point at (u, v) in the box came from (v, 1 - u) on the map.
+ */
+export function unrotate(u: number, v: number, rotation: number): { x: number; y: number } {
+	if (rotation === 90) return { x: v, y: 1 - u };
+	if (rotation === 180) return { x: 1 - u, y: 1 - v };
+	if (rotation === 270) return { x: 1 - v, y: u };
+	return { x: u, y: v };
 }

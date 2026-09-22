@@ -8,6 +8,7 @@ import {
 	isClick,
 	isFitted,
 	panBy,
+	unrotate,
 	zoomAbout,
 } from "./viewport";
 
@@ -119,5 +120,23 @@ describe("isClick", () => {
 
 	it("treats a real drag as a drag", () => {
 		expect(isClick({ x: 100, y: 100 }, { x: 140, y: 100 })).toBe(false);
+	});
+});
+
+describe("unrotate", () => {
+	it("leaves an unturned map alone", () => {
+		expect(unrotate(0.2, 0.7, 0)).toEqual({ x: 0.2, y: 0.7 });
+	});
+
+	it("finds the map's top left corner wherever the turn put it", () => {
+		// Clockwise: 90 puts it top right, 180 bottom right, 270 bottom left.
+		expect(unrotate(1, 0, 90)).toEqual({ x: 0, y: 0 });
+		expect(unrotate(1, 1, 180)).toEqual({ x: 0, y: 0 });
+		expect(unrotate(0, 1, 270)).toEqual({ x: 0, y: 0 });
+	});
+
+	it("undoes a quarter turn exactly", () => {
+		// The map's top right corner (1, 0) ends up bottom right after 90 degrees.
+		expect(unrotate(1, 1, 90)).toEqual({ x: 1, y: 0 });
 	});
 });

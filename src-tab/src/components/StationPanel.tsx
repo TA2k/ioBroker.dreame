@@ -1,84 +1,100 @@
 /**
  * The base station: empty the bin, wash the mop, dry the mop.
  *
- * Each action is offered only while the station is idle. The states that say so are the widget's
- * (`www/js/panels/station.js`): a non-zero `auto-empty-status`, `self-wash-base-status` or
- * `drainage-status` means that job is already running, and asking again during one is at best
- * ignored.
+ * Which buttons exist, when they may be pressed and what each says about itself is worked out in
+ * `panels/station.ts`, from Home Assistant's rules as the widget ports them. This only draws them:
+ * each with a tooltip that says what it does - or why it cannot be pressed just now, which is the
+ * question a greyed-out button otherwise leaves open.
  *
- * Drying is the exception with two buttons, because it is the one job a user routinely wants to
- * end early - the others finish in under a minute.
+ * A station with none of these jobs - a robot without one - shows no panel at all.
  */
 
 import type React from "react";
-import { Button, Stack, Typography } from "@mui/material";
+import { Button, Stack, Tooltip } from "@mui/material";
+import {
+	DeleteSweep as EmptyIcon,
+	WaterDrop as WashIcon,
+	Air as DryIcon,
+	Pause as PauseIcon,
+	PlayArrow as ResumeIcon,
+} from "@mui/icons-material";
 import { I18n } from "@iobroker/gui-components";
 
 import { PanelSection, useCommandRunner } from "./PanelSection";
-import { asNumber, useStates } from "../connection/useStates";
-import type { TabConnection } from "../connection/types";
+import { asNumber } from "../connection/useStates";
+import { isStarted } from "../status/statusCodes";
+import { stationActions } from "../panels/station";
+import type { StationAction, StationCommand } from "../panels/station";
+import type { DeviceStatus } from "../status/useDeviceStatus";
 import type { DeviceCommands } from "../commands/commands";
 
-/** Status codes at which the robot is drying its mop. From the widget's header panel. */
-const DRYING_STATES = new Set([8, 35]);
-
 export interface StationPanelProps {
-	connection: TabConnection;
-	instanceId: string;
-	did: string;
+	status: DeviceStatus;
 	commands: DeviceCommands;
+	/** Buttons the user hid in the settings, by the ids of `StationAction`. */
+	hidden?: ReadonlySet<string>;
 }
 
-export function StationPanel({ connection, instanceId, did, commands }: StationPanelProps): React.JSX.Element {
-	const status = (suffix: string): string => `${instanceId}.${did}.status.${suffix}`;
+function icon(action: StationAction): React.JSX.Element {
+	if (action.command === "pauseWash") return <PauseIcon />;
+	if (action.command === "resumeWash") return <ResumeIcon />;
+	if (action.id === "empty") return <EmptyIcon />;
+	if (action.id === "wash") return <WashIcon />;
+	return <DryIcon />;
+}
 
-	const emptyId = status("auto-empty-status");
-	const washId = status("self-wash-base-status");
-	const drainId = status("drainage-status");
-	const stateId = status("state");
-
-	const values = useStates(connection, [emptyId, washId, drainId, stateId]);
+export function StationPanel({ status, commands, hidden }: StationPanelProps): React.JSX.Element | null {
 	const { run, failureElement } = useCommandRunner();
 
-	const emptying = (asNumber(values[emptyId]) ?? 0) !== 0;
-	const washing = (asNumber(values[washId]) ?? 0) !== 0;
-	const draining = (asNumber(values[drainId]) ?? 0) !== 0;
-	const state = asNumber(values[stateId]);
-	const drying = state != null && DRYING_STATES.has(state);
+	const number = (value: unknown): number | null => asNumber(value);
+	const started = isStarted(number(status.taskStatus), number(status.robotStatus), Boolean(status.cleaningPaused));
+	const actions = stationActions(
+		{
+			wash: number(status.washStatus),
+			dustCollection: number(status.dustCollection),
+			charging: number(status.charging),
+			waterTank: number(status.waterTank),
+			mopInStation: number(status.mopInStation),
+			robotStatus: number(status.robotStatus),
+			cleaningPaused: Boolean(status.cleaningPaused),
+			drainage: number(status.drainage),
+			autoEmpty: number(status.emptyStatus),
+			state: number(status.state),
+		},
+		started,
+	).filter(action => !hidden?.has(action.id));
 
-	// Any station job blocks the others: they share one mechanism.
-	const busy = emptying || washing || draining;
+	if (!actions.length) return null;
+
+	const send: Record<StationCommand, () => Promise<void>> = {
+		autoEmpty: () => commands.startAutoEmpty(),
+		wash: () => commands.startWashing(),
+		pauseWash: () => commands.pauseWashing(),
+		resumeWash: () => commands.resumeWashing(),
+		dry: () => commands.startDrying(),
+		stopDry: () => commands.stopDrying(),
+	};
 
 	return (
 		<PanelSection title={I18n.t("panel.station.titel")}>
 			<Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
-				<Button
-					size="small"
-					variant="outlined"
-					disabled={busy}
-					onClick={run(() => commands.startAutoEmpty())}
-				>
-					{I18n.t("panel.station.knopf.entleeren")}
-				</Button>
-				<Button size="small" variant="outlined" disabled={busy} onClick={run(() => commands.startWashing())}>
-					{I18n.t("panel.station.knopf.waschen")}
-				</Button>
-				{drying ? (
-					<Button size="small" variant="outlined" onClick={run(() => commands.stopDrying())}>
-						{I18n.t("panel.station.knopf.trocknen-beenden")}
-					</Button>
-				) : (
-					<Button size="small" variant="outlined" disabled={busy} onClick={run(() => commands.startDrying())}>
-						{I18n.t("panel.station.knopf.trocknen")}
-					</Button>
-				)}
+				{actions.map(action => (
+					<Tooltip key={action.id} title={I18n.t(action.hintKey)}>
+						{/* The span keeps the tooltip on a disabled button, which fires no events. */}
+						<span>
+							<Button
+								size="small"
+								variant="outlined"
+								startIcon={icon(action)}
+								disabled={action.disabled}
+								onClick={run(send[action.command])}
+							>
+								{I18n.t(action.textKey)}
+							</Button>
+						</span>
+					</Tooltip>
+				))}
 			</Stack>
-
-			{busy ? (
-				<Typography variant="body2" color="text.secondary">
-					{I18n.t("panel.station.hinweis.laeuft")}
-				</Typography>
-			) : null}
 
 			{failureElement}
 		</PanelSection>

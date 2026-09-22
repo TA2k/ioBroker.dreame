@@ -7,10 +7,11 @@
  *
  * ## Why the state goes out and comes back
  *
- * A tap writes the new order to `remote.cleaning-sequence.order` and changes nothing locally. The
- * numbers on the map move when the adapter sends the order back. That round trip is the point:
- * the same state can be written by a script or by a second browser tab, and an optimistic local
- * copy would disagree with both.
+ * A tap writes the new order to `remote.cleaning-sequence.order` - and picks or drops the room
+ * for the next start, since the adapter applies an order only to a pick of exactly its rooms -
+ * and changes nothing locally. The numbers on the map move when the adapter sends the order back.
+ * That round trip is the point: the same state can be written by a script or by a second browser
+ * tab, and an optimistic local copy would disagree with both.
  */
 
 import type React from "react";
@@ -18,7 +19,7 @@ import { Button, FormControlLabel, Stack, Switch, Typography } from "@mui/materi
 import { I18n } from "@iobroker/gui-components";
 
 import { PanelSection, useCommandRunner } from "./PanelSection";
-import type { DeviceCommands } from "../commands/commands";
+import { orderApplies } from "../panels/sequence";
 
 export interface SequencePanelProps {
 	/** Room ids in cleaning order, as the adapter reports them. */
@@ -26,35 +27,42 @@ export interface SequencePanelProps {
 	/** Whether tapping rooms on the map currently edits the sequence. */
 	editing: boolean;
 	onEditingChange: (editing: boolean) => void;
-	commands: DeviceCommands;
+	/** The rooms picked for the next start: the order only applies to exactly these. */
+	selected: ReadonlySet<number>;
+	/** Empties the order - and the pick that editing it made. */
+	onClear: () => Promise<void>;
 }
 
 export function SequencePanel({
 	order,
 	editing,
 	onEditingChange,
-	commands,
+	selected,
+	onClear,
 }: SequencePanelProps): React.JSX.Element {
 	const { run, failureElement } = useCommandRunner();
 
 	return (
 		<PanelSection title={I18n.t("tab.sequence.titel")}>
 			<FormControlLabel
-				control={
-					<Switch size="small" checked={editing} onChange={event => onEditingChange(event.target.checked)} />
-				}
+				control={<Switch size="small" checked={editing} onChange={event => onEditingChange(event.target.checked)} />}
 				label={<Typography variant="body2">{I18n.t("tab.sequence.bearbeiten")}</Typography>}
 			/>
 
 			<Typography variant="body2" color="text.secondary">
-				{order.length === 0
-					? I18n.t("tab.sequence.leer")
-					: I18n.t("tab.sequence.anzahl", String(order.length))}
+				{order.length === 0 ? I18n.t("tab.sequence.leer") : I18n.t("tab.sequence.anzahl", String(order.length))}
 			</Typography>
+
+			{/* The adapter would quietly run in the robot's own order; better to say so here. */}
+			{order.length > 0 && !orderApplies(order, selected) ? (
+				<Typography variant="body2" color="warning.main">
+					{I18n.t("tab.sequence.passtNicht")}
+				</Typography>
+			) : null}
 
 			{editing ? (
 				<Stack direction="row" spacing={1}>
-					<Button size="small" variant="outlined" disabled={order.length === 0} onClick={run(() => commands.clearSequence())}>
+					<Button size="small" variant="outlined" disabled={order.length === 0} onClick={run(onClear)}>
 						{I18n.t("tab.sequence.zuruecksetzen")}
 					</Button>
 				</Stack>

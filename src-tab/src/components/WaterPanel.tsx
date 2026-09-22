@@ -3,81 +3,103 @@
  *
  * The tank figures come from the adapter's own bookkeeping under `<did>.config.tank.` rather than
  * from the robot: the device reports washes, not litres, so the adapter counts down from a
- * configured capacity. That is why the numbers exist even on models with no level sensor - and
- * why the panel stays out of sight entirely where the adapter has nothing configured.
+ * configured capacity - and says itself when that is getting low (`config.tank.status`), which
+ * colours the bar and raises the warning. Below it the rows the device reports: tank, mop,
+ * wetness, detergent, water temperature. Content and wording are the widget's; see
+ * `panels/water.ts`.
  *
- * The low-water flag is a separate state and is shown on its own, because a robot can report
- * "low" long before the counted remainder reaches zero, and vice versa after a refill that was
- * not registered.
+ * After a refill the counter has to be told, which is what the button is for.
  */
 
 import type React from "react";
-import { Alert, LinearProgress, Stack, Typography } from "@mui/material";
+import { useMemo } from "react";
+import { Alert, Box, Button, LinearProgress, Stack, Typography } from "@mui/material";
+import { WaterDrop as RefillIcon } from "@mui/icons-material";
 import { I18n } from "@iobroker/gui-components";
 
-import { PanelSection } from "./PanelSection";
-import { asBoolean, asNumber, useStates } from "../connection/useStates";
+import { PanelSection, useCommandRunner } from "./PanelSection";
+import { useStates } from "../connection/useStates";
+import { useObjectStates } from "../connection/useObjectStates";
+import { waterStateIds, waterValue, waterView } from "../panels/water";
 import type { TabConnection } from "../connection/types";
+import type { DeviceCommands } from "../commands/commands";
 
 export interface WaterPanelProps {
 	connection: TabConnection;
 	instanceId: string;
 	did: string;
+	commands: DeviceCommands;
+	/** Rows the user hid in the settings, by the ids of `WaterRow`, and `fuellstand` for the level. */
+	hidden?: ReadonlySet<string>;
 }
 
-export function WaterPanel({ connection, instanceId, did }: WaterPanelProps): React.JSX.Element | null {
-	const base = `${instanceId}.${did}.`;
-	const capacityId = `${base}config.tank.capacity-ml`;
-	const remainingId = `${base}config.tank.remaining-ml`;
-	const washesId = `${base}config.tank.remaining-washes`;
-	const counterId = `${base}config.tank.wash-counter`;
-	const lowId = `${base}status.clean-water-tank-low`;
+export function WaterPanel({
+	connection,
+	instanceId,
+	did,
+	commands,
+	hidden,
+}: WaterPanelProps): React.JSX.Element | null {
+	const prefix = `${instanceId}.${did}.`;
+	const ids = useMemo(() => waterStateIds(prefix), [prefix]);
+	const values = useStates(connection, ids);
+	const waterTankStates = useObjectStates(connection, `${prefix}status.water-tank`);
+	const temperatureStates = useObjectStates(connection, `${prefix}remote.water-temperature`);
+	const { run, failureElement } = useCommandRunner();
 
-	const values = useStates(connection, [capacityId, remainingId, washesId, counterId, lowId]);
+	const view = waterView(waterValue(values, prefix), { waterTankStates, temperatureStates }, key => I18n.t(key));
+	const levelShown = view.level != null && !hidden?.has("fuellstand");
+	const rows = view.rows.filter(row => !hidden?.has(row.id));
 
-	const capacity = asNumber(values[capacityId]);
-	const remaining = asNumber(values[remainingId]);
-	const washes = asNumber(values[washesId]);
-	const counter = asNumber(values[counterId]);
-	const low = asBoolean(values[lowId]);
+	// Nothing tracked and nothing reported: a robot without a water tank, or none configured.
+	if (!levelShown && !rows.length) return null;
 
-	// Nothing configured and nothing reported: the adapter is not tracking a tank for this device.
-	if (capacity == null && remaining == null && washes == null && low == null) return null;
-
-	const percent =
-		capacity != null && capacity > 0 && remaining != null
-			? Math.max(0, Math.min(100, (remaining / capacity) * 100))
-			: null;
+	const litres = (ml: number): string =>
+		(ml / 1000).toLocaleString(I18n.getLanguage(), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+	const levelColour =
+		view.level?.status === "critical" ? "error" : view.level?.status === "warn" ? "warning" : "primary";
 
 	return (
 		<PanelSection title={I18n.t("panel.frischwasser.titel")}>
-			{remaining != null && capacity != null ? (
-				<Typography variant="body2">
-					{(remaining / 1000).toFixed(1)} / {(capacity / 1000).toFixed(1)} L
-				</Typography>
-			) : null}
-
-			{percent != null ? (
-				<LinearProgress variant="determinate" value={percent} color={low ? "warning" : "primary"} />
-			) : null}
-
-			{counter != null || washes != null ? (
-				<Stack direction="row" spacing={1} sx={{ justifyContent: "space-between" }}>
-					<Typography variant="body2" color="text.secondary">
-						{I18n.t("panel.frischwasser.wasch-zyklen.label")}
+			{levelShown && view.level ? (
+				<Box>
+					<Typography
+						variant="body2"
+						sx={view.level.nearlyEmpty ? { fontWeight: 700, color: "error.main" } : undefined}
+					>
+						{litres(view.level.remainingMl)} / {litres(view.level.capacityMl)} L
 					</Typography>
-					<Typography variant="body2">
-						{[
-							counter != null ? String(counter) : null,
-							washes != null ? `~${washes}` : null,
-						]
-							.filter(Boolean)
-							.join(" / ")}
+					<LinearProgress variant="determinate" value={view.level.percent} color={levelColour} />
+				</Box>
+			) : null}
+
+			{rows.map(row => (
+				<Stack key={row.id} direction="row" spacing={1} sx={{ justifyContent: "space-between" }}>
+					<Typography variant="body2" color="text.secondary">
+						{I18n.t(row.labelKey)}
+					</Typography>
+					<Typography variant="body2" sx={{ textAlign: "right" }}>
+						{row.text}
 					</Typography>
 				</Stack>
+			))}
+
+			{levelShown && view.warningKey ? (
+				<Alert severity={view.warningCritical ? "error" : "warning"}>{I18n.t(view.warningKey)}</Alert>
 			) : null}
 
-			{low ? <Alert severity="warning">{I18n.t("panel.frischwasser.tank-leer")}</Alert> : null}
+			<Box>
+				<Button
+					size="small"
+					variant="outlined"
+					startIcon={<RefillIcon />}
+					onClick={run(() => commands.resetTankCounter())}
+				>
+					{I18n.t("panel.frischwasser.reset-knopf")}
+				</Button>
+			</Box>
+
+			{failureElement}
 		</PanelSection>
 	);
 }

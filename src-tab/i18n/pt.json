@@ -1,6 +1,4 @@
 {
-  "i18n.selftest": "Widget i18n carregado",
-
   "panel.reinigung.titel": "Limpeza",
   "panel.reinigung.modus.label": "Modo",
   "panel.reinigung.route.label": "Rota",
@@ -21,7 +19,6 @@
   "panel.reinigung.saug.leise": "Silencioso",
   "panel.reinigung.saug.standard": "Padrão",
   "panel.reinigung.saug.stark": "Forte",
-  "panel.reinigung.saug.turbo": "Turbo",
 
   "panel.reinigung.raum.alle": "Todos os cômodos ativos",
   "panel.reinigung.raum.gewaehlt-eins": "1 cômodo selecionado",
@@ -76,7 +73,6 @@
   "panel.wartung.saugbeutel.installiert": "Instalado",
   "panel.wartung.saugbeutel.nicht-installiert": "Não instalado",
   "panel.wartung.saugbeutel.ueberpruefen": "Verificar",
-  "panel.wartung.saugbeutel.status-unbekannt": "Status",
 
   "panel.statistik.titel": "Estatísticas",
   "panel.statistik.reinigungen.label": "Limpezas",
@@ -106,7 +102,6 @@
 
   "panel.kopf.start-knopf": "Iniciar",
   "panel.kopf.trocknung-praefix": "Secagem",
-  "panel.kopf.status.unbekannter-code-praefix": "Status",
   "panel.kopf.status.unbekannt": "Desconhecido",
   "panel.kopf.status.reinigung": "Limpando",
   "panel.kopf.status.standby": "Em espera",
@@ -291,56 +286,9 @@
   "panel.fehler.durch-hindernis-blockiert": "Robô bloqueado por um obstáculo.",
   "panel.fehler.abflussfilter-verstopft": "Filtro de drenagem entupido",
   "panel.fehler.fehler-der-hauptraeder": "Erro nas rodas principais",
-  "panel.fehler.rueckkehr-zum-laden-fehlgeschlagen": "O retorno para carregar falhou.",
+  "panel.fehler.rueckkehr-zum-laden-fehlgeschlagen": "O retorno para carregar falhou."
 
-  "tab.device": "Device",
-  "tab.noDevices": "No Dreame device found. Is the adapter running?",
-  "tab.noMap": "No map yet. It appears after the first cloud poll.",
-  "tab.mapError": "Map could not be read",
-  "tab.loading": "Loading…",
 
-  "room.type.1": "Living room",
-  "room.type.2": "Master bedroom",
-  "room.type.3": "Study",
-  "room.type.4": "Kitchen",
-  "room.type.5": "Dining room",
-  "room.type.6": "Bathroom",
-  "room.type.7": "Balcony",
-  "room.type.8": "Hallway",
-  "room.type.9": "Storage room",
-  "room.type.10": "Walk-in closet",
-  "room.type.11": "Meeting room",
-  "room.type.12": "Office",
-  "room.type.13": "Gym",
-  "room.type.14": "Recreation area",
-  "room.type.15": "Guest bedroom",
-  "room.fallback": "Room %s",
-  "tab.multipleBlocks": "%s separate map blocks",
-  "tab.stop": "Stop",
-  "tab.dock": "Return to dock",
-  "tab.commandFailed": "Command failed",
-  "panel.wartung.reset": "Reset",
-  "panel.frischwasser.tank-leer": "Clean water tank low",
-  "panel.reinigung.route.nicht-fuer-modus": "This route does not apply to the selected mode",
 
-  "tab.sequence.titel": "Cleaning order",
-  "tab.sequence.bearbeiten": "Tap rooms on the map",
-  "tab.sequence.leer": "Nothing selected – every room is cleaned",
-  "tab.sequence.anzahl": "%s rooms, in this order",
-  "tab.sequence.zuruecksetzen": "Reset",
-  "tab.zoom.rein": "Zoom in",
-  "tab.zoom.raus": "Zoom out",
-  "tab.zoom.einpassen": "Fit to view",
-  "tab.3d.keinWebgl": "3D is not available in this browser (no WebGL).",
-  "tab.ansicht.2d": "2D",
-  "tab.ansicht.3d": "3D",
 
-  "tab.floor.label": "Floor",
-  "tab.floor.live": "Where the robot is",
-  "tab.floor.roboterHier": "robot is here",
-  "tab.floor.gespeichert": "Stored floor – not live",
-  "tab.floor.keinBild": "There is no picture of this floor. Enable “fetch all maps” in the adapter.",
-  "tab.floor.kein3d": "3D is only available for the floor the robot is on",
-  "tile.keinGeraet": "No device selected",
-  "tile.akku": "Battery"
 }

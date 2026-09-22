@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import german from "@i18n/de.json";
+import english from "@i18n/en.json";
 import {
 	CLEAN_MODES,
 	CLEAN_ROUTES,
@@ -10,10 +10,11 @@ import {
 	routesFor,
 	suctionKey,
 } from "./cleaningOptions";
-import { DUST_BAG_TEXT_KEY, WEAR_PARTS, dustBagTextKey, wearSeverity } from "./maintenance";
+import { DUST_BAG_TEXT_KEY, WEAR_PARTS, dustBagSeverity, dustBagTextKey, wearSeverity } from "./maintenance";
 import { STATISTICS } from "./statistics";
 
-const translations = german as Record<string, string>;
+// English is the complete file; see the comment in errors.test.ts.
+const translations = english as Record<string, string>;
 
 describe("cleaning modes", () => {
 	it("knows which jobs each mode does", () => {
@@ -74,15 +75,22 @@ describe("dustBagTextKey", () => {
 });
 
 describe("wearSeverity", () => {
-	it("treats a used-up counter as empty and a nearly used one as low", () => {
-		expect(wearSeverity(0)).toBe("empty");
-		expect(wearSeverity(5)).toBe("low");
-		expect(wearSeverity(10)).toBe("low");
-		expect(wearSeverity(11)).toBe("ok");
+	it("turns red at 10 per cent and orange at 20, as the widget does", () => {
+		expect(wearSeverity(0)).toBe("bad");
+		expect(wearSeverity(10)).toBe("bad");
+		expect(wearSeverity(11)).toBe("warn");
+		expect(wearSeverity(20)).toBe("warn");
+		expect(wearSeverity(21)).toBe("ok");
+		expect(wearSeverity(null)).toBe("ok");
 	});
 
-	it("says nothing alarming about a part that reports nothing", () => {
-		expect(wearSeverity(null)).toBe("ok");
+	it("colours a missing dust bag red and one to check orange", () => {
+		expect([dustBagSeverity(0), dustBagSeverity(1), dustBagSeverity(2), dustBagSeverity(null)]).toEqual([
+			"ok",
+			"bad",
+			"warn",
+			"ok",
+		]);
 	});
 });
 

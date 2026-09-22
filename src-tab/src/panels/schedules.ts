@@ -146,10 +146,7 @@ export function parseSchedules(values: Readonly<Record<string, unknown>>, prefix
  *
  * @param translate Resolves a translation key.
  */
-export function formatSettings(
-	settings: ScheduleSettings,
-	translate: (key: string) => string,
-): string {
+export function formatSettings(settings: ScheduleSettings, translate: (key: string) => string): string {
 	return [
 		settings.mode,
 		settings.suction,

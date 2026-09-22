@@ -3,10 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "React admin tab of ioBroker.dreame. Built into ../admin/tab.html.",
+  "description": "React views of ioBroker.dreame: the admin tab, built into ../admin/tab.html, and the stand-alone page, built into ../www.",
   "scripts": {
     "start": "vite",
-    "build": "vite build",
+    "build": "vite build && vite build --config vite.web.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

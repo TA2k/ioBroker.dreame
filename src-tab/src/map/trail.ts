@@ -27,10 +27,10 @@
  * "continuation" - the adapter chose these numbers so older drawing code that only tests
  * `!== 0` keeps working.
  *
- * ## Not yet ported
+ * ## Drawn up to the playhead
  *
- * The widget animates a playhead along the trail and clips the mopping band to room areas with an
- * SVG mask. Both are refinements on top of these paths, not part of producing them.
+ * While a new piece of trail is being played back (see `playback.ts`), only the part behind the
+ * robot is drawn: a {@link TrailCut} stops the paths at the playhead.
  */
 
 import type { MapHeader, MapPackage, PathPoint } from "./mapPackage";
@@ -47,6 +47,18 @@ export const PathType = {
 export interface ImagePoint {
 	x: number;
 	y: number;
+}
+
+/** Where a trail being played back stops. */
+export interface TrailCut {
+	/** Last point drawn in full. */
+	lastIndex: number;
+	/**
+	 * The playhead, in world millimetres, which the line runs up to - null on a repositioning move,
+	 * which the robot drives without drawing. `index` is the point it is heading for, whose section
+	 * decides which path the last stretch belongs to.
+	 */
+	head: { x: number; y: number; index: number } | null;
 }
 
 /** The two paths, as SVG `d` strings. Either can be empty. */
@@ -114,11 +126,13 @@ function buildPath(
 	types: readonly number[],
 	header: MapHeader,
 	belongs: (type: number) => boolean,
+	cut?: TrailCut,
 ): string {
 	const parts: string[] = [];
 	let drawing = false;
+	const last = cut ? Math.min(cut.lastIndex, points.length - 1) : points.length - 1;
 
-	for (let i = 0; i < points.length; i++) {
+	for (let i = 0; i <= last; i++) {
 		if (!belongs(types[i]!)) {
 			drawing = false;
 			continue;
@@ -131,17 +145,23 @@ function buildPath(
 		drawing = true;
 	}
 
+	const head = cut?.head;
+	if (head && belongs(types[head.index] ?? PathType.VACUUM)) {
+		const { x, y } = worldToImage(head.x, head.y, header);
+		parts.push(`${drawing ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`);
+	}
+
 	return parts.join(" ");
 }
 
-/** Builds both paths for a decoded map. */
-export function buildTrailPaths(map: MapPackage): TrailPaths {
+/** Builds both paths for a decoded map, in full or up to a playhead. */
+export function buildTrailPaths(map: MapPackage, cut?: TrailCut | null): TrailPaths {
 	const points = map.meta.trpts ?? [];
 	if (points.length === 0) return { vacuum: "", mop: "" };
 
 	const types = sectionTypes(points);
 	return {
-		vacuum: buildPath(points, types, map.header, isVacuum),
-		mop: buildPath(points, types, map.header, isMop),
+		vacuum: buildPath(points, types, map.header, isVacuum, cut ?? undefined),
+		mop: buildPath(points, types, map.header, isMop, cut ?? undefined),
 	};
 }

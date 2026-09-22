@@ -45,12 +45,19 @@ export function dustBagTextKey(code: number | null): string | null {
  * How alarming a remaining percentage is.
  *
  * The thresholds are a display choice, not something the robot reports: it gives a number and
- * nothing else. Ten percent is close enough to order a replacement, and zero means the counter
- * has run out - the part still works, the robot just stops vouching for it.
+ * nothing else. They are the widget's - 20 per cent is time to order a replacement, 10 is time to
+ * fit it - so the parts turn orange and red at the same point in every view.
  */
-export function wearSeverity(percent: number | null): "ok" | "low" | "empty" {
+export function wearSeverity(percent: number | null): "ok" | "warn" | "bad" {
 	if (percent == null) return "ok";
-	if (percent <= 0) return "empty";
-	if (percent <= 10) return "low";
+	if (percent <= 10) return "bad";
+	if (percent <= 20) return "warn";
+	return "ok";
+}
+
+/** The dust bag's state as a severity, as the widget colours it: missing is bad, "check" a warning. */
+export function dustBagSeverity(code: number | null): "ok" | "warn" | "bad" {
+	if (code === 1) return "bad";
+	if (code === 2) return "warn";
 	return "ok";
 }

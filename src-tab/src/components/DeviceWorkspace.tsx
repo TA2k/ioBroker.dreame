@@ -16,6 +16,8 @@ import type { TabConnection } from "../connection/types";
 import { Centre } from "./Centre";
 import { DeviceSelector } from "./DeviceSelector";
 import { DreameView } from "./DreameView";
+import type { DreameViewProps } from "./DreameView";
+import type { ConfigDelta } from "../settings/widgetConfig";
 
 export interface DeviceWorkspaceProps {
 	connection: TabConnection;
@@ -24,6 +26,10 @@ export interface DeviceWorkspaceProps {
 	requestedDid: string | null;
 	/** Shown when the adapter reports no devices at all. */
 	emptyMessage: React.ReactNode;
+	/** Passed on to the view; see `DreameViewProps`. */
+	settingsMode?: DreameViewProps["settingsMode"];
+	showGear?: boolean;
+	configDelta?: ConfigDelta | null;
 }
 
 export function DeviceWorkspace({
@@ -31,6 +37,9 @@ export function DeviceWorkspace({
 	instanceId,
 	requestedDid,
 	emptyMessage,
+	settingsMode,
+	showGear,
+	configDelta,
 }: DeviceWorkspaceProps): React.JSX.Element {
 	const [snapshot, setSnapshot] = useState<DeviceListSnapshot>({ devices: [], selected: null });
 	const [listReady, setListReady] = useState(false);
@@ -81,6 +90,9 @@ export function DeviceWorkspace({
 			connection={connection}
 			instanceId={instanceId}
 			did={selected.did}
+			settingsMode={settingsMode}
+			showGear={showGear}
+			configDelta={configDelta}
 			headerStart={
 				<>
 					<DeviceSelector devices={snapshot.devices} selected={selected} onSelect={did => deviceList.select(did)} />
