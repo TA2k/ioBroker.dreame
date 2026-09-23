@@ -155,6 +155,60 @@
     "adminUI": {
       "config": "json"
     },
+    "adminTab": {
+      "name": {
+        "en": "Dreame",
+        "de": "Dreame",
+        "ru": "Dreame",
+        "pt": "Dreame",
+        "nl": "Dreame",
+        "fr": "Dreame",
+        "it": "Dreame",
+        "es": "Dreame",
+        "pl": "Dreame",
+        "uk": "Dreame",
+        "zh-cn": "Dreame"
+      },
+      "singleton": true
+    },
+    "deviceWidgets": {
+      "components": [
+        {
+          "name": "DreameRobotComponent",
+          "label": "Dreame robot",
+          "description": {
+            "en": "Shows the status or the map of a robot; a click opens the full view",
+            "de": "Zeigt den Status oder die Karte eines Roboters; ein Klick öffnet die volle Ansicht",
+            "ru": "Показывает статус или карту робота; по щелчку открывается полный вид",
+            "pt": "Mostra o estado ou o mapa de um robô; um clique abre a vista completa",
+            "nl": "Toont de status of de kaart van een robot; een klik opent de volledige weergave",
+            "fr": "Affiche l'état ou la carte d'un robot ; un clic ouvre la vue complète",
+            "it": "Mostra lo stato o la mappa di un robot; un clic apre la vista completa",
+            "es": "Muestra el estado o el mapa de un robot; un clic abre la vista completa",
+            "pl": "Pokazuje stan lub mapę robota; kliknięcie otwiera pełny widok",
+            "uk": "Показує стан або карту робота; клік відкриває повний вигляд",
+            "zh-cn": "显示机器人的状态或地图；点击打开完整视图"
+          },
+          "icon": "robot.png"
+        }
+      ]
+    },
+    "visWidgets": {
+      "vis2DreameWidgets": {
+        "i18n": "component",
+        "name": "vis2DreameWidgets",
+        "url": "dreame/customWidgets.js",
+        "color": "#1f6fb2",
+        "bundlerType": "module",
+        "label": "dreame_set_label",
+        "components": [
+          "DreameRobot"
+        ]
+      }
+    },
+    "restartAdapters": [
+      "vis-2"
+    ],
     "dependencies": [
       {
         "js-controller": ">=7.0.4"

@@ -1,0 +1,22 @@
+{
+  "dreame_caption": "letras",
+  "dreame_caption_auto": "Automático (robot, con piso seleccionado)",
+  "dreame_caption_custom": "Mi propio texto",
+  "dreame_caption_none": "Ninguno",
+  "dreame_caption_text": "Leyenda propia",
+  "dreame_caption_text_help": "Si se deja vacío, se muestra el subtítulo automático.",
+  "dreame_content": "Contenido de la baldosa",
+  "dreame_content_auto": "Automático (mapa de 2×2, estado en caso contrario)",
+  "dreame_content_map": "Mapa",
+  "dreame_content_status": "Estado",
+  "dreame_device": "Robot",
+  "dreame_device_auto": "Automático (primer robot de dreame.0)",
+  "dreame_dialog_2d": "2D",
+  "dreame_dialog_3d": "3D",
+  "dreame_dialog_mode": "Ver en el cuadro de diálogo",
+  "dreame_floor": "Mapa del piso",
+  "dreame_floor_follow": "Automático (el suelo sobre el que se encuentra el robot)",
+  "dreame_floor_help": "Cualquier otro piso se muestra como la imagen fija que almacena el adaptador.",
+  "dreame_no_device": "No se encontró ningún robot Dreame.",
+  "dreame_size": "Tamaño"
+}

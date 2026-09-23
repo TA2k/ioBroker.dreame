@@ -18,16 +18,16 @@
     "url": "git+https://github.com/TA2k/ioBroker.dreame.git"
   },
   "engines": {
-    "node": ">= 22"
+    "node": ">= 22.19.0"
   },
   "dependencies": {
     "@iobroker/adapter-core": "^3.4.3",
     "axios": "^1.20.0",
     "axios-retry": "^4.5.0",
     "crypto-js": "^4.2.0",
-    "json2iob": "^2.6.25",
-    "mqtt": "^5.15.2",
-    "pako": "^3.0.1"
+    "json2iob": "^2.6.26",
+    "mqtt": "^5.16.0",
+    "pako": "^3.0.2"
   },
   "optionalDependencies": {
     "canvas": "^3.2.3"
@@ -39,15 +39,15 @@
     "@alcalzone/release-script-plugin-manual-review": "^5.2.0",
     "@eslint/eslintrc": "^3.3.7",
     "@eslint/js": "^10.0.1",
-    "@iobroker/testing": "^6.1.0",
+    "@iobroker/testing": "^6.2.2",
     "@tsconfig/node22": "^22.0.6",
-    "@types/node": "^22.20.1",
-    "eslint": "^10.9.1",
+    "@types/node": "^22.20.4",
+    "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
     "globals": "^17.12.0",
-    "prettier": "^3.9.6",
-    "typescript": "^6.0.3"
+    "prettier": "^3.9.8",
+    "typescript": "~6.0.3"
   },
   "main": "main.js",
   "files": [
@@ -55,19 +55,37 @@
     "admin{,/!(src)/**}/*.{html,css,png,svg,jpg,js}",
     "lib/",
     "www/",
+    "widgets/",
     "io-package.json",
     "LICENSE",
     "main.js"
   ],
   "scripts": {
-    "test:js": "mocha --config test/mocharc.custom.json \"{!(node_modules|test)/**/*.test.js,*.test.js,test/**/*.test.js,test/**/test!(PackageFiles|Startup).js}\"",
+    "test:js": "mocha --config test/mocharc.custom.json \"{!(node_modules|test|src-tab|src-devices|src-widgets)/**/*.test.js,*.test.js,test/**/*.test.js,test/**/test!(PackageFiles|Startup).js}\"",
     "test:package": "mocha test/package --exit",
-    "test:integration": "mocha test/integration --exit",
+    "test:integration": "mocha test/integration --exit && npm run tab:test && npm run tab:typecheck",
     "test": "npm run test:js && npm run test:package",
+    "build": "npm run tab:app && npm run devices:app && npm run vis:app",
+    "tab:install": "npm --prefix src-tab install",
+    "tab:clean": "node -e \"require('node:fs').rmSync('admin/assets',{recursive:true,force:true})\"",
+    "tab:build": "npm run tab:clean && npm --prefix src-tab run build",
+    "tab:test": "npm --prefix src-tab run test",
+    "tab:typecheck": "npm --prefix src-tab run typecheck",
+    "tab:app": "npm run tab:install && npm run tab:clean && npm run tab:build && npm run tab:typecheck",
+    "devices:install": "npm --prefix src-devices install",
+    "devices:build": "npm --prefix src-devices run build && node tasks.js devices",
+    "devices:typecheck": "npm --prefix src-devices run typecheck",
+    "devices:app": "npm run devices:install && npm run devices:typecheck && npm run devices:build",
+    "vis:install": "npm --prefix src-widgets install",
+    "vis:build": "npm --prefix src-widgets run build && node tasks.js vis",
+    "vis:typecheck": "npm --prefix src-widgets run typecheck",
+    "vis:app": "npm run vis:install && npm run vis:typecheck && npm run vis:build",
     "check": "tsc --noEmit -p tsconfig.check.json",
     "lint": "eslint .",
     "translate": "translate-adapter --base lib/i18n/en.json --languages de ru pt nl fr it es pl uk zh-cn",
-    "release": "release-script --all"
+    "release": "release-script --all",
+    "update-packages": "npx -y npm-check-updates --upgrade && cd src-widgets && npx -y npm-check-updates --upgrade && cd ../src-devices && npx -y npm-check-updates --upgrade && cd ../src-tab && npx -y npm-check-updates --upgrade",
+    "npm": "npm i && cd src-widgets && npm i && cd ../src-devices && npm i && cd ../src-tab && npm i"
   },
   "overrides": {
     "serialize-javascript": "^7.0.5"

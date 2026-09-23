@@ -1,0 +1,22 @@
+{
+  "dreame_caption": "літерування",
+  "dreame_caption_auto": "Автоматичний (робот, з вибраною підлогою)",
+  "dreame_caption_custom": "Власний текст",
+  "dreame_caption_none": "Жоден",
+  "dreame_caption_text": "Власний підпис",
+  "dreame_caption_text_help": "Якщо залишити порожнім, відображається автоматичний підпис",
+  "dreame_content": "Вміст плитки",
+  "dreame_content_auto": "Автоматично (карта 2×2, статус в іншому випадку)",
+  "dreame_content_map": "Карта",
+  "dreame_content_status": "Статус",
+  "dreame_device": "Робот",
+  "dreame_device_auto": "Автоматичний (перший робот dreame.0)",
+  "dreame_dialog_2d": "2D",
+  "dreame_dialog_3d": "3D",
+  "dreame_dialog_mode": "Переглянути в діалоговому вікні",
+  "dreame_floor": "Карта поверху",
+  "dreame_floor_follow": "Автоматичний (підлога, на якій знаходиться робот)",
+  "dreame_floor_help": "Будь-який інший поверх відображається як нерухоме зображення, яке зберігає адаптер.",
+  "dreame_no_device": "Робота Dreame не знайдено",
+  "dreame_size": "Розмір"
+}
