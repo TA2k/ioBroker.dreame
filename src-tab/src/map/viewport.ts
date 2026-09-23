@@ -131,3 +131,34 @@ export function unrotate(u: number, v: number, rotation: number): { x: number; y
 	if (rotation === 270) return { x: 1 - v, y: u };
 	return { x: u, y: v };
 }
+
+/** A map's size on screen, in pixels, and how many pixels one map cell is. */
+export interface MapFit {
+	scale: number;
+	width: number;
+	height: number;
+}
+
+/**
+ * Fits a map into the space it is given, keeping its shape.
+ *
+ * Worked out here rather than left to CSS: `aspect-ratio` together with `max-height` does not
+ * keep a ratio. Where the box is too tall for the space the browser shortens it and leaves the
+ * width, and the map is then drawn stretched - or, worse, drawn stretched on the canvas while the
+ * overlay above it keeps the true ratio, which sets the trail and the markers off against the
+ * floor underneath.
+ *
+ * @param sideways the map is turned by a quarter, so its width lies along the box's height
+ */
+export function fitMap(
+	space: { width: number; height: number },
+	width: number,
+	height: number,
+	sideways = false,
+): MapFit {
+	const across = sideways ? height : width;
+	const down = sideways ? width : height;
+	if (space.width <= 0 || space.height <= 0 || across <= 0 || down <= 0) return { scale: 0, width: 0, height: 0 };
+	const scale = Math.min(space.width / across, space.height / down);
+	return { scale, width: across * scale, height: down * scale };
+}

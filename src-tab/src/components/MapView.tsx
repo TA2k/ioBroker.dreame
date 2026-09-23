@@ -56,6 +56,7 @@ import {
 	MIN_SCALE,
 	ZOOM_STEP,
 	clampPan,
+	fitMap,
 	isClick,
 	isFitted,
 	unrotate,
@@ -128,7 +129,7 @@ export function MapView({
 	const [maskUrl, setMaskUrl] = useState<string | null>(null);
 	const boxRef = useRef<HTMLDivElement | null>(null);
 	const outerRef = useRef<HTMLDivElement | null>(null);
-	const [boxWidth, setBoxWidth] = useState(0);
+	const [space, setSpace] = useState({ width: 0, height: 0 });
 	const [view, setView] = useState<Viewport>(FITTED);
 	// A ref rather than state: it changes on every pointer move and nothing renders from it.
 	const dragRef = useRef<{
@@ -177,18 +178,25 @@ export function MapView({
 	}, [interactive]);
 
 	// Watched rather than measured once: the admin's sidebar collapses, the window resizes, and a
-	// label sized against a stale width is the kind of wrong that only shows up on someone else's
+	// map sized against a stale box is the kind of wrong that only shows up on someone else's
 	// screen.
 	useEffect(() => {
-		const box = boxRef.current;
-		if (!box) return;
+		const outer = outerRef.current;
+		if (!outer) return;
+
+		const measure = (rect: { width: number; height: number }): void =>
+			setSpace(current =>
+				current.width === rect.width && current.height === rect.height
+					? current
+					: { width: rect.width, height: rect.height },
+			);
 
 		const observer = new ResizeObserver(entries => {
 			const entry = entries[0];
-			if (entry) setBoxWidth(entry.contentRect.width);
+			if (entry) measure(entry.contentRect);
 		});
-		observer.observe(box);
-		setBoxWidth(box.getBoundingClientRect().width);
+		observer.observe(outer);
+		measure(outer.getBoundingClientRect());
 
 		return () => observer.disconnect();
 	}, []);
@@ -264,9 +272,12 @@ export function MapView({
 	// Divided by the zoom as well: the labels keep a constant size on screen, so zooming in shows
 	// more map rather than bigger words. The widget does the same through `skaliereMarken`.
 	const sideways = rotation === 90 || rotation === 270;
-	// A quarter turn lays the map's width along the box's height.
-	const mapWidthPx = sideways ? (boxWidth * width) / height : boxWidth;
-	const fontSize = mapWidthPx > 0 ? (LABEL_PX * width) / (mapWidthPx * view.scale) : 0;
+
+	// Both sides in pixels, so that canvas and overlay are drawn on exactly the same rectangle.
+	const fit = fitMap(space, width, height, sideways);
+
+	// One map cell is `fit.scale` pixels before zooming; the labels keep their size on screen.
+	const fontSize = fit.scale > 0 ? LABEL_PX / (fit.scale * view.scale) : 0;
 	/** Turns a label or badge back upright about its own centre. */
 	const upright = (x: number, y: number): string | undefined =>
 		rotation ? `rotate(${-rotation} ${x.toFixed(2)} ${y.toFixed(2)})` : undefined;
@@ -389,11 +400,10 @@ export function MapView({
 				ref={boxRef}
 				sx={{
 					position: "relative",
-					aspectRatio: sideways ? `${height} / ${width}` : `${width} / ${height}`,
-					maxWidth: "100%",
-					maxHeight: "100%",
-					// Without a width the flex parent gives an aspect-ratio box no size to start from.
-					width: "100%",
+					// Both sides in pixels, so the map keeps its shape - see `fit` above.
+					width: fit.width,
+					height: fit.height,
+					flex: "0 0 auto",
 					transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
 					// Cell edges stay hard under magnification; the browser would otherwise smooth
 					// the canvas as part of the transform.
@@ -436,6 +446,10 @@ export function MapView({
 					/>
 					<svg
 						viewBox={`0 0 ${width} ${height}`}
+						// Follows the box exactly, as the canvas does. With the default, any difference
+						// between the box's shape and the map's would letterbox the overlay and set the
+						// trail, the rooms and the markers off against the floor underneath.
+						preserveAspectRatio="none"
 						style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
 					>
 						{/*

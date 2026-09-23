@@ -5,6 +5,7 @@ import {
 	MIN_SCALE,
 	clampPan,
 	clampScale,
+	fitMap,
 	isClick,
 	isFitted,
 	panBy,
@@ -138,5 +139,37 @@ describe("unrotate", () => {
 	it("undoes a quarter turn exactly", () => {
 		// The map's top right corner (1, 0) ends up bottom right after 90 degrees.
 		expect(unrotate(1, 1, 90)).toEqual({ x: 1, y: 0 });
+	});
+});
+
+describe("fitMap", () => {
+	it("fills the width where the space is taller than the map", () => {
+		expect(fitMap({ width: 200, height: 400 }, 100, 50)).toEqual({ scale: 2, width: 200, height: 100 });
+	});
+
+	it("fills the height where the space is wider, rather than stretching the map", () => {
+		// A wide, short space - the shape the map was drawn stretched in.
+		expect(fitMap({ width: 2000, height: 600 }, 100, 50)).toEqual({ scale: 12, width: 1200, height: 600 });
+	});
+
+	it("keeps the map's shape, whatever the space", () => {
+		for (const space of [
+			{ width: 300, height: 1000 },
+			{ width: 1000, height: 300 },
+			{ width: 640, height: 640 },
+		]) {
+			const fit = fitMap(space, 120, 80);
+			expect(fit.width / fit.height).toBeCloseTo(120 / 80);
+			expect(fit.width).toBeLessThanOrEqual(space.width + 0.001);
+			expect(fit.height).toBeLessThanOrEqual(space.height + 0.001);
+		}
+	});
+
+	it("swaps the sides for a quarter turn", () => {
+		expect(fitMap({ width: 400, height: 400 }, 100, 50, true)).toEqual({ scale: 4, width: 200, height: 400 });
+	});
+
+	it("has no size before the space has been measured", () => {
+		expect(fitMap({ width: 0, height: 0 }, 100, 50)).toEqual({ scale: 0, width: 0, height: 0 });
 	});
 });
