@@ -160,7 +160,13 @@ export function StatusTile({ connection, instanceId, did, caption }: StatusTileP
 						}}
 						aria-label={`${I18n.t("tile.akku")} ${battery} %`}
 					>
-						<BatteryIcon sx={{ fontSize: "clamp(12px, 9cqmin, 18px)" }} />
+						{/*
+						 * `style`, not `sx`: in vis-2 the icons are the one part of MUI that comes from this
+						 * bundle rather than from the host, and an `sx` on them is worked out by this
+						 * bundle's MUI against the host's theme. Where the two MUI versions differ, that
+						 * throws - the theme of an older one has no `breakpoints.internal_mediaKeys`.
+						 */}
+						<BatteryIcon style={{ fontSize: "clamp(12px, 9cqmin, 18px)" }} />
 						<Typography sx={{ fontSize: "clamp(10px, 8cqmin, 14px)", lineHeight: 1 }}>{battery} %</Typography>
 					</Box>
 				) : null}

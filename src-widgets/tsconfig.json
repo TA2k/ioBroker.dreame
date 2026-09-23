@@ -17,7 +17,6 @@
 		"noEmit": true,
 		"jsx": "react-jsx",
 		"types": ["vite/client", "@iobroker/types"],
-		"baseUrl": ".",
 		"paths": {
 			"@dreame/*": ["../src-tab/src/*"],
 			"@i18n/*": ["../src-tab/i18n/*"],

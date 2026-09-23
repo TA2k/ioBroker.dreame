@@ -46,6 +46,9 @@ const config = {
 			{ find: "@i18n", replacement: dir("../src-tab/i18n") },
 			// The package itself only, not its sub-paths: `./src/guiComponents.ts` reaches `I18n` by one.
 			{ find: /^@iobroker\/gui-components$/, replacement: dir("./src/guiComponents.ts") },
+			// The icon package reaches for this deep path, which the share scope does not cover, and
+			// pulled a second MUI into the bundle with it - see `./src/muiSvgIcon.tsx`.
+			{ find: /^@mui\/material\/SvgIcon$/, replacement: dir("./src/muiSvgIcon.tsx") },
 		],
 		dedupe: [
 			"react",
