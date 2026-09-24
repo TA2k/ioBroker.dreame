@@ -5227,12 +5227,19 @@ class Dreame extends utils.Adapter {
 
             if (entry.contours && entry.contours.value) {
               for (const [contourId, contour] of entry.contours.value) {
-                const cId = Array.isArray(contourId) ? contourId.join('_') : contourId;
+                const rawContourId = Array.isArray(contourId)
+				  ? contourId.join('_')
+				  : String(contourId);
+				
+				// ioBroker object IDs must not contain commas or other invalid characters.
+				const cId = rawContourId.replace(/[^a-zA-Z0-9_-]/g, '_');
                 const contourPath = slotPath + '.contour' + cId;
                 await this.extendObject(contourPath, {
                   type: 'channel',
-                  common: { name: 'Contour ' + cId },
-                  native: {},
+                  common: { name: 'Contour ' + rawContourId },
+                  native: {
+					  countourId: rawContourId,
+				  },
                 });
                 await this.setObjectAndState(contourPath + '.type', 'Contour Type', 'number', 'value', contour.type);
                 await this.setObjectAndState(
