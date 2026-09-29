@@ -63,10 +63,12 @@
   "scripts": {
     "test:js": "mocha --config test/mocharc.custom.json \"{!(node_modules|test|src-tab|src-devices|src-widgets)/**/*.test.js,*.test.js,test/**/*.test.js,test/**/test!(PackageFiles|Startup).js}\"",
     "test:package": "mocha test/package --exit",
-    "test:integration": "mocha test/integration --exit && npm run tab:test && npm run tab:typecheck",
+    "test:integration": "mocha test/integration --exit",
+    "test:tab": "npm run tab:install && npm run tab:test && npm run tab:typecheck",
     "test": "npm run test:js && npm run test:package",
     "build": "npm run tab:app && npm run devices:app && npm run vis:app",
     "tab:install": "npm --prefix src-tab install",
+    "tab:ci": "npm --prefix src-tab ci",
     "tab:clean": "node -e \"require('node:fs').rmSync('admin/assets',{recursive:true,force:true})\"",
     "tab:build": "npm run tab:clean && npm --prefix src-tab run build",
     "tab:test": "npm --prefix src-tab run test",

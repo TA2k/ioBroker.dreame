@@ -15,7 +15,7 @@
 		"isolatedModules": true,
 		"skipLibCheck": true,
 		"noEmit": true,
-		"types": ["vite/client", "vitest/globals", "@iobroker/types"],
+		"types": ["node", "vite/client", "vitest/globals", "@iobroker/types"],
 		"paths": {
 			"@i18n/*": ["./i18n/*"]
 		}

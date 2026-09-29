@@ -33,6 +33,32 @@ jobs:
           # install-command: 'npm install'
           lint: true
 
+  # Unit tests and typecheck of the React admin tab, which is an own npm package in src-tab
+  # and therefore not covered by the root 'npm ci' of the adapter tests
+  tab-tests:
+    needs: [check-and-lint]
+    if: contains(github.event.head_commit.message, '[skip ci]') == false
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+          cache: 'npm'
+          cache-dependency-path: src-tab/package-lock.json
+
+      - name: Install src-tab dependencies
+        run: npm --prefix src-tab ci
+
+      - name: Run tab unit tests
+        run: npm run tab:test
+
+      - name: Typecheck the tab sources
+        run: npm run tab:typecheck
+
   # Runs adapter tests on all supported node versions and OSes
   adapter-tests:
     needs: [check-and-lint]

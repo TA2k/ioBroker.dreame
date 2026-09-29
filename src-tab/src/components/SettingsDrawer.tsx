@@ -80,6 +80,10 @@ export function SettingsDrawer({
 			anchor="right"
 			open={open}
 			onClose={onClose}
+			// A drawer sits below a dialog by default, and in the devices app and in vis-2 the view
+			// itself lives in one - so the gear would open the settings behind it. One above the
+			// modal layer puts them in front there, and changes nothing on the page or in the tab.
+			sx={{ zIndex: t => t.zIndex.modal + 1 }}
 			slotProps={{ paper: { sx: { width: phone ? "100%" : 380, maxWidth: "100%" } } }}
 		>
 			<Stack direction="row" sx={{ alignItems: "center", px: 2, py: 1 }}>
