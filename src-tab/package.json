@@ -15,7 +15,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@iobroker/gui-components": "^10.3.2",
+    "@iobroker/gui-components": "^10.3.7",
     "@mui/icons-material": "^9.4.0",
     "@mui/material": "^9.4.0",
     "react": "^19.3.0",
