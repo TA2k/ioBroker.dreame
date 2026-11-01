@@ -48,10 +48,9 @@ export function activity(states: SF25States): "running" | "paused" | "standby" |
 }
 
 export function controls(states: SF25States, now: number) {
-	const ready =
-		fresh(states["status.state"], now) &&
-		fresh(states["info.online"], now) &&
-		booleanValue(states["info.online"]) === true;
+	// info.online is written on reachability transitions only, not on every poll.
+	// Its age says nothing about liveness; fresh status supplies that evidence.
+	const ready = fresh(states["status.state"], now) && booleanValue(states["info.online"]) === true;
 	const current = activity(states);
 	const idle = current === "standby" || current === "sleeping";
 	const runningFresh = fresh(states["status.running-state"], now);
@@ -64,7 +63,9 @@ export function controls(states: SF25States, now: number) {
 		pause: ready && current === "running" && runningFresh,
 		resume: ready && current === "paused" && runningFresh && lidClosed,
 		stop: ready && (current === "running" || current === "paused"),
-		wake: ready && current === "sleeping",
+		// Recovery must work even when status is old or reachability is unconfirmed.
+		// The controller confirms awake status; this does not start a program.
+		wake: current === "sleeping" || !ready,
 		openLid:
 			ready &&
 			current === "standby" &&

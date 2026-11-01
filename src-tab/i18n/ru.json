@@ -401,7 +401,7 @@
   "sf25.ui.lidNote": "Opening requires fresh standby and stopped program/running flags, a closed lid and at most 40 °C. The adapter checks again before opening. Closing is manual.",
   "sf25.ui.silent": "Mute voice and tones",
   "sf25.ui.childLock": "Child lock",
-  "sf25.ui.stale": "Current device state or reachability is unconfirmed. Controls are disabled until fresh values arrive.",
+  "sf25.ui.stale": "Current device state or reachability is unconfirmed. Wake and Refresh remain available; starting and opening the lid require confirmed current readings.",
   "sf25.ui.loadFailed": "Device values could not be loaded. Check the ioBroker connection and refresh.",
   "sf25.ui.sent": "Command sent to the adapter. Check the device status to confirm execution; rejected commands are recorded in the adapter log.",
   "sf25.ui.failed": "The command could not be sent. Check the ioBroker connection.",

@@ -46,6 +46,21 @@ function harness() {
 }
 afterEach(cleanup);
 describe("SF25 controls", () => {
+	it("keeps wake available when reachability is unconfirmed and writes only the wake command", async () => {
+		const h = harness();
+		render(<SF25View connection={h.connection} instanceId="dreame.2" did="-123" header="SF25" />);
+		await waitFor(() => expect(h.handlers.size).toBe(14));
+		await act(async () => {
+			h.update("info.online", false);
+			h.update("status.state", 3);
+		});
+		expect((screen.getByRole("button", { name: "sf25.ui.start" }) as HTMLButtonElement).disabled).toBe(true);
+		const wake = screen.getByRole("button", { name: "sf25.ui.wake" }) as HTMLButtonElement;
+		expect(wake.disabled).toBe(false);
+		fireEvent.click(wake);
+		await waitFor(() => expect(h.connection.setState).toHaveBeenCalledWith("dreame.2.-123.remote.wake", true));
+		expect(h.connection.setState).toHaveBeenCalledTimes(1);
+	});
 	it("never issues a device command on mount and confirms program starts", async () => {
 		const h = harness();
 		render(<SF25View connection={h.connection} instanceId="dreame.2" did="-123" header="Biomüllreaktor" />);

@@ -34,7 +34,8 @@ export function SF25View({
 }): React.JSX.Element {
 	const t = (key: string): string => I18n.t(`sf25.ui.${key}`);
 	const { states, error } = useSF25(connection, `${instanceId}.${did}`);
-	const [now, setNow] = useState(Date.now());
+	const [, refreshClock] = useState(0);
+	const now = Date.now();
 	const [pending, setPending] = useState(false);
 	const [notice, setNotice] = useState<"sent" | "failed" | null>(null);
 	const [confirmation, setConfirmation] = useState<number | null>(null);
@@ -42,7 +43,7 @@ export function SF25View({
 	const alive = useRef(true);
 	useEffect(() => {
 		alive.current = true;
-		const timer = window.setInterval(() => setNow(Date.now()), 10000);
+		const timer = window.setInterval(() => refreshClock(tick => tick + 1), 10000);
 		return () => {
 			alive.current = false;
 			window.clearInterval(timer);
@@ -109,14 +110,7 @@ export function SF25View({
 								{t(available.stale ? "unknown" : current)}
 							</Typography>
 							<Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }} useFlexGap>
-								<Chip
-									size="small"
-									label={t(
-										booleanValue(states["info.online"]) === true && fresh(states["info.online"], now)
-											? "reachable"
-											: "unavailable",
-									)}
-								/>
+								<Chip size="small" label={t(available.ready ? "reachable" : "unavailable")} />
 								<Chip
 									size="small"
 									variant="outlined"

@@ -401,7 +401,7 @@
   "sf25.ui.lidNote": "Öffnen erfordert frischen Standby, gestoppte Programm- und Laufwerte, einen geschlossenen Deckel und höchstens 40 °C. Der Adapter prüft vor dem Öffnen erneut. Schließen erfolgt von Hand.",
   "sf25.ui.silent": "Sprachansagen und Töne stumm",
   "sf25.ui.childLock": "Kindersicherung",
-  "sf25.ui.stale": "Aktueller Gerätestatus oder Erreichbarkeit unbestätigt. Die Bedienung bleibt bis zu frischen Werten gesperrt.",
+  "sf25.ui.stale": "Aktueller Gerätestatus oder Erreichbarkeit unbestätigt. Aufwecken und Aktualisieren bleiben verfügbar; Start und Deckelöffnung benötigen bestätigte aktuelle Werte.",
   "sf25.ui.loadFailed": "Gerätewerte konnten nicht geladen werden. ioBroker-Verbindung prüfen und aktualisieren.",
   "sf25.ui.sent": "Befehl an den Adapter gesendet. Ausführung am Gerätestatus prüfen; abgelehnte Befehle stehen im Adapterprotokoll.",
   "sf25.ui.failed": "Befehl konnte nicht gesendet werden. Bitte die ioBroker-Verbindung prüfen.",

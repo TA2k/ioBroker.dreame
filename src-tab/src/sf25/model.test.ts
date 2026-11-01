@@ -13,6 +13,25 @@ const idle = (): SF25States => ({
 	"status.temperature": state(40),
 });
 describe("SF25 view state and command policy", () => {
+	it("treats online as a transition flag, not a heartbeat, while requiring fresh device readings", () => {
+		const states = { ...idle(), "info.online": { ...state(true), ts: now - 3600000 } };
+		expect(controls(states, now)).toMatchObject({ ready: true, start: true, openLid: true });
+		expect(controls(states, now + MAX_STATE_AGE + 1)).toMatchObject({
+			ready: false,
+			start: false,
+			openLid: false,
+			wake: true,
+		});
+	});
+	it("allows waking as recovery with offline, unknown or old data without enabling guarded commands", () => {
+		for (const states of [
+			{},
+			{ ...idle(), "info.online": state(false) },
+			{ ...idle(), "status.state": { ...state(3), ts: now - MAX_STATE_AGE - 1 } },
+		]) {
+			expect(controls(states, now)).toMatchObject({ wake: true, start: false, openLid: false });
+		}
+	});
 	it("gives standby and sleep precedence over retained running flags", () => {
 		expect(activity({ ...idle(), "status.running-state": state(1), "remote.program": state(1) })).toBe("standby");
 		expect(activity({ ...idle(), "status.state": state(3), "status.running-state": state(1) })).toBe("sleeping");
