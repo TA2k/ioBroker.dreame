@@ -20,6 +20,7 @@ import { I18n } from "@iobroker/gui-components";
 import type { TabConnection } from "../connection/types";
 import { activity, booleanValue, controls, fresh, numeric, sendCommand } from "../sf25/model";
 import { useSF25 } from "../sf25/useSF25";
+import sf25Image from "../assets/sf25.png";
 
 export function SF25View({
 	connection,
@@ -104,35 +105,50 @@ export function SF25View({
 						{action("refresh", true, "Refresh", true)}
 					</Stack>
 					<Card variant="outlined">
-						<CardContent>
-							<Typography variant="overline">{t("operation")}</Typography>
-							<Typography variant="h4" sx={{ my: 1 }}>
-								{t(available.stale ? "unknown" : current)}
-							</Typography>
-							<Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }} useFlexGap>
-								<Chip size="small" label={t(available.ready ? "reachable" : "unavailable")} />
-								<Chip
-									size="small"
-									variant="outlined"
-									label={t(
-										booleanValue(states["status.lid-open"]) === true
-											? "lidOpen"
-											: booleanValue(states["status.lid-open"]) === false
-												? "lidClosed"
-												: "lidUnknown",
-									)}
-								/>
-							</Stack>
-							<Typography color="text.secondary" sx={{ mt: 1.5 }}>
-								{t("updated")}: {timestamp(stamp)}
-							</Typography>
-							<Typography color="text.secondary" variant="body2">
-								{t("program")}:{" "}
-								{program === null ? "—" : [-1, 0, 1, 2].includes(program) ? t(`program${program}`) : `${program}`}
-								{(current === "standby" || current === "sleeping") && program !== -1 && program !== null
-									? ` · ${t("retained")}`
-									: ""}
-							</Typography>
+						<CardContent sx={{ display: "flex", alignItems: "center", gap: { xs: 1, sm: 3 } }}>
+							<Box sx={{ flex: 1, minWidth: 0 }}>
+								<Typography variant="overline">{t("operation")}</Typography>
+								<Typography variant="h4" sx={{ my: 1 }}>
+									{t(available.stale ? "unknown" : current)}
+								</Typography>
+								<Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }} useFlexGap>
+									<Chip size="small" label={t(available.ready ? "reachable" : "unavailable")} />
+									<Chip
+										size="small"
+										variant="outlined"
+										label={t(
+											booleanValue(states["status.lid-open"]) === true
+												? "lidOpen"
+												: booleanValue(states["status.lid-open"]) === false
+													? "lidClosed"
+													: "lidUnknown",
+										)}
+									/>
+								</Stack>
+								<Typography color="text.secondary" sx={{ mt: 1.5 }}>
+									{t("updated")}: {timestamp(stamp)}
+								</Typography>
+								<Typography color="text.secondary" variant="body2">
+									{t("program")}:{" "}
+									{program === null ? "—" : [-1, 0, 1, 2].includes(program) ? t(`program${program}`) : `${program}`}
+									{(current === "standby" || current === "sleeping") && program !== -1 && program !== null
+										? ` · ${t("retained")}`
+										: ""}
+								</Typography>
+							</Box>
+							<Box
+								component="img"
+								src={sf25Image}
+								alt="Dreame SF25 WiFi"
+								sx={{
+									width: { xs: 96, sm: 240 },
+									height: { xs: 132, sm: 200 },
+									objectFit: "cover",
+									flexShrink: 0,
+									borderRadius: 1,
+									bgcolor: "#fff",
+								}}
+							/>
 						</CardContent>
 					</Card>
 					{(error || !available.ready) && <Alert severity="warning">{t(error ? "loadFailed" : "stale")}</Alert>}
