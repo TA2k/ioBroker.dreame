@@ -17,6 +17,8 @@ const zlib = require('node:zlib');
 const { buildGoToPointIn, parsePositionPair } = require('./lib/go-to-point');
 const { ReachabilityTracker } = require('./lib/reachability');
 const { isR2253Model } = require('./lib/specs/station');
+const { isSF25, statusTopic: sf25StatusTopic } = require('./lib/specs/sf25');
+const { SF25Controller } = require('./lib/sf25');
 //check if canvas is available because is optional dependency
 let createCanvas;
 let ImageData;
@@ -474,6 +476,7 @@ class Dreame extends utils.Adapter {
     this.specMetaDict = {};
     this.compoundRaw = {};
     this.createdStates = new Set();
+    this.sf25 = new SF25Controller(this);
   }
   /**
    * Is called when databases are connected and adapter received configuration.
@@ -485,6 +488,7 @@ class Dreame extends utils.Adapter {
     return this.getDeviceType(device) === 'vacuum';
   }
   getDeviceType(device) {
+    if (isSF25(device)) return 'fwd';
     if (!device || !device.model) return 'vacuum';
     const model = device.model.toLowerCase();
     if (model.includes('mower')) return 'mower';
@@ -501,6 +505,7 @@ class Dreame extends utils.Adapter {
   // im MIoT-Spec des KONKRETEN Geraets (nicht der statischen lib/specs-Tabelle, die fuer
   // alle Staubsauger gleich ist und daher als Praesenz-Check untauglich waere).
   deviceHasMopPadLifting(device) {
+    if (isSF25(device)) return false;
     const specType = device && device.spec_type;
     this._mopPadLiftingCache = this._mopPadLiftingCache || {};
     if (Object.prototype.hasOwnProperty.call(this._mopPadLiftingCache, specType)) {
@@ -983,7 +988,7 @@ class Dreame extends utils.Adapter {
             await this.extendObject(device.did, {
               type: 'device',
               common: {
-                name: device.customName || device.deviceInfo.displayName || device.model,
+                name: device.customName || device.deviceInfo?.displayName || device.model,
                 // Links the device to its reachability state so Admin and VIS
                 // render the status indicator on the device itself.
                 statusStates: { onlineId: `${this.namespace}.${device.did}.info.online` },
@@ -1007,6 +1012,10 @@ class Dreame extends utils.Adapter {
               },
               native: {},
             });
+            if (isSF25(device)) {
+              this.json2iob.parse(device.did + '.general', device, { channelName: 'General Updated at Start' });
+              continue;
+            }
             this.extendObject(device.did + '.map', {
               type: 'channel',
               common: {
@@ -1084,12 +1093,20 @@ class Dreame extends utils.Adapter {
               await this.getMap(device, true);
             }
           }
-          const deviceInfoList = this.deviceArray.map((d) => ({
+          // This list feeds the robot/map widgets, which do not support FWD devices.
+          const deviceInfoList = this.deviceArray.filter((d) => !isSF25(d)).map((d) => ({
             did: String(d.did),
             name: d.customName || (d.deviceInfo && d.deviceInfo.displayName) || d.model,
             typ: this.isMower(d) ? 'mower' : 'vacuum',
           }));
           await this.setStateAsync('info.devices', JSON.stringify(deviceInfoList), true);
+          // Separate list for the SF25-aware tab; legacy robot widgets keep their robot-only list.
+          const sf25Devices = this.deviceArray.filter(isSF25).map((d) => ({
+            did: String(d.did),
+            name: d.customName || (d.deviceInfo && d.deviceInfo.displayName) || d.model,
+            typ: 'fwd',
+          }));
+          await this.setStateAsync('info.sf25Devices', JSON.stringify(sf25Devices), true);
         } else {
           this.log.error('No Devices found: ' + JSON.stringify(response.data));
         }
@@ -1110,6 +1127,7 @@ class Dreame extends utils.Adapter {
   // values, so mirror them as a baseline (an actual poll/MQTT value overwrites
   // this because the poll runs afterwards / MQTT is realtime).
   async _bridgeStatusSummary(record) {
+    if (isSF25(record)) return; // COMM_MCU properties must be read via RPC.
     if (!record || this.isMower(record)) return;
     const did = String(record.did);
     if (record.latestStatus != null) {
@@ -1171,6 +1189,7 @@ class Dreame extends utils.Adapter {
   }
 
   async fetchSpecs() {
+    if (this.deviceArray.every(isSF25)) return;
     this.log.info('Fetching Specs');
     const allDevices = await this.requestClient({
       url: 'https://miot-spec.org/miot-spec-v2/instances?status=all',
@@ -1183,6 +1202,7 @@ class Dreame extends utils.Adapter {
     if (!allDevices || !allDevices.data || !allDevices.data.instances) {
       this.log.warn('Could not fetch device specs from miot-spec.org — using fallback spec for all devices');
       for (const device of this.deviceArray) {
+        if (isSF25(device)) continue;
         device.spec_type = 'urn:miot-spec-v2:device:vacuum:0000A006:dreame-r2320:1';
       }
       return;
@@ -1190,6 +1210,7 @@ class Dreame extends utils.Adapter {
 
     const specs = [];
     for (const device of this.deviceArray) {
+      if (isSF25(device)) continue;
       const type = allDevices.data.instances
         .filter((obj) => {
           return obj.model === device.model && obj.status === 'released';
@@ -1225,6 +1246,10 @@ class Dreame extends utils.Adapter {
   }
   async createRemotes() {
     for (const device of this.deviceArray) {
+      if (isSF25(device)) {
+        await this.sf25.createSF25Remotes(device);
+        continue;
+      }
       if (this.specs[device.spec_type]) {
         this.log.debug(JSON.stringify(this.specs[device.spec_type]));
         await this.extractRemotesFromSpec(device);
@@ -4035,6 +4060,15 @@ class Dreame extends utils.Adapter {
   }
   async updateDevicesViaSpec() {
     for (const device of this.deviceArray) {
+      if (isSF25(device)) {
+        if (this.sf25.busy?.has(String(device.did))) continue;
+        try {
+          await this.sf25.updateSF25(device);
+        } catch (error) {
+          this.log.debug(`SF25 poll failed: ${error.message}`);
+        }
+        continue;
+      }
       if (this.config.getMap && !this.isMower(device)) {
         this.getMap(device);
       }
@@ -4158,6 +4192,18 @@ class Dreame extends utils.Adapter {
     this.mqttClient.on('connect', () => {
       this.log.info('Connected to MQTT');
       for (const device of this.deviceArray) {
+        if (isSF25(device)) {
+          try {
+            if (device.bindDomain && device.bindDomain !== url) {
+              this.log.warn('SF25 uses a different MQTT broker; using polling for this device');
+              continue;
+            }
+            this.mqttClient?.subscribe(sf25StatusTopic(device));
+          } catch (error) {
+            this.log.warn(error.message + '; SF25 will use polling');
+          }
+          continue;
+        }
         this.mqttClient.subscribe(`/status/${device.did}/${this.session.uid}/${device.model}/eu/`);
       }
     });
@@ -4179,6 +4225,12 @@ class Dreame extends utils.Adapter {
       }
       if (message.data && message.data.method === 'properties_changed') {
         const messageDid = String(message.did || message.data.did || '');
+        const sf25Did = messageDid || topic.toString().split('/')[2];
+        const sf25Device = this.deviceArray.find((d) => isSF25(d) && String(d.did) === sf25Did);
+        if (sf25Device) {
+          await this.sf25._sf25ApplyProperties(sf25Device, /** @type {any} */ (message).data.params, true);
+          return;
+        }
         for (const element of message.data.params) {
           const did = String(element.did || messageDid);
           // Eigenschaftsspeicher fuellen + Listener feuern — 1:1 die Stelle, an der HA
@@ -4810,6 +4862,7 @@ class Dreame extends utils.Adapter {
   }
 
   async getMap(device, fetchAllMaps) {
+    if (isSF25(device)) return;
     try {
       // Vollbild-Abruf (force-I) dieses Forks — der Rumpf steht in lib/mapController.js,
       // damit getMap() so nah wie moeglich am Original von TA2k bleibt.
@@ -6527,6 +6580,11 @@ class Dreame extends utils.Adapter {
    */
   async onStateChange(id, state) {
     if (state) {
+      const sf25Device = this.deviceArray.find((d) => isSF25(d) && String(d.did) === id.split('.')[2]);
+      if (sf25Device) {
+        await this.sf25.handleSF25State(sf25Device, id, state);
+        return;
+      }
       // custom-room-cleaning.start is a command (role:button) and must arrive with
       // ack:false. An ack:true write (e.g. a manual value edit rather than a control
       // click) would otherwise be silently skipped by the ack check below with no

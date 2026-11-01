@@ -262,6 +262,19 @@
       "native": {}
     },
     {
+      "_id": "info.sf25Devices",
+      "type": "state",
+      "common": {
+        "role": "json",
+        "name": "List of SF25 devices for the admin tab",
+        "type": "string",
+        "read": true,
+        "write": false,
+        "def": "[]"
+      },
+      "native": {}
+    },
+    {
       "_id": "info.devices",
       "type": "state",
       "common": {
