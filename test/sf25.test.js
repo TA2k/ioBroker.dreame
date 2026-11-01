@@ -375,6 +375,8 @@ describe('SF25 adapter integration', () => {
     assert(!c.objects.some((o) => o.id === '123.map'));
     const list = c.buttons.find((args) => args[0] === 'info.devices');
     assert.equal(list[1], '[]');
+    const tabList = c.buttons.find((args) => args[0] === 'info.sf25Devices');
+    assert.deepEqual(JSON.parse(tabList[1]), [{ did: '123', name: device.model, typ: 'fwd' }]);
   });
   it('dispatches only the SF25 handler for its commands', async () => {
     const c = adapter();

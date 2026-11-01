@@ -28,6 +28,7 @@ export interface StateValue {
 	ack?: boolean;
 	ts?: number;
 	lc?: number;
+	q?: number;
 }
 
 /**

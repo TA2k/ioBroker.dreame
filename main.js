@@ -1100,6 +1100,13 @@ class Dreame extends utils.Adapter {
             typ: this.isMower(d) ? 'mower' : 'vacuum',
           }));
           await this.setStateAsync('info.devices', JSON.stringify(deviceInfoList), true);
+          // Separate list for the SF25-aware tab; legacy robot widgets keep their robot-only list.
+          const sf25Devices = this.deviceArray.filter(isSF25).map((d) => ({
+            did: String(d.did),
+            name: d.customName || (d.deviceInfo && d.deviceInfo.displayName) || d.model,
+            typ: 'fwd',
+          }));
+          await this.setStateAsync('info.sf25Devices', JSON.stringify(sf25Devices), true);
         } else {
           this.log.error('No Devices found: ' + JSON.stringify(response.data));
         }

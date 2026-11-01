@@ -29,6 +29,7 @@ processing run, a complete self-cleaning cycle and adapter restart/reconnection.
 Temperature scaling, total cycle energy, network-interruption recovery and mixed
 SF25/robot accounts still need validation. See [SF25 test results and remaining
 validation](docs/SF25.md).
+The Dreame admin tab includes an SF25 dashboard with live readings and controls.
 
 ---
 
