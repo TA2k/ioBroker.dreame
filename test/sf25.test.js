@@ -74,8 +74,9 @@ describe('SF25 protocol and state handling', () => {
   it('creates commands without inheriting robot actions', async () => {
     const c = harness();
     await c.createSF25Remotes(device);
-    assert.equal(c.objects.length, 7);
+    assert.equal(c.objects.length, 8);
     assert(c.objects.some((o) => o.id === '123.remote.pause'));
+    assert(c.objects.some((o) => o.id === '123.remote.open-lid' && o.object.common.role === 'button'));
     assert(!c.objects.some((o) => /map|mop|battery|start/.test(o.id)));
   });
   it('polls explicit successes and discards errors, unknown addresses and invalid values', async () => {
@@ -137,6 +138,69 @@ describe('SF25 protocol and state handling', () => {
     assert.deepEqual(c.calls[0].data.data.params, [{ did: '6.17', siid: 6, piid: 17, value: 1 }]);
     assert.equal(c.calls[0]['axios-retry'].retries, 0);
     assert.equal(c.calls[1].data.data.method, 'get_properties');
+  });
+  const lidPreflight = (temperature = 40) => [prop(2, 1, 2), prop(2, 3, -1), prop(2, 10, -1), prop(3, 3, temperature)];
+  it('opens the lid only after fresh idle readings and confirms lid readback', async () => {
+    const c = harness([reply(lidPreflight()), reply([prop(6, 26, undefined)]), reply([prop(6, 26, 1)])]);
+    await c.handleSF25State(device, 'dreame.0.123.remote.open-lid', { val: true, ack: false });
+    assert.equal(c.warnings.length, 0);
+    assert.deepEqual(c.calls[0].data.data.params.map((p) => p.did), ['2.1', '2.3', '2.10', '3.3']);
+    assert.deepEqual(c.calls[1].data.data.params, [{ did: '6.26', siid: 6, piid: 26, value: 1 }]);
+    assert.equal(c.calls[1]['axios-retry'].retries, 0);
+    assert.deepEqual(c.buttons.at(-1), ['dreame.0.123.remote.open-lid', false, true]);
+  });
+  it('blocks lid opening while hot, working, paused, sleeping or retaining old running flags', async () => {
+    for (const [index, value] of [[3, 41], [0, 1], [0, 3], [1, 0], [1, 1], [2, 0], [2, 1]]) {
+      const readings = lidPreflight();
+      readings[index].value = value;
+      const c = harness([reply(readings)]);
+      await assert.rejects(c._sf25OpenLid(device), /lid opening requires/);
+      assert.equal(c.calls.length, 1);
+    }
+  });
+  it('fails closed on missing, failed, duplicate or nonnumeric lid preflight values', async () => {
+    for (let index = 0; index < 4; index++) {
+      for (const invalid of ['missing', 'failed', 'duplicate', 'string', 'nan', 'infinity']) {
+        const readings = lidPreflight();
+        if (invalid === 'missing') readings.splice(index, 1);
+        else if (invalid === 'failed') readings[index].code = 1;
+        else if (invalid === 'duplicate') readings.push({ ...readings[index] });
+        else readings[index].value = invalid === 'string' ? String(readings[index].value) : invalid === 'nan' ? NaN : Infinity;
+        const c = harness([reply(readings)]);
+        await assert.rejects(c._sf25OpenLid(device), /lid opening requires/);
+        assert.equal(c.calls.length, 1);
+      }
+    }
+  });
+  it('does not use cached standby data when the fresh lid preflight fails', async () => {
+    const c = harness([new Error('offline')]);
+    await c._sf25ApplyProperties(device, lidPreflight());
+    await c.handleSF25State(device, 'dreame.0.123.remote.open-lid', { val: true, ack: false });
+    assert.equal(c.calls.length, 1);
+    assert(c.warnings.some((text) => text.includes('offline')));
+    assert.deepEqual(c.buttons.at(-1), ['dreame.0.123.remote.open-lid', false, true]);
+  });
+  it('never wakes or retries a rejected or uncertain lid write', async () => {
+    for (const response of [reply([prop(6, 26, undefined, 1)]), reply([]), new Error('timeout')]) {
+      const c = harness([reply(lidPreflight()), response]);
+      await assert.rejects(c._sf25OpenLid(device));
+      assert.deepEqual(c.calls.map((r) => r.data.data.method), ['get_properties', 'set_properties']);
+    }
+  });
+  it('does not repeat an accepted lid command when opening is not confirmed', async () => {
+    const c = harness([reply(lidPreflight()), reply([prop(6, 26, undefined)]), reply([prop(6, 26, 0)])]);
+    await assert.rejects(c._sf25OpenLid(device), /not confirmed/);
+    assert.equal(c.calls.filter((r) => r.data.data.method === 'set_properties').length, 1);
+  });
+  it('ignores false or acknowledged lid buttons and refuses concurrent commands', async () => {
+    const c = harness();
+    const id = 'dreame.0.123.remote.open-lid';
+    await c.handleSF25State(device, id, { val: false, ack: false });
+    await c.handleSF25State(device, id, { val: true, ack: true });
+    c.busy.add('123');
+    await c.handleSF25State(device, id, { val: true, ack: false });
+    assert.equal(c.calls.length, 0);
+    assert(c.warnings.some((text) => text.includes('already in progress')));
   });
   it('retries a sleep rejection once after wake and verifies awake status', async () => {
     const c = harness([
@@ -238,7 +302,9 @@ describe('SF25 protocol and state handling', () => {
 
 describe('SF25 adapter integration', () => {
   let Adapter;
-  before(() => {
+  before(function () {
+    // Loading the real adapter and its dependencies can exceed 2 s on a cold disk.
+    this.timeout(10000);
     // Load the real adapter methods without starting ioBroker or a cloud login.
     const filename = path.join(__dirname, '../main.js');
     const realRequire = createRequire(filename);
