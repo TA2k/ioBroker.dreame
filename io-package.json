@@ -175,7 +175,19 @@
       "components": [
         {
           "name": "DreameRobotComponent",
-          "label": "Dreame robot",
+          "label": {
+            "en": "Dreame robot",
+            "de": "Dreame-Roboter",
+            "ru": "Робот Dreame",
+            "pt": "Robô Dreame",
+            "nl": "Dreame-robot",
+            "fr": "Robot Dreame",
+            "it": "Robot Dreame",
+            "es": "Robot Dreame",
+            "pl": "Robot Dreame",
+            "uk": "Робот Dreame",
+            "zh-cn": "Dreame 机器人"
+          },
           "description": {
             "en": "Shows the status or the map of a robot; a click opens the full view",
             "de": "Zeigt den Status oder die Karte eines Roboters; ein Klick öffnet die volle Ansicht",
@@ -206,6 +218,9 @@
         ]
       }
     },
+    "webComponents": [
+      "webcomponents/dreame-robot.json"
+    ],
     "restartAdapters": [
       "vis-2"
     ],

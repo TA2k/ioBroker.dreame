@@ -61,11 +61,11 @@
     "main.js"
   ],
   "scripts": {
-    "test:js": "mocha --config test/mocharc.custom.json \"{!(node_modules|test|src-tab|src-devices|src-widgets)/**/*.test.js,*.test.js,test/**/*.test.js,test/**/test!(PackageFiles|Startup).js}\"",
+    "test:js": "mocha --config test/mocharc.custom.json \"{!(node_modules|test|src-tab|src-devices|src-widgets|src-webcomponents)/**/*.test.js,*.test.js,test/**/*.test.js,test/**/test!(PackageFiles|Startup).js}\"",
     "test:package": "mocha test/package --exit",
     "test:integration": "mocha test/integration --exit && npm run tab:test && npm run tab:typecheck",
     "test": "npm run test:js && npm run test:package",
-    "build": "npm run tab:app && npm run devices:app && npm run vis:app",
+    "build": "npm run tab:app && npm run devices:app && npm run vis:app && npm run wc:app",
     "tab:install": "npm --prefix src-tab install",
     "tab:clean": "node -e \"require('node:fs').rmSync('admin/assets',{recursive:true,force:true})\"",
     "tab:build": "npm run tab:clean && npm --prefix src-tab run build",
@@ -80,12 +80,18 @@
     "vis:build": "npm --prefix src-widgets run build && node tasks.js vis",
     "vis:typecheck": "npm --prefix src-widgets run typecheck",
     "vis:app": "npm run vis:install && npm run vis:typecheck && npm run vis:build",
+    "wc:install": "npm --prefix src-webcomponents install",
+    "wc:build": "npm --prefix src-webcomponents run build && node tasks.js wc",
+    "wc:typecheck": "npm --prefix src-webcomponents run check-ts",
+    "wc:lint": "npm --prefix src-webcomponents run lint",
+    "wc:app": "npm run wc:install && npm run wc:typecheck && npm run wc:build",
+    "build:wc": "npm run wc:app",
     "check": "tsc --noEmit -p tsconfig.check.json",
     "lint": "eslint .",
     "translate": "translate-adapter --base lib/i18n/en.json --languages de ru pt nl fr it es pl uk zh-cn",
     "release": "release-script --all",
-    "update-packages": "npx -y npm-check-updates --upgrade && cd src-widgets && npx -y npm-check-updates --upgrade && cd ../src-devices && npx -y npm-check-updates --upgrade && cd ../src-tab && npx -y npm-check-updates --upgrade",
-    "npm": "npm i && cd src-widgets && npm i && cd ../src-devices && npm i && cd ../src-tab && npm i"
+    "update-packages": "npx -y npm-check-updates --upgrade && cd src-widgets && npx -y npm-check-updates --upgrade && cd ../src-devices && npx -y npm-check-updates --upgrade && cd ../src-tab && npx -y npm-check-updates --upgrade && cd ../src-webcomponents && npx -y npm-check-updates --upgrade",
+    "npm": "npm i && cd src-widgets && npm i && cd ../src-devices && npm i && cd ../src-tab && npm i && cd ../src-webcomponents && npm i"
   },
   "overrides": {
     "serialize-javascript": "^7.0.5"

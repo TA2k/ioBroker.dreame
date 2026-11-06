@@ -1,0 +1,299 @@
+{
+    "$schema": "https://raw.githubusercontent.com/ioBroker/web-components/main/schemas/manifest.json",
+    "manifestVersion": 1,
+    "tag": "iob-dreame-robot",
+    "name": {
+        "en": "Dreame robot",
+        "de": "Dreame-Roboter",
+        "ru": "Робот Dreame",
+        "pt": "Robô Dreame",
+        "nl": "Dreame-robot",
+        "fr": "Robot Dreame",
+        "it": "Robot Dreame",
+        "es": "Robot Dreame",
+        "pl": "Robot Dreame",
+        "uk": "Робот Dreame",
+        "zh-cn": "Dreame 机器人"
+    },
+    "description": {
+        "en": "Status and map of a Dreame robot with start, pause, stop and dock; a click shows everything larger",
+        "de": "Status und Karte eines Dreame-Roboters mit Start, Pause, Stopp und Station; ein Klick zeigt alles größer",
+        "ru": "Статус и карта робота Dreame с кнопками старт, пауза, стоп и станция; щелчок показывает всё крупнее",
+        "pt": "Estado e mapa de um robô Dreame com iniciar, pausa, parar e base; um clique mostra tudo maior",
+        "nl": "Status en kaart van een Dreame-robot met start, pauze, stop en station; een klik toont alles groter",
+        "fr": "État et carte d'un robot Dreame avec démarrer, pause, arrêt et station ; un clic affiche tout en plus grand",
+        "it": "Stato e mappa di un robot Dreame con avvio, pausa, stop e base; un clic mostra tutto più grande",
+        "es": "Estado y mapa de un robot Dreame con iniciar, pausa, detener y base; un clic lo muestra todo más grande",
+        "pl": "Stan i mapa robota Dreame ze startem, pauzą, stopem i stacją; kliknięcie pokazuje wszystko większe",
+        "uk": "Стан і карта робота Dreame з кнопками старт, пауза, стоп і станція; клік показує все більшим",
+        "zh-cn": "Dreame 机器人的状态和地图，可开始、暂停、停止和回充；点击可放大显示全部内容"
+    },
+    "icon": "../dreame.png",
+    "module": "dreame-robot.js",
+    "size": {
+        "width": 320,
+        "height": 320
+    },
+    "settings": {
+        "type": "panel",
+        "items": {
+            "device": {
+                "type": "objectId",
+                "types": "device",
+                "root": "dreame",
+                "label": {
+                    "en": "Robot",
+                    "de": "Roboter",
+                    "ru": "Робот",
+                    "pt": "Robô",
+                    "nl": "Robot",
+                    "fr": "Robot",
+                    "it": "Robot",
+                    "es": "Robot",
+                    "pl": "Robot",
+                    "uk": "Робот",
+                    "zh-cn": "机器人"
+                },
+                "help": {
+                    "en": "The device dreame.<n>.<id>; empty: the first robot of dreame.0",
+                    "de": "Das Gerät dreame.<n>.<ID>; leer: der erste Roboter von dreame.0",
+                    "ru": "Устройство dreame.<n>.<id>; пусто: первый робот dreame.0",
+                    "pt": "O dispositivo dreame.<n>.<id>; vazio: o primeiro robô de dreame.0",
+                    "nl": "Het apparaat dreame.<n>.<id>; leeg: de eerste robot van dreame.0",
+                    "fr": "L'appareil dreame.<n>.<id> ; vide : le premier robot de dreame.0",
+                    "it": "Il dispositivo dreame.<n>.<id>; vuoto: il primo robot di dreame.0",
+                    "es": "El dispositivo dreame.<n>.<id>; vacío: el primer robot de dreame.0",
+                    "pl": "Urządzenie dreame.<n>.<id>; puste: pierwszy robot dreame.0",
+                    "uk": "Пристрій dreame.<n>.<id>; порожньо: перший робот dreame.0",
+                    "zh-cn": "设备 dreame.<n>.<id>；为空时使用 dreame.0 的第一个机器人"
+                }
+            },
+            "content": {
+                "type": "select",
+                "default": "auto",
+                "label": {
+                    "en": "Display",
+                    "de": "Anzeige",
+                    "ru": "Отображение",
+                    "pt": "Exibição",
+                    "nl": "Weergave",
+                    "fr": "Affichage",
+                    "it": "Visualizzazione",
+                    "es": "Visualización",
+                    "pl": "Widok",
+                    "uk": "Відображення",
+                    "zh-cn": "显示"
+                },
+                "options": [
+                    {
+                        "value": "auto",
+                        "label": {
+                            "en": "Automatic (map where there is room for it, status otherwise)",
+                            "de": "Automatisch (Karte, wo Platz dafür ist, sonst Status)",
+                            "ru": "Автоматически (карта, если хватает места, иначе статус)",
+                            "pt": "Automático (mapa onde houver espaço, senão estado)",
+                            "nl": "Automatisch (kaart waar er ruimte voor is, anders status)",
+                            "fr": "Automatique (carte s'il y a la place, sinon état)",
+                            "it": "Automatico (mappa dove c'è spazio, altrimenti stato)",
+                            "es": "Automático (mapa donde haya espacio, si no estado)",
+                            "pl": "Automatycznie (mapa, gdy jest miejsce, w przeciwnym razie stan)",
+                            "uk": "Автоматично (карта, якщо вистачає місця, інакше стан)",
+                            "zh-cn": "自动（空间足够时显示地图，否则显示状态）"
+                        }
+                    },
+                    {
+                        "value": "status",
+                        "label": {
+                            "en": "Status",
+                            "de": "Status",
+                            "ru": "Статус",
+                            "pt": "Estado",
+                            "nl": "Status",
+                            "fr": "État",
+                            "it": "Stato",
+                            "es": "Estado",
+                            "pl": "Stan",
+                            "uk": "Стан",
+                            "zh-cn": "状态"
+                        }
+                    },
+                    {
+                        "value": "map",
+                        "label": {
+                            "en": "Map",
+                            "de": "Karte",
+                            "ru": "Карта",
+                            "pt": "Mapa",
+                            "nl": "Kaart",
+                            "fr": "Carte",
+                            "it": "Mappa",
+                            "es": "Mapa",
+                            "pl": "Mapa",
+                            "uk": "Карта",
+                            "zh-cn": "地图"
+                        }
+                    }
+                ]
+            },
+            "floor": {
+                "type": "objectId",
+                "types": "channel",
+                "root": "dreame",
+                "hidden": "data.content === 'status'",
+                "label": {
+                    "en": "Map floor",
+                    "de": "Etage der Karte",
+                    "ru": "Этаж карты",
+                    "pt": "Piso do mapa",
+                    "nl": "Verdieping van de kaart",
+                    "fr": "Étage de la carte",
+                    "it": "Piano della mappa",
+                    "es": "Planta del mapa",
+                    "pl": "Piętro mapy",
+                    "uk": "Поверх карти",
+                    "zh-cn": "地图楼层"
+                },
+                "help": {
+                    "en": "The channel dreame.<n>.<id>.map.maps.<map>; empty: the floor the robot is on. Any other floor is shown as the still picture the adapter stores",
+                    "de": "Der Kanal dreame.<n>.<ID>.map.maps.<Karte>; leer: die Etage, auf der der Roboter ist. Jede andere Etage erscheint als Standbild, das der Adapter speichert",
+                    "ru": "Канал dreame.<n>.<id>.map.maps.<карта>; пусто: этаж, на котором находится робот. Любой другой этаж показывается как сохранённое адаптером изображение",
+                    "pt": "O canal dreame.<n>.<id>.map.maps.<mapa>; vazio: o piso onde o robô está. Qualquer outro piso é mostrado como a imagem fixa que o adaptador guarda",
+                    "nl": "Het kanaal dreame.<n>.<id>.map.maps.<kaart>; leeg: de verdieping waar de robot is. Elke andere verdieping wordt getoond als het stilstaande beeld dat de adapter bewaart",
+                    "fr": "Le canal dreame.<n>.<id>.map.maps.<carte> ; vide : l'étage où se trouve le robot. Tout autre étage est affiché comme l'image fixe que l'adaptateur enregistre",
+                    "it": "Il canale dreame.<n>.<id>.map.maps.<mappa>; vuoto: il piano in cui si trova il robot. Ogni altro piano è mostrato come l'immagine fissa che l'adattatore salva",
+                    "es": "El canal dreame.<n>.<id>.map.maps.<mapa>; vacío: la planta en la que está el robot. Cualquier otra planta se muestra como la imagen fija que guarda el adaptador",
+                    "pl": "Kanał dreame.<n>.<id>.map.maps.<mapa>; puste: piętro, na którym jest robot. Każde inne piętro jest pokazywane jako obraz zapisany przez adapter",
+                    "uk": "Канал dreame.<n>.<id>.map.maps.<карта>; порожньо: поверх, на якому робот. Будь-який інший поверх показується як збережене адаптером зображення",
+                    "zh-cn": "通道 dreame.<n>.<id>.map.maps.<地图>；为空时为机器人所在的楼层。其他楼层显示为适配器保存的静态图片"
+                }
+            },
+            "caption": {
+                "type": "select",
+                "default": "auto",
+                "label": {
+                    "en": "Caption",
+                    "de": "Beschriftung",
+                    "ru": "Подпись",
+                    "pt": "Legenda",
+                    "nl": "Bijschrift",
+                    "fr": "Légende",
+                    "it": "Didascalia",
+                    "es": "Leyenda",
+                    "pl": "Podpis",
+                    "uk": "Підпис",
+                    "zh-cn": "标题"
+                },
+                "options": [
+                    {
+                        "value": "auto",
+                        "label": {
+                            "en": "Automatic (robot, with the floor where one is picked)",
+                            "de": "Automatisch (Roboter, bei gewählter Etage mit Etage)",
+                            "ru": "Автоматически (робот, с этажом, если он выбран)",
+                            "pt": "Automático (robô, com o piso quando um é escolhido)",
+                            "nl": "Automatisch (robot, met de verdieping als er een gekozen is)",
+                            "fr": "Automatique (robot, avec l'étage s'il est choisi)",
+                            "it": "Automatico (robot, con il piano se ne è scelto uno)",
+                            "es": "Automático (robot, con la planta si se ha elegido una)",
+                            "pl": "Automatycznie (robot, z piętrem, jeśli wybrano)",
+                            "uk": "Автоматично (робот, з поверхом, якщо його вибрано)",
+                            "zh-cn": "自动（机器人名称，选择楼层时附带楼层）"
+                        }
+                    },
+                    {
+                        "value": "custom",
+                        "label": {
+                            "en": "Own text",
+                            "de": "Eigener Text",
+                            "ru": "Свой текст",
+                            "pt": "Texto próprio",
+                            "nl": "Eigen tekst",
+                            "fr": "Texte personnel",
+                            "it": "Testo proprio",
+                            "es": "Texto propio",
+                            "pl": "Własny tekst",
+                            "uk": "Власний текст",
+                            "zh-cn": "自定义文本"
+                        }
+                    },
+                    {
+                        "value": "none",
+                        "label": {
+                            "en": "None",
+                            "de": "Keine",
+                            "ru": "Нет",
+                            "pt": "Nenhuma",
+                            "nl": "Geen",
+                            "fr": "Aucune",
+                            "it": "Nessuna",
+                            "es": "Ninguna",
+                            "pl": "Brak",
+                            "uk": "Немає",
+                            "zh-cn": "无"
+                        }
+                    }
+                ]
+            },
+            "captionText": {
+                "type": "text",
+                "hidden": "data.caption !== 'custom'",
+                "label": {
+                    "en": "Own caption",
+                    "de": "Eigene Beschriftung",
+                    "ru": "Своя подпись",
+                    "pt": "Legenda própria",
+                    "nl": "Eigen bijschrift",
+                    "fr": "Légende personnelle",
+                    "it": "Didascalia propria",
+                    "es": "Leyenda propia",
+                    "pl": "Własny podpis",
+                    "uk": "Власний підпис",
+                    "zh-cn": "自定义标题"
+                },
+                "help": {
+                    "en": "Left empty, the automatic caption is shown",
+                    "de": "Leer gelassen, erscheint die automatische Beschriftung",
+                    "ru": "Если оставить пустым, показывается автоматическая подпись",
+                    "pt": "Se ficar vazia, é mostrada a legenda automática",
+                    "nl": "Leeg gelaten wordt het automatische bijschrift getoond",
+                    "fr": "Laissée vide, la légende automatique est affichée",
+                    "it": "Se lasciata vuota, viene mostrata la didascalia automatica",
+                    "es": "Si se deja vacía, se muestra la leyenda automática",
+                    "pl": "Pozostawione puste - wyświetlany jest podpis automatyczny",
+                    "uk": "Якщо залишити порожнім, показується автоматичний підпис",
+                    "zh-cn": "留空时显示自动标题"
+                }
+            },
+            "controls": {
+                "type": "checkbox",
+                "default": true,
+                "label": {
+                    "en": "Show buttons",
+                    "de": "Tasten anzeigen",
+                    "ru": "Показывать кнопки",
+                    "pt": "Mostrar botões",
+                    "nl": "Knoppen tonen",
+                    "fr": "Afficher les boutons",
+                    "it": "Mostra pulsanti",
+                    "es": "Mostrar botones",
+                    "pl": "Pokaż przyciski",
+                    "uk": "Показувати кнопки",
+                    "zh-cn": "显示按钮"
+                },
+                "help": {
+                    "en": "Start or pause, stop and back to the dock - where the box has room for them",
+                    "de": "Start oder Pause, Stopp und zurück zur Station - wo die Kachel Platz dafür hat",
+                    "ru": "Старт или пауза, стоп и возврат на станцию - если для них есть место",
+                    "pt": "Iniciar ou pausa, parar e voltar à base - onde houver espaço para eles",
+                    "nl": "Start of pauze, stop en terug naar het station - waar er ruimte voor is",
+                    "fr": "Démarrer ou pause, arrêt et retour à la station - là où il y a la place",
+                    "it": "Avvio o pausa, stop e ritorno alla base - dove c'è spazio",
+                    "es": "Iniciar o pausa, detener y volver a la base - donde haya espacio",
+                    "pl": "Start lub pauza, stop i powrót do stacji - gdy jest na nie miejsce",
+                    "uk": "Старт або пауза, стоп і повернення на станцію - якщо для них є місце",
+                    "zh-cn": "开始或暂停、停止和返回基站 - 在空间足够时显示"
+                }
+            }
+        }
+    }
+}
