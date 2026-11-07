@@ -86,6 +86,10 @@ export class DeviceList {
 	private readonly listeners = new Set<DeviceListListener>();
 	private readonly stateId: string;
 	private handler: StateHandler | null = null;
+	private readonly sf25StateId: string;
+	private readonly lists = new Map<string, DreameDevice[]>();
+	private stopped = false;
+	private generation = 0;
 
 	/**
 	 * @param connection How to reach ioBroker.
@@ -96,28 +100,66 @@ export class DeviceList {
 		private readonly connection: TabConnection,
 		instanceId: string,
 		private readonly requestedDid: string | null = null,
+		private readonly includeSF25 = false,
 	) {
 		this.stateId = `${instanceId}.info.devices`;
+		this.sf25StateId = `${instanceId}.info.sf25Devices`;
 	}
 
 	/** Loads the list once and stays subscribed to it. */
 	public async start(): Promise<DeviceListSnapshot> {
-		const state = await this.connection.getState(this.stateId);
-		this.apply(parseDeviceList(state?.val));
-
-		this.handler = (_id, changed) => {
-			this.apply(parseDeviceList(changed?.val));
+		const generation = ++this.generation;
+		this.stopped = false;
+		this.lists.clear();
+		let initializing = true;
+		const ids = this.includeSF25 ? [this.stateId, this.sf25StateId] : [this.stateId];
+		const publish = (id: string, raw: unknown): void => {
+			this.lists.set(
+				id,
+				parseDeviceList(raw).filter(device => id !== this.sf25StateId || device.typ === "fwd"),
+			);
+			if (initializing) return;
+			this.apply([
+				...new Map(ids.flatMap(key => this.lists.get(key) ?? []).map(device => [device.did, device])).values(),
+			]);
 			this.publish();
 		};
-		await this.connection.subscribe(this.stateId, this.handler);
+		const updated = new Set<string>();
+		this.handler = (id, changed) => {
+			if (this.stopped || generation !== this.generation) return;
+			updated.add(id);
+			publish(id, changed?.val);
+		};
+		const handler = this.handler;
+		await Promise.all(
+			ids.map(async id => {
+				await this.connection.subscribe(id, handler);
+				if (this.stopped || generation !== this.generation) {
+					this.connection.unsubscribe(id, handler);
+					return;
+				}
+				const state = await this.connection.getState(id);
+				if (!this.stopped && generation === this.generation && !updated.has(id)) publish(id, state?.val);
+			}),
+		);
+		initializing = false;
+		if (!this.stopped && generation === this.generation) {
+			this.apply([
+				...new Map(ids.flatMap(key => this.lists.get(key) ?? []).map(device => [device.did, device])).values(),
+			]);
+			this.publish();
+		}
 
 		return this.snapshot();
 	}
 
 	/** Drops the subscription. Safe to call when `start` never ran. */
 	public stop(): void {
+		this.generation++;
+		this.stopped = true;
 		if (this.handler) {
 			this.connection.unsubscribe(this.stateId, this.handler);
+			if (this.includeSF25) this.connection.unsubscribe(this.sf25StateId, this.handler);
 			this.handler = null;
 		}
 		this.listeners.clear();

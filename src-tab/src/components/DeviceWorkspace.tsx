@@ -16,6 +16,7 @@ import type { TabConnection } from "../connection/types";
 import { Centre } from "./Centre";
 import { DeviceSelector } from "./DeviceSelector";
 import { DreameView } from "./DreameView";
+import { SF25View } from "./SF25View";
 import type { DreameViewProps } from "./DreameView";
 import type { ConfigDelta } from "../settings/widgetConfig";
 
@@ -45,7 +46,7 @@ export function DeviceWorkspace({
 	const [listReady, setListReady] = useState(false);
 
 	const deviceList = useMemo(
-		() => new DeviceList(connection, instanceId, requestedDid),
+		() => new DeviceList(connection, instanceId, requestedDid, true),
 		[connection, instanceId, requestedDid],
 	);
 
@@ -56,11 +57,16 @@ export function DeviceWorkspace({
 			if (!cancelled) setSnapshot(next);
 		});
 
-		void deviceList.start().then(initial => {
-			if (cancelled) return;
-			setSnapshot(initial);
-			setListReady(true);
-		});
+		void deviceList
+			.start()
+			.then(initial => {
+				if (cancelled) return;
+				setSnapshot(initial);
+				setListReady(true);
+			})
+			.catch(() => {
+				if (!cancelled) setListReady(true);
+			});
 
 		return () => {
 			cancelled = true;
@@ -81,6 +87,23 @@ export function DeviceWorkspace({
 	if (snapshot.devices.length === 0 || !selected) {
 		return <Centre>{emptyMessage}</Centre>;
 	}
+	const header = (
+		<>
+			<DeviceSelector devices={snapshot.devices} selected={selected} onSelect={did => deviceList.select(did)} />
+			<Typography variant="h6">{selected.name}</Typography>
+		</>
+	);
+	if (selected.typ === "fwd") {
+		return (
+			<SF25View
+				key={`${instanceId}.${selected.did}`}
+				connection={connection}
+				instanceId={instanceId}
+				did={selected.did}
+				header={header}
+			/>
+		);
+	}
 
 	return (
 		<DreameView
@@ -93,12 +116,7 @@ export function DeviceWorkspace({
 			settingsMode={settingsMode}
 			showGear={showGear}
 			configDelta={configDelta}
-			headerStart={
-				<>
-					<DeviceSelector devices={snapshot.devices} selected={selected} onSelect={did => deviceList.select(did)} />
-					<Typography variant="h6">{selected.name}</Typography>
-				</>
-			}
+			headerStart={header}
 		/>
 	);
 }

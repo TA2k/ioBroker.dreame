@@ -56,9 +56,7 @@ describe("parseDeviceList", () => {
 	});
 
 	it("falls back to the did as a name and to vacuum as a type", () => {
-		expect(parseDeviceList(JSON.stringify([{ did: "aaa" }]))).toEqual([
-			{ did: "aaa", name: "aaa", typ: "vacuum" },
-		]);
+		expect(parseDeviceList(JSON.stringify([{ did: "aaa" }]))).toEqual([{ did: "aaa", name: "aaa", typ: "vacuum" }]);
 	});
 
 	it("drops entries without a usable did rather than inventing one", () => {
@@ -91,6 +89,44 @@ describe("chooseDevice", () => {
 });
 
 describe("DeviceList", () => {
+	it("keeps the robot list first even if the SF25 list arrives sooner", async () => {
+		const { connection } = fakeConnection(null);
+		let finish: (state: StateValue) => void = () => {};
+		connection.getState = id =>
+			id.endsWith("info.devices")
+				? new Promise(resolve => {
+						finish = resolve;
+					})
+				: Promise.resolve({ val: JSON.stringify([{ did: "sf", typ: "fwd" }]) });
+		const list = new DeviceList(connection, "dreame.0", null, true);
+		const starting = list.start();
+		await Promise.resolve();
+		finish({ val: twoDevices });
+		expect((await starting).selected?.did).toBe("aaa");
+		list.stop();
+	});
+	it("combines SF25 and robot lists only when requested and follows both", async () => {
+		const handlers = new Map<string, StateHandler>();
+		const values: Record<string, string> = {
+			"dreame.2.info.devices": twoDevices,
+			"dreame.2.info.sf25Devices": JSON.stringify([{ did: "fwd", typ: "fwd", name: "SF25" }]),
+		};
+		const { connection } = fakeConnection(null);
+		connection.getState = async id => ({ val: values[id] });
+		connection.subscribe = async (id, handler) => {
+			handlers.set(id, handler);
+		};
+		connection.unsubscribe = id => {
+			handlers.delete(id);
+		};
+		const list = new DeviceList(connection, "dreame.2", "fwd", true);
+		expect((await list.start()).selected?.typ).toBe("fwd");
+		expect(list.snapshot().devices).toHaveLength(3);
+		handlers.get("dreame.2.info.devices")?.("dreame.2.info.devices", { val: "[]" });
+		expect(list.snapshot().selected?.did).toBe("fwd");
+		list.stop();
+		expect(handlers.size).toBe(0);
+	});
 	it("loads the list and selects the first device", async () => {
 		const { connection } = fakeConnection(twoDevices);
 		const list = new DeviceList(connection, "dreame.0");
