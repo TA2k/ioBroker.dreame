@@ -39,6 +39,7 @@ scripts/
 __pycache__/
 
 
-# Intermediate output of the widget builds; the deliverables are copied to admin/dm-widgets and widgets/
+# Intermediate output of the widget builds; the deliverables are copied to admin/dm-widgets, widgets/ and admin/webcomponents
 src-devices/build/
 src-widgets/build/
+src-webcomponents/build/
