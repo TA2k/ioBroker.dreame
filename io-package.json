@@ -219,7 +219,28 @@
       }
     },
     "webComponents": [
-      "webcomponents/dreame-robot.json"
+      {
+        "manifest": "webcomponents/dreame-robot.json",
+        "tag": "iob-dreame-robot",
+        "name": {
+          "en": "Dreame robot",
+          "de": "Dreame-Roboter",
+          "ru": "Робот Dreame",
+          "pt": "Robô Dreame",
+          "nl": "Dreame-robot",
+          "fr": "Robot Dreame",
+          "it": "Robot Dreame",
+          "es": "Robot Dreame",
+          "pl": "Robot Dreame",
+          "uk": "Робот Dreame",
+          "zh-cn": "Dreame 机器人"
+        },
+        "icon": "../dreame.png",
+        "size": {
+          "width": 320,
+          "height": 320
+        }
+      }
     ],
     "restartAdapters": [
       "vis-2"
